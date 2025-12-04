@@ -65,7 +65,16 @@ public:
 	//const TArray<FShaderMacro>& GetMacros() const { return Macros; }
 
 	static bool HasMacro(const TArray<FShaderMacro>& InMacros, const FString& InMacroName);
-	
+
+	// ───── Shader Macro Constants ────────────────────────────
+	static constexpr const char* MACRO_USE_GPU_SKINNING = "USE_GPU_SKINNING";
+	static constexpr const char* MACRO_USE_CARTOON_SHADING = "USE_CARTOON_SHADING";
+	static constexpr const char* MACRO_HAS_TEXTURE = "HAS_TEXTURE";
+	static constexpr const char* MACRO_HAS_NORMAL_TEXTURE = "HAS_NORMAL_TEXTURE";
+	static constexpr const char* MACRO_LIGHTING_MODEL_PHONG = "LIGHTING_MODEL_PHONG";
+	static constexpr const char* MACRO_LIGHTING_MODEL_GOURAUD = "LIGHTING_MODEL_GOURAUD";
+	static constexpr const char* MACRO_LIGHTING_MODEL_LAMBERT = "LIGHTING_MODEL_LAMBERT";
+
 protected:
 	virtual ~UShader();
 

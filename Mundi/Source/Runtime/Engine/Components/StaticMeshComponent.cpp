@@ -221,6 +221,13 @@ void UStaticMeshComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMesh
 		FMeshBatchElement BatchElement;
 		// View 모드 전용 매크로와 머티리얼 개인 매크로를 결합한다
 		TArray<FShaderMacro> ShaderMacros = View->ViewShaderMacros;
+
+		// ───── Cartoon Shading Support ─────
+		if (bUseCartoonShading)
+		{
+			ShaderMacros.Add(FShaderMacro(UShader::MACRO_USE_CARTOON_SHADING, "1"));
+		}
+
 		if (0 < MaterialToUse->GetShaderMacros().Num())
 		{
 			ShaderMacros.Append(MaterialToUse->GetShaderMacros());
@@ -246,6 +253,15 @@ void UStaticMeshComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMesh
 		BatchElement.WorldMatrix = GetWorldMatrix();
 		BatchElement.ObjectID = InternalIndex;
 		BatchElement.PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+		// ───── Cartoon Rendering Parameters ─────
+		if (bUseCartoonShading)
+		{
+			BatchElement.CartoonOutlineThreshold = CartoonOutlineThreshold;
+			BatchElement.CartoonShadingLevels = CartoonShadingLevels;
+			BatchElement.CartoonSpecularThreshold = CartoonSpecularThreshold;
+			BatchElement.CartoonRimIntensity = CartoonRimIntensity;
+		}
 
 		OutMeshBatchElements.Add(BatchElement);
 	}

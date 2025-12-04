@@ -73,6 +73,22 @@ public:
     void SetGenerateOverlapEvents(bool bEnable) { bEnable ? bGenerateOverlapEvents = true : bGenerateOverlapEvents = false; }
     bool GetGenerateOverlapEvents() const { return bGenerateOverlapEvents; }
 
+    // ───── Cartoon Rendering ────────────────────────────
+    void SetUseCartoonShading(bool bInUseCartoon) { bUseCartoonShading = bInUseCartoon; }
+    bool IsUsingCartoonShading() const { return bUseCartoonShading; }
+
+    void SetCartoonOutlineThreshold(float InThreshold) { CartoonOutlineThreshold = InThreshold; }
+    float GetCartoonOutlineThreshold() const { return CartoonOutlineThreshold; }
+
+    void SetCartoonShadingLevels(int32 InLevels) { CartoonShadingLevels = InLevels; }
+    int32 GetCartoonShadingLevels() const { return CartoonShadingLevels; }
+
+    void SetCartoonSpecularThreshold(float InThreshold) { CartoonSpecularThreshold = InThreshold; }
+    float GetCartoonSpecularThreshold() const { return CartoonSpecularThreshold; }
+
+    void SetCartoonRimIntensity(float InIntensity) { CartoonRimIntensity = InIntensity; }
+    float GetCartoonRimIntensity() const { return CartoonRimIntensity; }
+
     // ───── 직렬화 ────────────────────────────
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
@@ -81,6 +97,22 @@ public:
 
 protected:
     bool bIsCulled = false;
+
+    // ───── Cartoon Rendering Parameters ────────────────────────────
+    UPROPERTY(EditAnywhere, Category = "Render")
+    bool bUseCartoonShading = false;
+
+    UPROPERTY(EditAnywhere, Category = "Render")
+    float CartoonOutlineThreshold = 0.55f;  // Outline detection threshold (0.0 ~ 1.0)
+
+    UPROPERTY(EditAnywhere, Category = "Render")
+    int32 CartoonShadingLevels = 3;  // Number of cel shading levels (2 ~ 10)
+
+    UPROPERTY(EditAnywhere, Category = "Render")
+    float CartoonSpecularThreshold = 0.5f;  // Specular highlight threshold (0.0 ~ 1.0)
+
+    UPROPERTY(EditAnywhere, Category = "Render")
+    float CartoonRimIntensity = 0.3f;  // Rim light intensity (0.0 ~ 1.0)
      
     // ───── 충돌 관련 ────────────────────────────
     UPROPERTY(EditAnywhere, Category="Shape")

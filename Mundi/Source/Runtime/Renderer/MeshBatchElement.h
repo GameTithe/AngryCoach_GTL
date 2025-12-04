@@ -81,6 +81,12 @@ struct FMeshBatchElement
 	// RenderParticlePass에서 Sprite / Mesh 구분을 위해 쓴다
 	bool bIsDepthWrite = false;
 
+	// --- Cartoon Rendering Parameters ---
+	float CartoonOutlineThreshold = 0.55f;
+	int32 CartoonShadingLevels = 3;
+	float CartoonSpecularThreshold = 0.5f;
+	float CartoonRimIntensity = 0.3f;
+
 	// --- 4. GPU Instancing 여부 ---
 	bool bInstancedDraw = false;
 	ID3D11Buffer* InstanceVertexBuffer = nullptr;
