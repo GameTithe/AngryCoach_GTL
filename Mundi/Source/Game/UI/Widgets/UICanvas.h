@@ -99,6 +99,43 @@ public:
     void SetWidgetRightToLeft(const std::string& Name, bool bRTL);
 
     // ============================================
+    // 위젯 애니메이션 함수
+    // ============================================
+
+    /**
+     * @brief 위젯 이동 애니메이션
+     * @param Name 위젯 이름
+     * @param TargetX, TargetY 목표 위치
+     * @param Duration 애니메이션 시간 (초)
+     * @param Easing 이징 함수 타입
+     */
+    void MoveWidget(const std::string& Name, float TargetX, float TargetY,
+                    float Duration, EEasingType Easing = EEasingType::Linear);
+
+    /**
+     * @brief 위젯 크기 변경 애니메이션
+     */
+    void ResizeWidget(const std::string& Name, float TargetW, float TargetH,
+                      float Duration, EEasingType Easing = EEasingType::Linear);
+
+    /**
+     * @brief 위젯 회전 애니메이션
+     */
+    void RotateWidget(const std::string& Name, float TargetAngle,
+                      float Duration, EEasingType Easing = EEasingType::Linear);
+
+    /**
+     * @brief 위젯 페이드 애니메이션
+     */
+    void FadeWidget(const std::string& Name, float TargetOpacity,
+                    float Duration, EEasingType Easing = EEasingType::Linear);
+
+    /**
+     * @brief 위젯 애니메이션 중지
+     */
+    void StopWidgetAnimation(const std::string& Name);
+
+    // ============================================
     // 캔버스 속성 설정
     // ============================================
 
@@ -108,8 +145,14 @@ public:
     void SetZOrder(int32_t Z) { ZOrder = Z; }
 
     // ============================================
-    // 렌더링
+    // 업데이트 및 렌더링
     // ============================================
+
+    /**
+     * @brief 캔버스 및 모든 위젯 업데이트
+     * @param DeltaTime 프레임 시간
+     */
+    void Update(float DeltaTime);
 
     /**
      * @brief 캔버스 및 모든 위젯 렌더링

@@ -753,6 +753,86 @@ void FLuaManager::ExposeUIFunctions()
         "GetWidgetCount", [](UUICanvas* Self) -> size_t
         {
             return Self ? Self->GetWidgetCount() : 0;
+        },
+
+        // ======== 위젯 애니메이션 ========
+
+        // 이동 애니메이션
+        "MoveWidget", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float X, float Y, float Duration)
+            {
+                if (Self) Self->MoveWidget(Name, X, Y, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float X, float Y, float Duration,
+               const std::string& Easing)
+            {
+                if (!Self) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->MoveWidget(Name, X, Y, Duration, Type);
+            }
+        ),
+
+        // 크기 애니메이션
+        "ResizeWidget", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float W, float H, float Duration)
+            {
+                if (Self) Self->ResizeWidget(Name, W, H, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float W, float H, float Duration,
+               const std::string& Easing)
+            {
+                if (!Self) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->ResizeWidget(Name, W, H, Duration, Type);
+            }
+        ),
+
+        // 회전 애니메이션
+        "RotateWidget", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float Angle, float Duration)
+            {
+                if (Self) Self->RotateWidget(Name, Angle, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float Angle, float Duration,
+               const std::string& Easing)
+            {
+                if (!Self) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->RotateWidget(Name, Angle, Duration, Type);
+            }
+        ),
+
+        // 페이드 애니메이션
+        "FadeWidget", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float Opacity, float Duration)
+            {
+                if (Self) Self->FadeWidget(Name, Opacity, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float Opacity, float Duration,
+               const std::string& Easing)
+            {
+                if (!Self) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->FadeWidget(Name, Opacity, Duration, Type);
+            }
+        ),
+
+        // 애니메이션 중지
+        "StopAnimation", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self) Self->StopWidgetAnimation(Name);
         }
     );
 

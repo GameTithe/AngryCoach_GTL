@@ -676,6 +676,7 @@
     <ClCompile Include="Source\Game\UI\Widgets\ProgressBarWidget.cpp" />
     <ClCompile Include="Source\Game\UI\Widgets\TextureWidget.cpp" />
     <ClCompile Include="Source\Game\UI\Widgets\UICanvas.cpp" />
+    <ClCompile Include="Source\Game\UI\Widgets\UIWidget.cpp" />
     <ClCompile Include="Source\Slate\UIManager.cpp" />
     <ClCompile Include="Source\Slate\USlateManager.cpp" />
     <ClCompile Include="Source\Slate\Widgets\ConsoleWidget.cpp" />

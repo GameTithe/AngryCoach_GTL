@@ -274,6 +274,15 @@ void UGameUIManager::Update(float DeltaTime)
     default:
         break;
     }
+
+    // 모든 캔버스 업데이트 (위젯 애니메이션 처리)
+    for (auto& Pair : Canvases)
+    {
+        if (Pair.second)
+        {
+            Pair.second->Update(DeltaTime);
+        }
+    }
 }
 
 void UGameUIManager::SetGameState(EGameUIState NewState)

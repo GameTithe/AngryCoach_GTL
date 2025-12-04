@@ -179,8 +179,71 @@ void UUICanvas::SetWidgetRightToLeft(const std::string& WidgetName, bool bRTL)
 }
 
 // ============================================
-// 렌더링
+// 위젯 애니메이션
 // ============================================
+
+void UUICanvas::MoveWidget(const std::string& WidgetName, float TargetX, float TargetY,
+                           float Duration, EEasingType Easing)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->MoveTo(TargetX, TargetY, Duration, Easing);
+    }
+}
+
+void UUICanvas::ResizeWidget(const std::string& WidgetName, float TargetW, float TargetH,
+                             float Duration, EEasingType Easing)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->SizeTo(TargetW, TargetH, Duration, Easing);
+    }
+}
+
+void UUICanvas::RotateWidget(const std::string& WidgetName, float TargetAngle,
+                             float Duration, EEasingType Easing)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->RotateTo(TargetAngle, Duration, Easing);
+    }
+}
+
+void UUICanvas::FadeWidget(const std::string& WidgetName, float TargetOpacity,
+                           float Duration, EEasingType Easing)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->FadeTo(TargetOpacity, Duration, Easing);
+    }
+}
+
+void UUICanvas::StopWidgetAnimation(const std::string& WidgetName)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->StopAnimation();
+    }
+}
+
+// ============================================
+// 업데이트 및 렌더링
+// ============================================
+
+void UUICanvas::Update(float DeltaTime)
+{
+    if (!bVisible)
+        return;
+
+    // 모든 위젯 업데이트 (애니메이션 처리)
+    for (auto& Pair : Widgets)
+    {
+        if (Pair.second)
+        {
+            Pair.second->Update(DeltaTime);
+        }
+    }
+}
 
 void UUICanvas::UpdateWidgetSortOrder()
 {
