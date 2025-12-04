@@ -281,6 +281,8 @@
     <FxCompile Include="Shaders\Effects\ParticleBeam.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_StandAlone|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_StandAlone|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <ClCompile Include="SnippetVehicle4W.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -671,6 +673,8 @@
     <ClCompile Include="Source\Slate\StatsOverlayD2D.cpp" />
     <ClCompile Include="Source\Game\UI\GameUIManager.cpp" />
     <ClCompile Include="Source\Game\UI\GameUIBase.cpp" />
+    <ClCompile Include="Source\Game\UI\Widgets\ProgressBarWidget.cpp" />
+    <ClCompile Include="Source\Game\UI\Widgets\TextureWidget.cpp" />
     <ClCompile Include="Source\Slate\UIManager.cpp" />
     <ClCompile Include="Source\Slate\USlateManager.cpp" />
     <ClCompile Include="Source\Slate\Widgets\ConsoleWidget.cpp" />
@@ -1159,6 +1163,9 @@
     <ClInclude Include="Source\Slate\StatsOverlayD2D.h" />
     <ClInclude Include="Source\Game\UI\GameUIManager.h" />
     <ClInclude Include="Source\Game\UI\GameUIBase.h" />
+    <ClInclude Include="Source\Game\UI\Widgets\UIWidget.h" />
+    <ClInclude Include="Source\Game\UI\Widgets\ProgressBarWidget.h" />
+    <ClInclude Include="Source\Game\UI\Widgets\TextureWidget.h" />
     <ClInclude Include="Source\Slate\UIManager.h" />
     <ClInclude Include="Source\Slate\USlateManager.h" />
     <ClInclude Include="Source\Slate\Widgets\ConsoleWidget.h" />

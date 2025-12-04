@@ -9,6 +9,9 @@
 #include "PlayerCameraManager.h"
 #include <tuple>
 
+#include "Source/Game/UI/GameUIManager.h"
+#include "Source/Game/UI/Widgets/UICanvas.h"
+
 sol::object MakeCompProxy(sol::state_view SolState, void* Instance, UClass* Class) {
     BuildBoundClass(Class);
     LuaComponentProxy Proxy;
@@ -356,6 +359,9 @@ FLuaManager::FLuaManager()
     ExposeGlobalFunctions();
     ExposeAllComponentsToLua();
 
+    // UI 위젯 시스템 바인딩
+    ExposeUIFunctions();
+
     // 위 등록 마친 뒤 fall back 설정 : Shared lib의 fall back은 G
     sol::table MetaTableShared = Lua->create_table();
     MetaTableShared[sol::meta_function::index] = Lua->globals();
@@ -635,11 +641,234 @@ sol::protected_function FLuaManager::GetFunc(sol::environment& Env, const char* 
         return {};
 
     sol::object Object = Env[Name];
-    
+
     if (Object == sol::nil || Object.get_type() != sol::type::function)
         return {};
-    
+
     sol::protected_function Func = Object.as<sol::protected_function>();
-    
+
     return Func;
+}
+
+void FLuaManager::ExposeUIFunctions()
+{
+    // UI 테이블 생성 (pch.h의 UI 매크로와 충돌 방지를 위해 GameUI로 명명)
+    sol::table GameUI = Lua->create_named_table("UI");
+
+    // ========================================
+    // Canvas usertype 등록
+    // ========================================
+    Lua->new_usertype<UUICanvas>("UICanvas",
+        sol::no_constructor,
+
+        // 위젯 생성
+        "CreateProgressBar", [](UUICanvas* Self, const std::string& Name,
+                                float X, float Y, float W, float H) -> bool
+        {
+            return Self ? Self->CreateProgressBar(Name, X, Y, W, H) : false;
+        },
+        "CreateRect", [](UUICanvas* Self, const std::string& Name,
+                         float X, float Y, float W, float H) -> bool
+        {
+            return Self ? Self->CreateRect(Name, X, Y, W, H) : false;
+        },
+        "CreateTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path,
+                            float X, float Y, float W, float H) -> bool
+        {
+            if (!Self) return false;
+            return Self->CreateTextureWidget(Name, Path, X, Y, W, H,
+                                             UGameUIManager::Get().GetD2DContext());
+        },
+
+        // 위젯 속성 설정
+        "SetProgress", [](UUICanvas* Self, const std::string& Name, float Value)
+        {
+            if (Self) Self->SetWidgetProgress(Name, Value);
+        },
+        "SetWidgetPosition", [](UUICanvas* Self, const std::string& Name, float X, float Y)
+        {
+            if (Self) Self->SetWidgetPosition(Name, X, Y);
+        },
+        "SetWidgetSize", [](UUICanvas* Self, const std::string& Name, float W, float H)
+        {
+            if (Self) Self->SetWidgetSize(Name, W, H);
+        },
+        "SetWidgetVisible", [](UUICanvas* Self, const std::string& Name, bool bVisible)
+        {
+            if (Self) Self->SetWidgetVisible(Name, bVisible);
+        },
+        "SetWidgetZOrder", [](UUICanvas* Self, const std::string& Name, int32_t Z)
+        {
+            if (Self) Self->SetWidgetZOrder(Name, Z);
+        },
+        "SetForegroundColor", [](UUICanvas* Self, const std::string& Name,
+                                 float R, float G, float B, float A)
+        {
+            if (Self) Self->SetWidgetForegroundColor(Name, R, G, B, A);
+        },
+        "SetBackgroundColor", [](UUICanvas* Self, const std::string& Name,
+                                 float R, float G, float B, float A)
+        {
+            if (Self) Self->SetWidgetBackgroundColor(Name, R, G, B, A);
+        },
+        "SetColor", [](UUICanvas* Self, const std::string& Name,
+                       float R, float G, float B, float A)
+        {
+            if (Self) Self->SetWidgetForegroundColor(Name, R, G, B, A);
+        },
+        "SetRightToLeft", [](UUICanvas* Self, const std::string& Name, bool bRTL)
+        {
+            if (Self) Self->SetWidgetRightToLeft(Name, bRTL);
+        },
+
+        // 위젯 삭제
+        "RemoveWidget", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self) Self->RemoveWidget(Name);
+        },
+        "RemoveAllWidgets", [](UUICanvas* Self)
+        {
+            if (Self) Self->RemoveAllWidgets();
+        },
+
+        // 캔버스 속성
+        "SetPosition", [](UUICanvas* Self, float X, float Y)
+        {
+            if (Self) Self->SetPosition(X, Y);
+        },
+        "SetSize", [](UUICanvas* Self, float W, float H)
+        {
+            if (Self) Self->SetSize(W, H);
+        },
+        "SetVisible", [](UUICanvas* Self, bool bVisible)
+        {
+            if (Self) Self->SetVisible(bVisible);
+        },
+        "SetZOrder", [](UUICanvas* Self, int32_t Z)
+        {
+            if (Self) Self->SetZOrder(Z);
+        },
+
+        // 캔버스 정보
+        "GetWidgetCount", [](UUICanvas* Self) -> size_t
+        {
+            return Self ? Self->GetWidgetCount() : 0;
+        }
+    );
+
+    // ========================================
+    // 캔버스 관리 함수들
+    // ========================================
+
+    // 캔버스 생성
+    GameUI.set_function("CreateCanvas", sol::overload(
+        [](const std::string& Name, int32_t ZOrder) -> UUICanvas*
+        {
+            return UGameUIManager::Get().CreateCanvas(Name, ZOrder);
+        },
+        [](const std::string& Name) -> UUICanvas*
+        {
+            return UGameUIManager::Get().CreateCanvas(Name, 0);
+        }
+    ));
+
+    // 캔버스 찾기
+    GameUI.set_function("FindCanvas", [](const std::string& Name) -> UUICanvas*
+    {
+        return UGameUIManager::Get().FindCanvas(Name);
+    });
+
+    // 캔버스 삭제
+    GameUI.set_function("RemoveCanvas", [](const std::string& Name)
+    {
+        UGameUIManager::Get().RemoveCanvas(Name);
+    });
+
+    // 모든 캔버스 삭제
+    GameUI.set_function("RemoveAllCanvases", []()
+    {
+        UGameUIManager::Get().RemoveAllCanvases();
+    });
+
+    // 캔버스 가시성 설정
+    GameUI.set_function("SetCanvasVisible", [](const std::string& Name, bool bVisible)
+    {
+        UGameUIManager::Get().SetCanvasVisible(Name, bVisible);
+    });
+
+    // 캔버스 Z순서 설정
+    GameUI.set_function("SetCanvasZOrder", [](const std::string& Name, int32_t Z)
+    {
+        UGameUIManager::Get().SetCanvasZOrder(Name, Z);
+    });
+
+    // ========================================
+    // 게임 상태 관련 함수들
+    // ========================================
+
+    // 게임 상태 설정
+    GameUI.set_function("SetGameState", [](const std::string& State)
+    {
+        if (State == "MainMenu")
+            UGameUIManager::Get().SetGameState(EGameUIState::MainMenu);
+        else if (State == "InGame")
+            UGameUIManager::Get().SetGameState(EGameUIState::InGame);
+        else if (State == "Paused")
+            UGameUIManager::Get().SetGameState(EGameUIState::Paused);
+        else if (State == "Result")
+            UGameUIManager::Get().SetGameState(EGameUIState::Result);
+    });
+
+    // HUD 가시성 설정
+    GameUI.set_function("SetHUDVisible", [](bool bVisible)
+    {
+        UGameUIManager::Get().SetHUDVisible(bVisible);
+    });
+
+    // 타이머 설정
+    GameUI.set_function("SetTimer", [](float Time)
+    {
+        UGameUIManager::Get().SetGameTimer(Time);
+    });
+
+    // 플레이어 체력 설정 (기존 HUD용)
+    GameUI.set_function("SetPlayer1Health", [](float Current, float Max)
+    {
+        auto& Data = UGameUIManager::Get().GetPlayer1Data();
+        Data.CurrentHealth = Current;
+        Data.MaxHealth = Max;
+    });
+
+    GameUI.set_function("SetPlayer2Health", [](float Current, float Max)
+    {
+        auto& Data = UGameUIManager::Get().GetPlayer2Data();
+        Data.CurrentHealth = Current;
+        Data.MaxHealth = Max;
+    });
+
+    // 플레이어 스태미나 설정 (기존 HUD용)
+    GameUI.set_function("SetPlayer1Stamina", [](float Current, float Max)
+    {
+        auto& Data = UGameUIManager::Get().GetPlayer1Data();
+        Data.CurrentStamina = Current;
+        Data.MaxStamina = Max;
+    });
+
+    GameUI.set_function("SetPlayer2Stamina", [](float Current, float Max)
+    {
+        auto& Data = UGameUIManager::Get().GetPlayer2Data();
+        Data.CurrentStamina = Current;
+        Data.MaxStamina = Max;
+    });
+
+    // 뷰포트 정보 가져오기
+    GameUI.set_function("GetViewportWidth", []() -> float
+    {
+        return UGameUIManager::Get().GetViewportWidth();
+    });
+
+    GameUI.set_function("GetViewportHeight", []() -> float
+    {
+        return UGameUIManager::Get().GetViewportHeight();
+    });
 }

@@ -24,6 +24,8 @@
 #include "BlueprintGraph/EdGraph.h"
 #include "Windows/AnimGraph/SAnimGraphEditorWindow.h"
 #include "Windows/SGraphEditorWindow.h"
+#include "Source/Game/UI/GameUIManager.h"
+#include "FViewport.h"
 
 IMPLEMENT_CLASS(USlateManager)
 
@@ -609,6 +611,18 @@ void USlateManager::Update(float DeltaSeconds)
         const float toolbarHeight = 50.0f;
         TopPanel->Rect = FRect(0, toolbarHeight, CLIENTWIDTH, CLIENTHEIGHT);
         TopPanel->OnUpdate(DeltaSeconds);
+    }
+
+    // MainViewport 정보를 GameUIManager에 전달
+    if (MainViewport && MainViewport->GetViewport())
+    {
+        FViewport* VP = MainViewport->GetViewport();
+        UGameUIManager::Get().SetViewport(
+            static_cast<float>(VP->GetStartX()),
+            static_cast<float>(VP->GetStartY()),
+            static_cast<float>(VP->GetSizeX()),
+            static_cast<float>(VP->GetSizeY())
+        );
     }
 
     if (SkeletalViewerWindow)
