@@ -75,16 +75,17 @@ namespace
 void FClothManager::Initialize()
 {
 	nv::cloth::InitializeNvCloth(&g_ClothAllocator, &g_ClothErrorCallback, &g_ClothAssertHandler, nullptr);
-	
+
 	CreateFactory();
 	CreateSolver();
 }
 
 void FClothManager::Shutdown()
 {
+	// 4. Solver 삭제
 	if (solver)
 	{
-		UE_LOG("[ClothComponent] Deleting solver\n");
+		UE_LOG("ClothManager: Shutdown: Deleting solver");
 		NV_CLOTH_DELETE(solver);
 		solver = nullptr;
 	}
@@ -93,11 +94,12 @@ void FClothManager::Shutdown()
 	// 6. Factory 해제
 	if (factory)
 	{
-		UE_LOG("[ClothComponent] Destroying factory\n");
+		UE_LOG("ClothManager: Shutdown: Destroying factory");
 		NvClothDestroyFactory(factory);
 		factory = nullptr;
 
 	}
+
 }
 
 void FClothManager::CreateSolver()
@@ -105,19 +107,32 @@ void FClothManager::CreateSolver()
 	if (!factory)
 		return;
 
-	solver = factory->createSolver(); 
+	solver = factory->createSolver();
+
 }
 
-void FClothManager::CreateFactory()
-{ 
-	factory = NvClothCreateFactoryCPU();
 
+void FClothManager::CreateFactory()
+{
+	factory = NvClothCreateFactoryCPU();
 	if (factory == nullptr)
 	{
-		UE_LOG("ClothManager: Faitled To Create Factory"); 
+		UE_LOG("ClothManager: CreateFactory: Failed");
 	}
 }
 
+void FClothManager::ClothSimulation(float DeltaSeconds)
+{
+	solver->beginSimulation(DeltaSeconds);
+
+	for (int i = 0; i < solver->getSimulationChunkCount(); ++i)
+	{
+		// multi thread로 병렬화 가능
+		solver->simulateChunk(i);
+	}
+
+	solver->endSimulation();
+}
 
 void FClothManager::AddClothToSolver(nv::cloth::Cloth* Cloth)
 {
@@ -126,16 +141,3 @@ void FClothManager::AddClothToSolver(nv::cloth::Cloth* Cloth)
 		solver->addCloth(Cloth);
 	}
 }
-
-void FClothManager::ClothSimulation(float DeltaSeconds)
-{
-	solver->beginSimulation(DeltaSeconds);
-	
-	for (int i = 0; i < solver->getSimulationChunkCount(); ++i)
-	{
-		solver->simulateChunk(i);
-	}
-	
-	solver->endSimulation();
-}
-

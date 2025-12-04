@@ -63,6 +63,10 @@ protected:
      */
     TArray<FNormalVertex> NormalSkinnedVertices;
 
+    // Cloth Comp에서 VertexBuffer를 업데이트 해줘야하기 때문에 Getter,Setter를 Protected로 만들었다. 
+    ID3D11Buffer* GetCPUSkinnedVertexBuffer() { return CPUSkinnedVertexBuffer; }
+    void SetCPUSkinnedVertexBuffer(ID3D11Buffer* InVertexBuffer) { CPUSkinnedVertexBuffer = InVertexBuffer; }
+
 private:
     FVector SkinVertexPosition(const FSkinnedVertex& InVertex) const;
     FVector SkinVertexNormal(const FSkinnedVertex& InVertex) const;

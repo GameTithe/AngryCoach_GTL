@@ -11,6 +11,8 @@
 
 class FClothManager
 {
+public:
+
 	static FClothManager& GetInstance()
 	{
 		static FClothManager Instance;
