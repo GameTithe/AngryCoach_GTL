@@ -5,12 +5,18 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <string>
+#include <unordered_map>
 
 // Forward declarations
 struct ID3D11Device;
 struct ID3D11DeviceContext;
 struct IDXGISwapChain;
 class UGameUIBase;
+class UUIWidget;
+class UProgressBarWidget;
+class UTextureWidget;
+class UUICanvas;
 
 /**
  * @brief 게임 상태 열거형
@@ -141,6 +147,13 @@ public:
     float GetScreenWidth() const { return ScreenWidth; }
     float GetScreenHeight() const { return ScreenHeight; }
 
+    // 뷰포트 설정 (에디터에서 사용)
+    void SetViewport(float X, float Y, float Width, float Height);
+    float GetViewportX() const { return ViewportX; }
+    float GetViewportY() const { return ViewportY; }
+    float GetViewportWidth() const { return ViewportWidth; }
+    float GetViewportHeight() const { return ViewportHeight; }
+
     // 마우스 입력 (UI 상호작용용)
     void OnMouseMove(float X, float Y);
     void OnMouseDown(float X, float Y);
@@ -159,6 +172,43 @@ public:
 
     // 디버그용: 강제 상태 전환
     void ForceSetState(EGameUIState State) { SetGameState(State); }
+
+    // ============================================
+    // Canvas 시스템 (Lua 동적 UI)
+    // ============================================
+
+    /**
+     * @brief 캔버스 생성
+     * @param Name 캔버스 이름
+     * @param ZOrder 렌더링 순서 (높을수록 위에 그려짐)
+     * @return 생성된 캔버스 포인터 (실패 시 nullptr)
+     */
+    UUICanvas* CreateCanvas(const std::string& Name, int32_t ZOrder = 0);
+
+    /**
+     * @brief 이름으로 캔버스 찾기
+     */
+    UUICanvas* FindCanvas(const std::string& Name);
+
+    /**
+     * @brief 캔버스 삭제
+     */
+    void RemoveCanvas(const std::string& Name);
+
+    /**
+     * @brief 모든 캔버스 삭제
+     */
+    void RemoveAllCanvases();
+
+    /**
+     * @brief 캔버스 가시성 설정
+     */
+    void SetCanvasVisible(const std::string& Name, bool bVisible);
+
+    /**
+     * @brief 캔버스 Z순서 설정
+     */
+    void SetCanvasZOrder(const std::string& Name, int32_t Z);
 
 private:
     UGameUIManager() = default;
@@ -241,9 +291,15 @@ private:
     int32_t MaxRounds = 3;
     int32_t CurrentRound = 1;
 
-    // 화면 크기
+    // 화면 크기 (전체 창)
     float ScreenWidth = 1920.0f;
     float ScreenHeight = 1080.0f;
+
+    // 뷰포트 크기 (에디터 뷰포트 또는 게임 영역)
+    float ViewportX = 0.0f;
+    float ViewportY = 0.0f;
+    float ViewportWidth = 1920.0f;
+    float ViewportHeight = 1080.0f;
 
     // 마우스 상태
     float MouseX = 0.0f;
@@ -258,4 +314,21 @@ private:
 
     // 이전 게임 상태 (일시정지 해제용)
     EGameUIState PreviousState = EGameUIState::None;
+
+    // ============================================
+    // Canvas 시스템
+    // ============================================
+
+    // 캔버스 컨테이너 (이름으로 빠른 검색)
+    std::unordered_map<std::string, std::unique_ptr<UUICanvas>> Canvases;
+
+    // Z순서로 정렬된 렌더링 순서 (ZOrder 변경 시 갱신)
+    std::vector<UUICanvas*> SortedCanvases;
+    bool bCanvasesSortDirty = false;
+
+    // 캔버스 렌더링
+    void RenderCanvases();
+
+    // 정렬 갱신
+    void UpdateCanvasSortOrder();
 };

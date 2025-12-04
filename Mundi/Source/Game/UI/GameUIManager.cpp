@@ -1,9 +1,14 @@
 #include "pch.h"
 #include "GameUIManager.h"
+#include "Widgets/UIWidget.h"
+#include "Widgets/UICanvas.h"
+#include "Widgets/ProgressBarWidget.h"
+#include "Widgets/TextureWidget.h"
 
 #include <d2d1_1.h>
 #include <dwrite.h>
 #include <dxgi1_2.h>
+#include <algorithm>
 
 #pragma comment(lib, "d2d1")
 #pragma comment(lib, "dwrite")
@@ -35,9 +40,9 @@ void UGameUIManager::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InC
     CreateD2DResources();
     bInitialized = true;
 
-    // 초기 상태를 InGame으로 설정 (테스트용)
-    // 실제 게임에서는 MainMenu로 시작하도록 변경 가능
-    SetGameState(EGameUIState::InGame);
+    // 초기 상태: HUD 비활성화 (Lua에서 직접 제어)
+    bShowHUD = false;
+    CurrentState = EGameUIState::None;
 }
 
 void UGameUIManager::CreateD2DResources()
@@ -190,12 +195,23 @@ void UGameUIManager::CreateTextFormats()
 
 void UGameUIManager::Shutdown()
 {
+    // 캔버스 정리
+    RemoveAllCanvases();
+
     ReleaseD2DResources();
 
     D3DDevice = nullptr;
     D3DContext = nullptr;
     SwapChain = nullptr;
     bInitialized = false;
+}
+
+void UGameUIManager::SetViewport(float X, float Y, float Width, float Height)
+{
+    ViewportX = X;
+    ViewportY = Y;
+    ViewportWidth = Width;
+    ViewportHeight = Height;
 }
 
 void UGameUIManager::ReleaseD2DResources()
@@ -368,6 +384,9 @@ void UGameUIManager::Render()
     default:
         break;
     }
+
+    // Lua 캔버스 렌더링 (항상 최상위에 그려짐)
+    RenderCanvases();
 
     EndD2DDraw();
 }
@@ -954,4 +973,104 @@ FUIButton* UGameUIManager::GetButtonAt(float X, float Y)
         }
     }
     return nullptr;
+}
+
+// ============================================
+// Canvas 시스템 구현
+// ============================================
+
+UUICanvas* UGameUIManager::CreateCanvas(const std::string& Name, int32_t ZOrder)
+{
+    // 이미 존재하면 실패
+    if (Canvases.find(Name) != Canvases.end())
+        return nullptr;
+
+    auto Canvas = std::make_unique<UUICanvas>();
+    Canvas->Name = Name;
+    Canvas->ZOrder = ZOrder;
+
+    UUICanvas* Ptr = Canvas.get();
+    Canvases[Name] = std::move(Canvas);
+    bCanvasesSortDirty = true;
+
+    return Ptr;
+}
+
+UUICanvas* UGameUIManager::FindCanvas(const std::string& Name)
+{
+    auto it = Canvases.find(Name);
+    if (it != Canvases.end())
+        return it->second.get();
+    return nullptr;
+}
+
+void UGameUIManager::RemoveCanvas(const std::string& Name)
+{
+    Canvases.erase(Name);
+    bCanvasesSortDirty = true;
+}
+
+void UGameUIManager::RemoveAllCanvases()
+{
+    Canvases.clear();
+    SortedCanvases.clear();
+    bCanvasesSortDirty = false;
+}
+
+void UGameUIManager::SetCanvasVisible(const std::string& Name, bool bVisible)
+{
+    if (auto* Canvas = FindCanvas(Name))
+    {
+        Canvas->SetVisible(bVisible);
+    }
+}
+
+void UGameUIManager::SetCanvasZOrder(const std::string& Name, int32_t Z)
+{
+    if (auto* Canvas = FindCanvas(Name))
+    {
+        Canvas->SetZOrder(Z);
+        bCanvasesSortDirty = true;
+    }
+}
+
+void UGameUIManager::UpdateCanvasSortOrder()
+{
+    SortedCanvases.clear();
+    SortedCanvases.reserve(Canvases.size());
+
+    for (auto& Pair : Canvases)
+    {
+        SortedCanvases.push_back(Pair.second.get());
+    }
+
+    // ZOrder 오름차순 정렬 (낮은 것이 먼저 그려짐)
+    std::sort(SortedCanvases.begin(), SortedCanvases.end(),
+        [](const UUICanvas* A, const UUICanvas* B)
+        {
+            return A->ZOrder < B->ZOrder;
+        });
+
+    bCanvasesSortDirty = false;
+}
+
+void UGameUIManager::RenderCanvases()
+{
+    if (!D2DContext || Canvases.empty())
+        return;
+
+    // 정렬이 필요하면 갱신
+    if (bCanvasesSortDirty)
+    {
+        UpdateCanvasSortOrder();
+    }
+
+    // ZOrder 순서대로 캔버스 렌더링
+    for (UUICanvas* Canvas : SortedCanvases)
+    {
+        if (Canvas && Canvas->bVisible)
+        {
+            Canvas->Render(D2DContext, ViewportX, ViewportY);
+        }
+    }
 }
