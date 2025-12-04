@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "StatsOverlayD2D.h"
+#include "Source/Game/UI/GameUIManager.h"
 #include "Color.h"
 
 void D3D11RHI::Initialize(HWND hWindow)
@@ -19,6 +20,9 @@ void D3D11RHI::Initialize(HWND hWindow)
 
     // Initialize Direct2D overlay after device/swapchain ready
     UStatsOverlayD2D::Get().Initialize(Device, DeviceContext, SwapChain);
+
+    // Initialize Game UI Manager
+    UGameUIManager::Get().Initialize(Device, DeviceContext, SwapChain);
 }
 
 void D3D11RHI::Release()
@@ -29,6 +33,9 @@ void D3D11RHI::Release()
 
     // Direct2D 오버레이를 먼저 정리하여 D3D 리소스에 대한 참조를 제거
     UStatsOverlayD2D::Get().Shutdown();
+
+    // Game UI Manager 정리
+    UGameUIManager::Get().Shutdown();
 
     if (DeviceContext)
     {
@@ -522,6 +529,10 @@ void D3D11RHI::Present()
 {
     // Draw any Direct2D overlays before present
     UStatsOverlayD2D::Get().Draw();
+
+    // Render Game UI
+    UGameUIManager::Get().Render();
+
     SwapChain->Present(0, 0); // vsync on
 }
 

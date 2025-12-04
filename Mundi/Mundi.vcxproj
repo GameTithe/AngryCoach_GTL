@@ -669,6 +669,8 @@
     </ClCompile>
     <ClCompile Include="Source\Slate\ImGui\ImGuiHelper.cpp" />
     <ClCompile Include="Source\Slate\StatsOverlayD2D.cpp" />
+    <ClCompile Include="Source\Game\UI\GameUIManager.cpp" />
+    <ClCompile Include="Source\Game\UI\GameUIBase.cpp" />
     <ClCompile Include="Source\Slate\UIManager.cpp" />
     <ClCompile Include="Source\Slate\USlateManager.cpp" />
     <ClCompile Include="Source\Slate\Widgets\ConsoleWidget.cpp" />
@@ -1155,6 +1157,8 @@
     </ClInclude>
     <ClInclude Include="Source\Slate\ImGui\ImGuiHelper.h" />
     <ClInclude Include="Source\Slate\StatsOverlayD2D.h" />
+    <ClInclude Include="Source\Game\UI\GameUIManager.h" />
+    <ClInclude Include="Source\Game\UI\GameUIBase.h" />
     <ClInclude Include="Source\Slate\UIManager.h" />
     <ClInclude Include="Source\Slate\USlateManager.h" />
     <ClInclude Include="Source\Slate\Widgets\ConsoleWidget.h" />
