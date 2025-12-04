@@ -614,14 +614,16 @@ void USlateManager::Update(float DeltaSeconds)
     }
 
     // MainViewport 정보를 GameUIManager에 전달
+    // 뷰포트 툴바(35px)를 제외한 실제 게임 콘텐츠 영역 계산
     if (MainViewport && MainViewport->GetViewport())
     {
         FViewport* VP = MainViewport->GetViewport();
+        const float ViewportToolbarHeight = 35.0f;
         UGameUIManager::Get().SetViewport(
             static_cast<float>(VP->GetStartX()),
-            static_cast<float>(VP->GetStartY()),
+            static_cast<float>(VP->GetStartY()) + ViewportToolbarHeight,
             static_cast<float>(VP->GetSizeX()),
-            static_cast<float>(VP->GetSizeY())
+            static_cast<float>(VP->GetSizeY()) - ViewportToolbarHeight
         );
     }
 
