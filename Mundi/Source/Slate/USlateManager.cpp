@@ -87,6 +87,7 @@ USlateManager::~USlateManager()
 static SSkeletalMeshViewerWindow* g_SkeletalViewerWindow = nullptr;
 static SParticleViewerWindow* g_ParticleViewerWindow = nullptr;
 static SGraphEditorWindow* g_AnimationGraphEditorWindow = nullptr;
+static SWeightPaintEditorWindow* g_WeightPaintEditorWindow = nullptr;
 
 static bool IsMouseInViewportWindow(const FVector2D& MousePos)
 {
@@ -108,6 +109,12 @@ static bool IsMouseInViewportWindow(const FVector2D& MousePos)
     if (g_AnimationGraphEditorWindow && g_AnimationGraphEditorWindow->IsMouseInBlendSpaceViewport(MousePos))
     {
         return true;
+    }
+
+    // Weight Paint 에디터의 뷰포트 영역 체크
+    if (g_WeightPaintEditorWindow && g_WeightPaintEditorWindow->IsOpen())
+    {
+        return g_WeightPaintEditorWindow->GetViewportRect().Contains(MousePos);
     }
 
     return false;
@@ -390,6 +397,51 @@ void USlateManager::CloseUIEditor()
     UIEditorWindow = nullptr;
 }
 
+// ============================================================
+// Weight Paint Editor
+// ============================================================
+void USlateManager::OpenWeightPaintEditor()
+{
+    if (WeightPaintEditorWindow)
+        return;
+
+    WeightPaintEditorWindow = new SWeightPaintEditorWindow();
+    g_WeightPaintEditorWindow = WeightPaintEditorWindow;
+
+    // 창 크기/위치 설정
+    const float toolbarHeight = 50.0f;
+    const float availableHeight = Rect.GetHeight() - toolbarHeight;
+    const float w = Rect.GetWidth() * 0.85f;
+    const float h = availableHeight * 0.85f;
+    const float x = Rect.Left + (Rect.GetWidth() - w) * 0.5f;
+    const float y = Rect.Top + toolbarHeight + (availableHeight - h) * 0.5f;
+
+    WeightPaintEditorWindow->Initialize(x, y, w, h, World, Device);
+}
+
+void USlateManager::CloseWeightPaintEditor()
+{
+    if (!WeightPaintEditorWindow) return;
+    delete WeightPaintEditorWindow;
+    WeightPaintEditorWindow = nullptr;
+    g_WeightPaintEditorWindow = nullptr;
+}
+
+void USlateManager::OpenWeightPaintEditorWithFile(const char* FilePath)
+{
+    // 에디터가 이미 열려있으면 그냥 사용, 아니면 새로 열기
+    if (!WeightPaintEditorWindow)
+    {
+        OpenWeightPaintEditor();
+    }
+
+    // 해당 메쉬를 Weight Paint Editor에 로드
+    if (WeightPaintEditorWindow && FilePath)
+    {
+        WeightPaintEditorWindow->LoadSkeletalMesh(FilePath);
+    }
+}
+
 void USlateManager::CloseAnimationGraphEditor()
 {
     if (!AnimationGraphEditorWindow)
@@ -621,14 +673,25 @@ void USlateManager::Render()
     {
         UIEditorWindow->OnRender();
     }
+
+    // Weight Paint Editor 렌더링 (OnRenderViewport는 RenderAfterUI에서 호출)
+    if (WeightPaintEditorWindow && WeightPaintEditorWindow->IsOpen())
+    {
+        WeightPaintEditorWindow->OnRender();
+    }
 }
 
 void USlateManager::RenderAfterUI()
 {
-
     if (ParticleViewerWindow)
     {
         ParticleViewerWindow->OnRenderViewport();
+    }
+
+    // Weight Paint Editor 뷰포트 렌더링 (ImGui 후에 렌더링해야 배경에 덮이지 않음)
+    if (WeightPaintEditorWindow && WeightPaintEditorWindow->IsOpen())
+    {
+        WeightPaintEditorWindow->OnRenderViewport();
     }
 }
 
@@ -679,6 +742,18 @@ void USlateManager::Update(float DeltaSeconds)
     if (AnimationGraphEditorWindow)
     {
         AnimationGraphEditorWindow->OnUpdate(DeltaSeconds);
+    }
+
+    // Weight Paint Editor 업데이트
+    if (WeightPaintEditorWindow)
+    {
+        WeightPaintEditorWindow->OnUpdate(DeltaSeconds);
+
+        // 창이 닫혔으면 정리
+        if (!WeightPaintEditorWindow->IsOpen())
+        {
+            CloseWeightPaintEditor();
+        }
     }
 
     // 콘솔 애니메이션 업데이트
@@ -830,6 +905,13 @@ void USlateManager::OnMouseMove(FVector2D MousePos)
         return;
     }
 
+    // Weight Paint Editor 라우팅
+    if (WeightPaintEditorWindow && WeightPaintEditorWindow->IsOpen() && WeightPaintEditorWindow->Rect.Contains(MousePos))
+    {
+        WeightPaintEditorWindow->OnMouseMove(MousePos);
+        return;
+    }
+
     // BlendSpace 프리뷰 뷰포트로 라우팅
     if (AnimationGraphEditorWindow)
     {
@@ -857,6 +939,13 @@ void USlateManager::OnMouseDown(FVector2D MousePos, uint32 Button)
     if (ParticleViewerWindow && ParticleViewerWindow->Rect.Contains(MousePos))
     {
         ParticleViewerWindow->OnMouseDown(MousePos, Button);
+        return;
+    }
+
+    // Weight Paint Editor 라우팅
+    if (WeightPaintEditorWindow && WeightPaintEditorWindow->IsOpen() && WeightPaintEditorWindow->Rect.Contains(MousePos))
+    {
+        WeightPaintEditorWindow->OnMouseDown(MousePos, Button);
         return;
     }
 
@@ -919,6 +1008,13 @@ void USlateManager::OnMouseUp(FVector2D MousePos, uint32 Button)
     if (AnimationGraphEditorWindow)
     {
         AnimationGraphEditorWindow->OnMouseUp(MousePos, Button);
+        // do not return; still allow panels to finish mouse up
+    }
+
+    // Weight Paint Editor - 뷰포트 밖에서 마우스를 놓아도 드래그가 해제되도록 항상 처리
+    if (WeightPaintEditorWindow && WeightPaintEditorWindow->IsOpen())
+    {
+        WeightPaintEditorWindow->OnMouseUp(MousePos, Button);
         // do not return; still allow panels to finish mouse up
     }
 
@@ -1006,6 +1102,13 @@ void USlateManager::Shutdown()
     {
         delete UIEditorWindow;
         UIEditorWindow = nullptr;
+    }
+
+    if (WeightPaintEditorWindow)
+    {
+        delete WeightPaintEditorWindow;
+        WeightPaintEditorWindow = nullptr;
+        g_WeightPaintEditorWindow = nullptr;
     }
 }
 

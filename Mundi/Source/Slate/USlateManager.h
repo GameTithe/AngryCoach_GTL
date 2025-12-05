@@ -8,6 +8,7 @@
 #include "Windows/SSkeletalMeshViewerWindow.h"
 #include "Windows/Viewer/ParticleViewerWindow.h"
 #include "Windows/UIEditor/SUIEditorWindow.h"
+#include "Windows/SWeightPaintEditorWindow.h"
 
 class UAnimationGraph;
 class SAnimGraphEditorWindow;
@@ -100,6 +101,12 @@ public:
     void CloseUIEditor();
     bool IsUIEditorOpen() const { return UIEditorWindow != nullptr; }
 
+    // Weight Paint Editor
+    void OpenWeightPaintEditor();
+    void OpenWeightPaintEditorWithFile(const char* FilePath);
+    void CloseWeightPaintEditor();
+    bool IsWeightPaintEditorOpen() const { return WeightPaintEditorWindow != nullptr; }
+
 private:
     FRect Rect; // 이전엔 SWindow로부터 상속받던 영역 정보
 
@@ -150,6 +157,9 @@ private:
 
     // UI Editor window
     SUIEditorWindow* UIEditorWindow = nullptr;
+
+    // Weight Paint Editor window
+    SWeightPaintEditorWindow* WeightPaintEditorWindow = nullptr;
 
     // 애니메이션 그래프 편집기
     SGraphEditorWindow* AnimationGraphEditorWindow = nullptr;

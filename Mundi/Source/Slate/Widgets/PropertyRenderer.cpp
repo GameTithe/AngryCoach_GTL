@@ -41,6 +41,8 @@ TArray<FString> UPropertyRenderer::CachedSoundPaths;
 TArray<const char*> UPropertyRenderer::CachedSoundItems;
 TArray<FString> UPropertyRenderer::CachedScriptPaths;
 TArray<const char*> UPropertyRenderer::CachedScriptItems;
+TArray<FString> UPropertyRenderer::CachedClothWeightAssetPaths;
+TArray<FString> UPropertyRenderer::CachedClothWeightAssetItems;
 
 static bool ItemsGetter(void* Data, int Index, const char** CItem)
 {
@@ -179,6 +181,10 @@ bool UPropertyRenderer::RenderProperty(const FProperty& Property, void* ObjectIn
 
 	case EPropertyType::AggCollisionShapeType:
 		bChanged = RenderCollisionShapeTypeProperty(Property, ObjectInstance);
+		break;
+
+	case EPropertyType::ClothWeightAsset:
+		bChanged = RenderClothWeightAssetProperty(Property, ObjectInstance);
 		break;
 
 	default:
@@ -438,6 +444,31 @@ void UPropertyRenderer::CacheResources()
             CachedSoundItems.push_back(path.c_str());
         }
     }
+
+	// 6. ClothWeightAsset (.clothweight 파일)
+	if (CachedClothWeightAssetPaths.IsEmpty() && CachedClothWeightAssetItems.IsEmpty())
+	{
+		CachedClothWeightAssetPaths.Add("");
+		CachedClothWeightAssetItems.Add("None");
+
+		// Data 디렉토리에서 .clothweight 파일 검색
+		const FString DataDir = GDataDir;
+		if (fs::exists(DataDir) && fs::is_directory(DataDir))
+		{
+			for (const auto& Entry : fs::recursive_directory_iterator(DataDir))
+			{
+				if (Entry.is_regular_file() && Entry.path().extension() == ".clothweight")
+				{
+					FString Path = WideToUTF8(Entry.path().generic_wstring());
+					CachedClothWeightAssetPaths.Add(NormalizePath(Path));
+
+					// 파일명만 추출해서 표시
+					std::filesystem::path fsPath(Path);
+					CachedClothWeightAssetItems.Add(fsPath.filename().string());
+				}
+			}
+		}
+	}
 }
 
 void UPropertyRenderer::ClearResourcesCache()
@@ -456,6 +487,8 @@ void UPropertyRenderer::ClearResourcesCache()
 	CachedSoundItems.Empty();
 	CachedScriptPaths.Empty();
 	CachedScriptItems.Empty();
+	CachedClothWeightAssetPaths.Empty();
+	CachedClothWeightAssetItems.Empty();
 }
 
 // ===== 타입별 렌더링 구현 =====
@@ -2290,6 +2323,56 @@ bool UPropertyRenderer::RenderCollisionShapeTypeProperty(const FProperty& Prop, 
 		case 3: Description = "다각형"; break;
 		}
 		ImGui::SetTooltip("%s", Description);
+	}
+
+	return bChanged;
+}
+
+bool UPropertyRenderer::RenderClothWeightAssetProperty(const FProperty& Prop, void* Instance)
+{
+	bool bChanged = false;
+	FString* FilePath = Prop.GetValuePtr<FString>(Instance);
+	if (!FilePath)
+		return false;
+
+	// 현재 선택된 아이템 찾기
+	int CurrentItem = 0; // 0번 인덱스 ("None")이 기본값
+	for (int i = 0; i < CachedClothWeightAssetPaths.Num(); ++i)
+	{
+		if (!FilePath->empty() && CachedClothWeightAssetPaths[i] == *FilePath)
+		{
+			CurrentItem = i;
+			break;
+		}
+	}
+
+	// 콤보박스 렌더링
+	FString Label = FString(Prop.Name) + "##ClothWeightAsset";
+	const char* PreviewValue = CurrentItem < CachedClothWeightAssetItems.Num()
+		? CachedClothWeightAssetItems[CurrentItem].c_str()
+		: "None";
+
+	ImGui::SetNextItemWidth(200.0f);
+	if (ImGui::BeginCombo(Label.c_str(), PreviewValue))
+	{
+		for (int i = 0; i < CachedClothWeightAssetItems.Num(); ++i)
+		{
+			bool bIsSelected = (CurrentItem == i);
+			if (ImGui::Selectable(CachedClothWeightAssetItems[i].c_str(), bIsSelected))
+			{
+				*FilePath = CachedClothWeightAssetPaths[i];
+				bChanged = true;
+			}
+			if (bIsSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
+	// 툴팁: 전체 경로 표시
+	if (ImGui::IsItemHovered() && !FilePath->empty())
+	{
+		ImGui::SetTooltip("Path: %s", FilePath->c_str());
 	}
 
 	return bChanged;

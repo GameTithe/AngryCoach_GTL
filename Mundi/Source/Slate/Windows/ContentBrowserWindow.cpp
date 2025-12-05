@@ -384,6 +384,60 @@ void UContentBrowserWindow::RenderFileItem(FFileEntry& Entry, int Index, bool bU
 
     ImGui::EndGroup();
 
+    // 파일 아이템 우클릭 컨텍스트 메뉴
+    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+    {
+        SelectedIndex = Index;
+        SelectedFile = &Entry;
+        ImGui::OpenPopup("FileItemContextMenu");
+    }
+
+    if (ImGui::BeginPopup("FileItemContextMenu"))
+    {
+        std::string ext = Entry.Extension;
+        std::string pathUTF8 = WideToUTF8(Entry.Path.wstring());
+
+        if (ext == ".fbx")
+        {
+            if (ImGui::MenuItem("Open in Skeletal Mesh Viewer"))
+            {
+                USlateManager::GetInstance().OpenSkeletalMeshViewerWithFile(pathUTF8.c_str());
+            }
+            if (ImGui::MenuItem("Open in Weight Paint Editor"))
+            {
+                USlateManager::GetInstance().OpenWeightPaintEditorWithFile(pathUTF8.c_str());
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Create Physics Asset"))
+            {
+                CreateNewPhysicsAssetForSkeletalMesh();
+            }
+        }
+        else if (ext == ".particle")
+        {
+            if (ImGui::MenuItem("Open in Particle Viewer"))
+            {
+                UParticleSystem* LoadedSystem = UResourceManager::GetInstance().Load<UParticleSystem>(pathUTF8);
+                if (LoadedSystem)
+                {
+                    USlateManager::GetInstance().OpenParticleViewerWithSystem(LoadedSystem, pathUTF8);
+                }
+            }
+        }
+        else if (ext == ".phys")
+        {
+            if (ImGui::MenuItem("Open in Skeletal Mesh Viewer"))
+            {
+                UPhysicsAsset* LoadedAsset = UResourceManager::GetInstance().Load<UPhysicsAsset>(pathUTF8);
+                if (LoadedAsset)
+                {
+                    USlateManager::GetInstance().OpenSkeletalMeshViewerWithAsset(LoadedAsset, pathUTF8);
+                }
+            }
+        }
+        ImGui::EndPopup();
+    }
+
     HandleDragSource(Entry);
 }
 
