@@ -125,9 +125,22 @@ void FClothManager::CreateFactory()
 
 void FClothManager::ClothSimulation(float DeltaSeconds)
 {
+	if (!solver)
+	{
+		UE_LOG("[ClothManager] ClothSimulation: Solver is NULL");
+		return;
+	}
+
+	int32 chunkCount = solver->getSimulationChunkCount();
+	if (chunkCount == 0)
+	{
+		// Cloth가 하나도 추가되지 않았음
+		return;
+	}
+
 	solver->beginSimulation(DeltaSeconds);
 
-	for (int i = 0; i < solver->getSimulationChunkCount(); ++i)
+	for (int i = 0; i < chunkCount; ++i)
 	{
 		// multi thread로 병렬화 가능
 		solver->simulateChunk(i);
@@ -138,8 +151,18 @@ void FClothManager::ClothSimulation(float DeltaSeconds)
 
 void FClothManager::AddClothToSolver(nv::cloth::Cloth* Cloth)
 {
-	if (solver)
+	if (!Cloth)
 	{
-		solver->addCloth(Cloth);
+		UE_LOG("[ClothManager] AddClothToSolver: Cloth is NULL");
+		return;
 	}
+
+	if (!solver)
+	{
+		UE_LOG("[ClothManager] AddClothToSolver: Solver is NULL");
+		return;
+	}
+
+	solver->addCloth(Cloth);
+	UE_LOG("[ClothManager] Added cloth to solver. Total chunks: %d", solver->getSimulationChunkCount());
 }

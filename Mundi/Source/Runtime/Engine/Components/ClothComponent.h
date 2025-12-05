@@ -90,7 +90,8 @@ public:
 	virtual void TickComponent(float DeltaTime) override;
 	virtual void OnCreatePhysicsState() override;
 	virtual void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
-	virtual void DuplicateSubObjects() override;  
+	virtual void DuplicateSubObjects() override;
+	virtual FAABB GetWorldAABB() const override;
 
 	// Cloth Set up
 	void SetupClothFromMesh();
@@ -157,6 +158,15 @@ protected:
 	TArray<physx::PxVec3> ClothNormals;
 	TArray<uint32> ClothIndices;
 	TArray<float> ClothInvMasses;
+
+	// 메시 정점 인덱스 -> Cloth 파티클 인덱스 매핑
+	TArray<int32> MeshVertexToClothParticle;
+
+	// Cloth 파티클 -> 원본 메시 정점들 매핑 (UV seam 대응)
+	TArray<TArray<uint32>> ParticleToGlobalVertices;
+
+	// Cloth 정점 인덱스 -> 대표 메시 정점 인덱스 매핑
+	TArray<uint32> ClothVertexToMeshVertex;
 
 	TArray<int32> AttachmentVertices;
 	TArray<FName> AttachmentBoneNames;
