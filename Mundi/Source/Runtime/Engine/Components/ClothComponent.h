@@ -1,10 +1,11 @@
-﻿#pragma once 
+﻿#pragma once
 #include "SkinnedMeshComponent.h"
+#include "StaticMesh.h"
 #include "NvCloth/include/Factory.h"
 #include "NvCloth/include/Fabric.h"
 #include "NvCloth/include/Cloth.h"
 #include "NvCloth/include/Solver.h"
-#include "NvCloth/include/Callbacks.h"	
+#include "NvCloth/include/Callbacks.h"
 #include "NvCloth/include/NvClothExt/ClothFabricCooker.h"
 #include "foundation/PxAllocatorCallback.h"
 #include "foundation/PxErrorCallback.h"
@@ -89,12 +90,13 @@ public:
 	virtual void TickComponent(float DeltaTime) override;
 	virtual void OnCreatePhysicsState() override;
 	virtual void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
-	
+	virtual void DuplicateSubObjects() override;  
+
 	// Cloth Set up
 	void SetupClothFromMesh();
 	void ReleaseCloth();
 
-	// Helper functions
+	// Helper functions (for attachment)
 	int32 GetBoneIndex(const FName& BoneName) const;
 	FTransform GetBoneTransform(int32 BoneIndex) const;
 	FVector GetBoneLocation(const FName& BoneName);
@@ -134,41 +136,45 @@ protected:
 	void RecalculateNormals();
 	FVector GetAttachmentPosition(int AttachmentIndex);
 
-	// PIE State Management 
-	bool bHasSavedOriginalState;
-
+	// PIE State Management
+	TArray<physx::PxVec4> CacheOriginalParticles;    // PIE 시작 전 원본 위치 (복구용)
+	bool bHasSavedOriginalState = false;        // 원본 상태 저장 여부
 	void SaveOriginalState();
-	void RestoreOrigina1lState();
-	void ExtractClothSection(const FGroupInfo& Group, const TArray<FSkinnedVertex>& AllVertices, const TArray<uint32>& AllIndices);
-	
-	void ExtractClothSectionOrdered(const FGroupInfo& Group, const TArray<FSkinnedVertex>& AllVertices, const TArray<uint32>& AllIndices);
-	bool ShouldFixVertex(const FSkinnedVertex& Vertex);
-	void UpdateSectionVertices(const FGroupInfo& Group, int32& ParticleIdx);
 	 
-	// Cloth Data
+
+	// CPU-side mesh data
+	//TArray<FNormalVertex> ClothVertices;       // 원본 정점 데이터 
+	//TArray<FNormalVertex> RenderedVertices;    // 렌더링용 정점 데이터 (시뮬레이션 결과 반영)
+	//TArray<uint32> ClothMeshIndices;
+
+	// GPU Buffers
+	//ID3D11Buffer* ClothVertexBuffer = nullptr;
+	//ID3D11Buffer* ClothIndexBuffer = nullptr;
+
+	// Cloth Simulation Data
 	TArray<physx::PxVec4> ClothParticles;
 	TArray<physx::PxVec4> PreviousParticles;
 	TArray<physx::PxVec3> ClothNormals;
-	TArray<uint32> ClothIndices;                 
-	TArray<float> ClothInvMasses;               
+	TArray<uint32> ClothIndices;
+	TArray<float> ClothInvMasses;
 
-	TArray<int32> AttachmentVertices;          
-	TArray<FName> AttachmentBoneNames;         
-	TArray<FVector> AttachmentOffsets;         
+	TArray<int32> AttachmentVertices;
+	TArray<FName> AttachmentBoneNames;
+	TArray<FVector> AttachmentOffsets;
 
 	nv::cloth::Fabric* fabric;
 	nv::cloth::Cloth* cloth;
 	nv::cloth::Vector<int32_t>::Type phaseTypeInfo;
 	nv::cloth::PhaseConfig* phases;
 
-	// Setting 
+	// Setting
 	FClothSimulationSettings ClothSettings;
 	bool bClothEnabled = true;
 	bool bClothInitialized = false;
-	 
-	// Cloth Paint  
-	 
-	// Attachment Data 
+
+	// Cloth Paint
+
+	// Attachment Data
 
 	// Constraints
 };

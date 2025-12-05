@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_StandAlone|x64">
@@ -290,6 +290,7 @@
     </ClCompile>
     <ClCompile Include="Source\Runtime\Core\Object\MyCar.cpp" />
     <ClCompile Include="Source\Editor\FBX\BlendSpace\BlendSpace2D.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\AccessoryComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\ClothComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_DOF.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\SpringArmComponent.cpp" />
@@ -701,7 +702,8 @@
     <ClCompile Include="Generated\UParticleSystemComponent.generated.cpp" />
     <ClCompile Include="Generated\AMyCar.generated.cpp" />
     <ClCompile Include="Generated\USpringArmComponent.generated.cpp" />
-  <ClCompile Include="Generated\UClothComponent.generated.cpp" /></ItemGroup>
+    <ClCompile Include="Generated\UClothComponent.generated.cpp" />
+  </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -919,6 +921,7 @@
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimTypes.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\Team2AnimInstance.h" />
     <ClInclude Include="Source\Runtime\Engine\Audio\Sound.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\AccessoryComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\AudioComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\CapsuleComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\ClothComponent.h" />
@@ -1194,7 +1197,8 @@
     <ClInclude Include="Generated\UParticleSystemComponent.generated.h" />
     <ClInclude Include="Generated\AMyCar.generated.h" />
     <ClInclude Include="Generated\USpringArmComponent.generated.h" />
-  <ClInclude Include="Generated\UClothComponent.generated.h" /></ItemGroup>
+    <ClInclude Include="Generated\UClothComponent.generated.h" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />
