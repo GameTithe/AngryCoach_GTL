@@ -133,9 +133,17 @@ void FBXMeshLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<
 	// 역전치(노말용)
 	FbxAMatrix FbxSceneWorldInverseTranspose{};
 
+	// bone이 없는 경우를 위해 메시 노드의 글로벌 트랜스폼으로 초기화
+	FbxNode* MeshNode = InMesh->GetNode();
+	if (MeshNode)
+	{
+		FbxSceneWorld = MeshNode->EvaluateGlobalTransform();
+		FbxSceneWorldInverseTranspose = FbxSceneWorld.Inverse().Transpose();
+	}
+
 	// Deformer: 매시의 모양을 변형시키는 모든 기능, ex) skin, blendShape(모프 타겟, 두 표정 미리 만들고 블랜딩해서 서서히 변화시킴)
 	// 99.9퍼센트는 스킨이 하나만 있고 완전 복잡한 얼굴 표정을 표현하기 위해서 2개 이상을 쓰기도 하는데 0번만 쓰도록 해도 문제 없음(AAA급 게임에서 2개 이상을 처리함)
-	// 2개 이상의 스킨이 들어가면 뼈 인덱스가 16개까지도 늘어남. 
+	// 2개 이상의 스킨이 들어가면 뼈 인덱스가 16개까지도 늘어남.
 	if (InMesh->GetDeformerCount(FbxDeformer::eSkin) > 0)
 	{
 		// 클러스터: 뼈라고 봐도 됨(뼈 정보와(Bind Pose 행렬) 그 뼈가 영향을 주는 정점, 가중치 저장)

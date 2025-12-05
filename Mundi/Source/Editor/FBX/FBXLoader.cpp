@@ -356,6 +356,28 @@ FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 
 		// 여러 루트 본이 있으면 가상 루트 생성
 		FBXSkeletonLoader::EnsureSingleRootBone(*MeshData);
+
+		// bone이 없는 경우 기본 root bone 생성
+		if (MeshData->Skeleton.Bones.IsEmpty())
+		{
+			FBone DefaultRootBone;
+			DefaultRootBone.Name = "Root";
+			DefaultRootBone.ParentIndex = -1;
+			DefaultRootBone.BindPose = FMatrix::Identity();
+			DefaultRootBone.InverseBindPose = FMatrix::Identity();
+
+			MeshData->Skeleton.Bones.Add(DefaultRootBone);
+			MeshData->Skeleton.BoneNameToIndex.Add(DefaultRootBone.Name, 0);
+
+			// 모든 정점을 기본 bone에 바인딩
+			for (auto& Vertex : MeshData->Vertices)
+			{
+				Vertex.BoneIndices[0] = 0;
+				Vertex.BoneWeights[0] = 1.0f;
+			}
+
+			UE_LOG("UFbxLoader: No skeleton found. Created default root bone for mesh.");
+		}
 	}
 
 	// 머티리얼이 있는 경우 플래그 설정
