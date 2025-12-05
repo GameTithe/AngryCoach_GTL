@@ -10,6 +10,11 @@
 #include <dxgi1_2.h>
 #include <algorithm>
 
+#ifdef _EDITOR
+#include "Source/Runtime/Engine/GameFramework/EditorEngine.h"
+extern UEditorEngine GEngine;
+#endif
+
 #pragma comment(lib, "d2d1")
 #pragma comment(lib, "dwrite")
 
@@ -282,6 +287,12 @@ void UGameUIManager::Render()
 {
     if (!bInitialized)
         return;
+
+#ifdef _EDITOR
+    // 에디터 모드에서는 PIE 실행 중일 때만 UI 렌더링
+    if (!GEngine.IsPIEActive())
+        return;
+#endif
 
     BeginD2DDraw();
 
