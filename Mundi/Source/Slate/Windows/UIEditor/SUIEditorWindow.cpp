@@ -543,27 +543,127 @@ void SUIEditorWindow::RenderCanvas(float Width, float Height)
             CanvasPan.y += delta.y;
         }
 
-        // 위젯 선택/이동 (좌클릭)
+        // 위젯 선택/이동/리사이즈 (좌클릭)
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::GetIO().KeyAlt)
         {
             ImVec2 mousePos = ImGui::GetMousePos();
             ImVec2 localPos = ImVec2((mousePos.x - canvasBoundsMin.x) / CanvasZoom,
                                       (mousePos.y - canvasBoundsMin.y) / CanvasZoom);
 
-            int32_t hitIndex = HitTest(localPos);
-            SelectWidget(hitIndex);
-
-            if (hitIndex >= 0)
+            // 먼저 핸들 클릭 체크 (선택된 위젯이 있을 때만)
+            int32_t handleIndex = HitTestHandle(localPos);
+            if (handleIndex >= 0)
             {
-                bDraggingWidget = true;
+                bDraggingHandle = true;
+                DragHandleIndex = handleIndex;
                 DragStartPos = localPos;
-                DragWidgetStartPos = ImVec2(CurrentAsset.Widgets[hitIndex].X,
-                                            CurrentAsset.Widgets[hitIndex].Y);
+                auto& widget = CurrentAsset.Widgets[SelectedWidgetIndex];
+                DragWidgetStartPos = ImVec2(widget.X, widget.Y);
+                DragWidgetStartSize = ImVec2(widget.Width, widget.Height);
+            }
+            else
+            {
+                // 위젯 클릭 체크
+                int32_t hitIndex = HitTest(localPos);
+                SelectWidget(hitIndex);
+
+                if (hitIndex >= 0)
+                {
+                    bDraggingWidget = true;
+                    DragStartPos = localPos;
+                    DragWidgetStartPos = ImVec2(CurrentAsset.Widgets[hitIndex].X,
+                                                CurrentAsset.Widgets[hitIndex].Y);
+                }
+            }
+        }
+
+        // 핸들 드래그 리사이즈
+        if (bDraggingHandle && SelectedWidgetIndex >= 0)
+        {
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+            {
+                ImVec2 mousePos = ImGui::GetMousePos();
+                ImVec2 localPos = ImVec2((mousePos.x - canvasBoundsMin.x) / CanvasZoom,
+                                          (mousePos.y - canvasBoundsMin.y) / CanvasZoom);
+
+                float deltaX = localPos.x - DragStartPos.x;
+                float deltaY = localPos.y - DragStartPos.y;
+
+                auto& widget = CurrentAsset.Widgets[SelectedWidgetIndex];
+                float newX = DragWidgetStartPos.x;
+                float newY = DragWidgetStartPos.y;
+                float newW = DragWidgetStartSize.x;
+                float newH = DragWidgetStartSize.y;
+
+                // 핸들별 리사이즈 로직
+                // 0: 좌상, 1: 상, 2: 우상, 3: 우, 4: 우하, 5: 하, 6: 좌하, 7: 좌
+                switch (DragHandleIndex)
+                {
+                case 0: // 좌상
+                    newX += deltaX; newW -= deltaX;
+                    newY += deltaY; newH -= deltaY;
+                    break;
+                case 1: // 상
+                    newY += deltaY; newH -= deltaY;
+                    break;
+                case 2: // 우상
+                    newW += deltaX;
+                    newY += deltaY; newH -= deltaY;
+                    break;
+                case 3: // 우
+                    newW += deltaX;
+                    break;
+                case 4: // 우하
+                    newW += deltaX;
+                    newH += deltaY;
+                    break;
+                case 5: // 하
+                    newH += deltaY;
+                    break;
+                case 6: // 좌하
+                    newX += deltaX; newW -= deltaX;
+                    newH += deltaY;
+                    break;
+                case 7: // 좌
+                    newX += deltaX; newW -= deltaX;
+                    break;
+                }
+
+                // 최소 크기 보장
+                const float minSize = 10.0f;
+                if (newW < minSize)
+                {
+                    if (DragHandleIndex == 0 || DragHandleIndex == 6 || DragHandleIndex == 7)
+                        newX = DragWidgetStartPos.x + DragWidgetStartSize.x - minSize;
+                    newW = minSize;
+                }
+                if (newH < minSize)
+                {
+                    if (DragHandleIndex == 0 || DragHandleIndex == 1 || DragHandleIndex == 2)
+                        newY = DragWidgetStartPos.y + DragWidgetStartSize.y - minSize;
+                    newH = minSize;
+                }
+
+                if (bSnapToGrid)
+                {
+                    newX = std::round(newX / GridSize) * GridSize;
+                    newY = std::round(newY / GridSize) * GridSize;
+                    newW = std::round(newW / GridSize) * GridSize;
+                    newH = std::round(newH / GridSize) * GridSize;
+                    if (newW < minSize) newW = minSize;
+                    if (newH < minSize) newH = minSize;
+                }
+
+                widget.X = newX;
+                widget.Y = newY;
+                widget.Width = newW;
+                widget.Height = newH;
+                bModified = true;
             }
         }
 
         // 위젯 드래그 이동
-        if (bDraggingWidget && SelectedWidgetIndex >= 0)
+        if (bDraggingWidget && SelectedWidgetIndex >= 0 && !bDraggingHandle)
         {
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
             {
@@ -592,6 +692,8 @@ void SUIEditorWindow::RenderCanvas(float Width, float Height)
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
         {
             bDraggingWidget = false;
+            bDraggingHandle = false;
+            DragHandleIndex = -1;
         }
     }
 }
@@ -1188,7 +1290,42 @@ int32_t SUIEditorWindow::HitTest(ImVec2 CanvasPos)
 
 int32_t SUIEditorWindow::HitTestHandle(ImVec2 CanvasPos)
 {
-    // TODO: 핸들 히트 테스트 구현
+    if (SelectedWidgetIndex < 0 || SelectedWidgetIndex >= (int)CurrentAsset.Widgets.size())
+        return -1;
+
+    const auto& widget = CurrentAsset.Widgets[SelectedWidgetIndex];
+    const float handleSize = 8.0f;  // 히트 영역 크기
+
+    float minX = widget.X;
+    float minY = widget.Y;
+    float maxX = widget.X + widget.Width;
+    float maxY = widget.Y + widget.Height;
+    float midX = (minX + maxX) * 0.5f;
+    float midY = (minY + maxY) * 0.5f;
+
+    // 8개의 핸들 위치 (0: 좌상, 1: 상, 2: 우상, 3: 우, 4: 우하, 5: 하, 6: 좌하, 7: 좌)
+    ImVec2 handles[8] = {
+        ImVec2(minX, minY),  // 0: 좌상
+        ImVec2(midX, minY),  // 1: 상
+        ImVec2(maxX, minY),  // 2: 우상
+        ImVec2(maxX, midY),  // 3: 우
+        ImVec2(maxX, maxY),  // 4: 우하
+        ImVec2(midX, maxY),  // 5: 하
+        ImVec2(minX, maxY),  // 6: 좌하
+        ImVec2(minX, midY),  // 7: 좌
+    };
+
+    for (int i = 0; i < 8; i++)
+    {
+        if (CanvasPos.x >= handles[i].x - handleSize * 0.5f &&
+            CanvasPos.x <= handles[i].x + handleSize * 0.5f &&
+            CanvasPos.y >= handles[i].y - handleSize * 0.5f &&
+            CanvasPos.y <= handles[i].y + handleSize * 0.5f)
+        {
+            return i;
+        }
+    }
+
     return -1;
 }
 
