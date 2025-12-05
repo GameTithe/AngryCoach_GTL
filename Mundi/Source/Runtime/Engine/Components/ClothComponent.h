@@ -115,6 +115,8 @@ public:
 	void SetVertexWeightByMeshVertex(uint32 MeshVertexIndex, float Weight);
 	void InitializeVertexWeights(float DefaultWeight = 1.0f);
 	void ApplyPaintedWeights();
+	void ApplyWeightsToClothParticles();  // ClothParticles.w에 weight 적용 (CreateClothInstance 전에 호출)
+	bool LoadWeightsToArray();            // ClothVertexWeights 배열에만 로드 (NvCloth 적용 안함)
 	void LoadWeightsFromMap(const std::unordered_map<uint32, float>& InClothVertexWeights);
 	const TArray<float>& GetVertexWeights() const { return ClothVertexWeights; }
 	const TArray<uint32>& GetClothVertexToMeshVertexMapping() const { return ClothVertexToMeshVertex; }
