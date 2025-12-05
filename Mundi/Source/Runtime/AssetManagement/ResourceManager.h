@@ -16,6 +16,7 @@
 #include "Object.h"
 #include "SkeletalMesh.h"
 #include "Source/Runtime/Engine/Animation/AnimSequence.h"
+#include "Source/Runtime/Engine/Animation/AnimMontage.h"
 #include "Source/Runtime/Engine/Particle/ParticleSystem.h"
 #include "Source/Runtime/Engine/Physics/PhysicsAsset.h"
 // ... 기타 include ...
@@ -79,6 +80,7 @@ public:
 
 	void PreloadParticles();
 	void PreloadPhysicsAssets();
+	void PreloadMontages();
 
 	// --- 디버그 및 기본 메시 생성 ---
 	void CreateDefaultShader();
@@ -218,6 +220,15 @@ inline T* UResourceManager::Load(const FString& InFilePath, Args && ...InArgs)
 	}
 }
 
+// UAnimSequence는 FBX에서 로드되므로 Load 지원 안 함
+template<>
+inline UAnimSequence* UResourceManager::Load(const FString& InFilePath)
+{
+	// AnimSequence는 FBX 로더에서 Add로 등록됨. 직접 Load 불가.
+	// Get으로만 사용하세요.
+	return Get<UAnimSequence>(InFilePath);
+}
+
 template<>
 inline UShader* UResourceManager::Load(const FString& InFilePath, TArray<FShaderMacro>& InMacros)
 {
@@ -270,7 +281,9 @@ EResourceType UResourceManager::GetResourceType()
     if (T::StaticClass() == USound::StaticClass())
         return EResourceType::Sound;
 	if (T::StaticClass() == UAnimSequence::StaticClass())
-		return EResourceType::Animation;
+		return EResourceType::AnimSequence;
+	if (T::StaticClass() == UAnimMontage::StaticClass())
+		return EResourceType::AnimMontage;
 	if (T::StaticClass() == UParticleSystem::StaticClass())
 		return EResourceType::Particle;
 	if (T::StaticClass() == UPhysicsAsset::StaticClass())
