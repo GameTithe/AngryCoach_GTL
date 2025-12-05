@@ -36,7 +36,8 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
         if (widget.Type == "ProgressBar")
         {
             widgetObj["progress"] = widget.Progress;
-            widgetObj["progressBarMode"] = static_cast<int>(widget.ProgressBarMode);
+            widgetObj["foregroundMode"] = static_cast<int>(widget.ForegroundMode);
+            widgetObj["backgroundMode"] = static_cast<int>(widget.BackgroundMode);
 
             JSON fgColor = JSON::Make(JSON::Class::Array);
             fgColor.append(widget.ForegroundColor[0], widget.ForegroundColor[1],
@@ -130,8 +131,11 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
             FJsonSerializer::ReadFloat(widgetObj, "progress", widget.Progress, 1.0f, false);
 
             int32 tempMode = 0;
-            if (FJsonSerializer::ReadInt32(widgetObj, "progressBarMode", tempMode, 0, false))
-                widget.ProgressBarMode = static_cast<EProgressBarMode>(tempMode);
+            if (FJsonSerializer::ReadInt32(widgetObj, "foregroundMode", tempMode, 0, false))
+                widget.ForegroundMode = static_cast<EProgressBarMode>(tempMode);
+            tempMode = 0;
+            if (FJsonSerializer::ReadInt32(widgetObj, "backgroundMode", tempMode, 0, false))
+                widget.BackgroundMode = static_cast<EProgressBarMode>(tempMode);
 
             // Color arrays (foregroundColor, backgroundColor, lowColor)
             FLinearColor tempColor;
@@ -632,117 +636,133 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
         ImGui::Text("ProgressBar");
         if (ImGui::SliderFloat("Progress", &widget->Progress, 0.0f, 1.0f)) bModified = true;
 
-        // 모드 콤보박스
         const char* modeNames[] = { "Color", "Texture" };
-        int currentMode = static_cast<int>(widget->ProgressBarMode);
-        if (ImGui::Combo("Mode", &currentMode, modeNames, IM_ARRAYSIZE(modeNames)))
+        UResourceManager& ResMgr = UResourceManager::GetInstance();
+        TArray<FString> TexturePaths = ResMgr.GetAllFilePaths<UTexture>();
+
+        // === Foreground 설정 ===
+        ImGui::Separator();
+        ImGui::Text("Foreground");
+
+        int fgMode = static_cast<int>(widget->ForegroundMode);
+        if (ImGui::Combo("FG Mode", &fgMode, modeNames, IM_ARRAYSIZE(modeNames)))
         {
-            widget->ProgressBarMode = static_cast<EProgressBarMode>(currentMode);
+            widget->ForegroundMode = static_cast<EProgressBarMode>(fgMode);
             bModified = true;
         }
 
-        if (widget->ProgressBarMode == EProgressBarMode::Color)
+        if (widget->ForegroundMode == EProgressBarMode::Color)
         {
-            // 색상 모드
-            if (ImGui::ColorEdit4("Foreground", widget->ForegroundColor)) bModified = true;
-            if (ImGui::ColorEdit4("Background", widget->BackgroundColor)) bModified = true;
+            if (ImGui::ColorEdit4("FG Color", widget->ForegroundColor)) bModified = true;
             if (ImGui::ColorEdit4("Low Color", widget->LowColor)) bModified = true;
             if (ImGui::SliderFloat("Low Threshold", &widget->LowThreshold, 0.0f, 1.0f)) bModified = true;
         }
         else
         {
-            // 텍스처 모드 - 콤보박스로 텍스처 선택
-            UResourceManager& ResMgr = UResourceManager::GetInstance();
-            TArray<FString> TexturePaths = ResMgr.GetAllFilePaths<UTexture>();
-
-            // Foreground 텍스처
+            // Foreground 텍스처 콤보박스
+            int fgIndex = 0;
+            for (int idx = 0; idx < TexturePaths.Num(); ++idx)
             {
-                int fgIndex = 0;
-                for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+                if (TexturePaths[idx] == widget->ForegroundTexturePath.c_str())
                 {
-                    if (TexturePaths[idx] == widget->ForegroundTexturePath.c_str())
-                    {
-                        fgIndex = idx + 1;
-                        break;
-                    }
-                }
-                FString fgPreview = "None";
-                if (fgIndex > 0)
-                {
-                    std::filesystem::path p(TexturePaths[fgIndex - 1]);
-                    fgPreview = p.filename().string();
-                }
-                if (ImGui::BeginCombo("Foreground Tex", fgPreview.c_str()))
-                {
-                    bool selNone = (fgIndex == 0);
-                    if (ImGui::Selectable("None", selNone))
-                    {
-                        widget->ForegroundTexturePath = "";
-                        bModified = true;
-                    }
-                    if (selNone) ImGui::SetItemDefaultFocus();
-                    for (int i = 0; i < TexturePaths.Num(); ++i)
-                    {
-                        bool selected = (fgIndex == i + 1);
-                        std::filesystem::path p(TexturePaths[i]);
-                        FString displayName = p.filename().string();
-                        if (ImGui::Selectable(displayName.c_str(), selected))
-                        {
-                            widget->ForegroundTexturePath = TexturePaths[i].c_str();
-                            bModified = true;
-                        }
-                        if (selected) ImGui::SetItemDefaultFocus();
-                        if (ImGui::IsItemHovered())
-                            ImGui::SetTooltip("%s", TexturePaths[i].c_str());
-                    }
-                    ImGui::EndCombo();
+                    fgIndex = idx + 1;
+                    break;
                 }
             }
-
-            // Background 텍스처
+            FString fgPreview = "None";
+            if (fgIndex > 0)
             {
-                int bgIndex = 0;
-                for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+                std::filesystem::path p(TexturePaths[fgIndex - 1]);
+                fgPreview = p.filename().string();
+            }
+            if (ImGui::BeginCombo("FG Texture", fgPreview.c_str()))
+            {
+                bool selNone = (fgIndex == 0);
+                if (ImGui::Selectable("None", selNone))
                 {
-                    if (TexturePaths[idx] == widget->BackgroundTexturePath.c_str())
-                    {
-                        bgIndex = idx + 1;
-                        break;
-                    }
+                    widget->ForegroundTexturePath = "";
+                    bModified = true;
                 }
-                FString bgPreview = "None";
-                if (bgIndex > 0)
+                if (selNone) ImGui::SetItemDefaultFocus();
+                for (int i = 0; i < TexturePaths.Num(); ++i)
                 {
-                    std::filesystem::path p(TexturePaths[bgIndex - 1]);
-                    bgPreview = p.filename().string();
-                }
-                if (ImGui::BeginCombo("Background Tex", bgPreview.c_str()))
-                {
-                    bool selNone = (bgIndex == 0);
-                    if (ImGui::Selectable("None", selNone))
+                    bool selected = (fgIndex == i + 1);
+                    std::filesystem::path p(TexturePaths[i]);
+                    FString displayName = p.filename().string();
+                    if (ImGui::Selectable(displayName.c_str(), selected))
                     {
-                        widget->BackgroundTexturePath = "";
+                        widget->ForegroundTexturePath = TexturePaths[i].c_str();
                         bModified = true;
                     }
-                    if (selNone) ImGui::SetItemDefaultFocus();
-                    for (int i = 0; i < TexturePaths.Num(); ++i)
-                    {
-                        bool selected = (bgIndex == i + 1);
-                        std::filesystem::path p(TexturePaths[i]);
-                        FString displayName = p.filename().string();
-                        if (ImGui::Selectable(displayName.c_str(), selected))
-                        {
-                            widget->BackgroundTexturePath = TexturePaths[i].c_str();
-                            bModified = true;
-                        }
-                        if (selected) ImGui::SetItemDefaultFocus();
-                        if (ImGui::IsItemHovered())
-                            ImGui::SetTooltip("%s", TexturePaths[i].c_str());
-                    }
-                    ImGui::EndCombo();
+                    if (selected) ImGui::SetItemDefaultFocus();
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("%s", TexturePaths[i].c_str());
                 }
+                ImGui::EndCombo();
             }
         }
+
+        // === Background 설정 ===
+        ImGui::Separator();
+        ImGui::Text("Background");
+
+        int bgMode = static_cast<int>(widget->BackgroundMode);
+        if (ImGui::Combo("BG Mode", &bgMode, modeNames, IM_ARRAYSIZE(modeNames)))
+        {
+            widget->BackgroundMode = static_cast<EProgressBarMode>(bgMode);
+            bModified = true;
+        }
+
+        if (widget->BackgroundMode == EProgressBarMode::Color)
+        {
+            if (ImGui::ColorEdit4("BG Color", widget->BackgroundColor)) bModified = true;
+        }
+        else
+        {
+            // Background 텍스처 콤보박스
+            int bgIndex = 0;
+            for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+            {
+                if (TexturePaths[idx] == widget->BackgroundTexturePath.c_str())
+                {
+                    bgIndex = idx + 1;
+                    break;
+                }
+            }
+            FString bgPreview = "None";
+            if (bgIndex > 0)
+            {
+                std::filesystem::path p(TexturePaths[bgIndex - 1]);
+                bgPreview = p.filename().string();
+            }
+            if (ImGui::BeginCombo("BG Texture", bgPreview.c_str()))
+            {
+                bool selNone = (bgIndex == 0);
+                if (ImGui::Selectable("None", selNone))
+                {
+                    widget->BackgroundTexturePath = "";
+                    bModified = true;
+                }
+                if (selNone) ImGui::SetItemDefaultFocus();
+                for (int i = 0; i < TexturePaths.Num(); ++i)
+                {
+                    bool selected = (bgIndex == i + 1);
+                    std::filesystem::path p(TexturePaths[i]);
+                    FString displayName = p.filename().string();
+                    if (ImGui::Selectable(displayName.c_str(), selected))
+                    {
+                        widget->BackgroundTexturePath = TexturePaths[i].c_str();
+                        bModified = true;
+                    }
+                    if (selected) ImGui::SetItemDefaultFocus();
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("%s", TexturePaths[i].c_str());
+                }
+                ImGui::EndCombo();
+            }
+        }
+
+        ImGui::Separator();
 
         if (ImGui::DragFloat("Border Width", &widget->BorderWidth, 0.1f, 0.0f, 10.0f)) bModified = true;
         if (ImGui::Checkbox("Right to Left", &widget->bRightToLeft)) bModified = true;
@@ -873,13 +893,13 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
     {
         ImVec2 originalMin = min;  // 테두리용 저장
 
-        if (Widget.ProgressBarMode == EProgressBarMode::Texture)
+        // === 배경 렌더링 ===
+        if (Widget.BackgroundMode == EProgressBarMode::Texture)
         {
-            // 텍스처 모드
-            // 배경 텍스처
+            // 배경 텍스처 모드
             if (!Widget.BackgroundTexturePath.empty())
             {
-                UTexture* bgTex = ResMgr.GetResource<UTexture>(FString(Widget.BackgroundTexturePath.c_str()));
+                UTexture* bgTex = ResMgr.Load<UTexture>(FString(Widget.BackgroundTexturePath.c_str()));
                 if (bgTex && bgTex->GetShaderResourceView())
                 {
                     DrawList->AddImage((ImTextureID)bgTex->GetShaderResourceView(), min, max);
@@ -893,38 +913,10 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
             {
                 DrawList->AddRectFilled(min, max, IM_COL32(60, 60, 60, 200));
             }
-
-            // 전경 텍스처 (Progress 반영)
-            if (!Widget.ForegroundTexturePath.empty())
-            {
-                UTexture* fgTex = ResMgr.GetResource<UTexture>(FString(Widget.ForegroundTexturePath.c_str()));
-                if (fgTex && fgTex->GetShaderResourceView())
-                {
-                    float fillWidth = Widget.Width * Widget.Progress * Zoom;
-                    ImVec2 fgMin, fgMax;
-                    ImVec2 uvMin(0, 0), uvMax(1, 1);
-
-                    if (Widget.bRightToLeft)
-                    {
-                        fgMin = ImVec2(max.x - fillWidth, min.y);
-                        fgMax = max;
-                        uvMin.x = 1.0f - Widget.Progress;
-                    }
-                    else
-                    {
-                        fgMin = min;
-                        fgMax = ImVec2(min.x + fillWidth, max.y);
-                        uvMax.x = Widget.Progress;
-                    }
-
-                    DrawList->AddImage((ImTextureID)fgTex->GetShaderResourceView(), fgMin, fgMax, uvMin, uvMax);
-                }
-            }
         }
         else
         {
-            // 색상 모드
-            // 배경
+            // 배경 색상 모드
             ImU32 bgColor = IM_COL32(
                 (int)(Widget.BackgroundColor[0] * 255),
                 (int)(Widget.BackgroundColor[1] * 255),
@@ -932,22 +924,47 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
                 (int)(Widget.BackgroundColor[3] * 255)
             );
             DrawList->AddRectFilled(min, max, bgColor);
+        }
 
-            // 전경 (Progress)
-            float fillWidth = Widget.Width * Widget.Progress * Zoom;
-            ImVec2 fillMax;
-            ImVec2 fillMin = min;
+        // === 전경 렌더링 (Progress 반영) ===
+        float fillWidth = Widget.Width * Widget.Progress * Zoom;
+        ImVec2 fgMin, fgMax;
 
-            if (Widget.bRightToLeft)
+        if (Widget.bRightToLeft)
+        {
+            fgMin = ImVec2(max.x - fillWidth, min.y);
+            fgMax = max;
+        }
+        else
+        {
+            fgMin = min;
+            fgMax = ImVec2(min.x + fillWidth, max.y);
+        }
+
+        if (Widget.ForegroundMode == EProgressBarMode::Texture)
+        {
+            // 전경 텍스처 모드
+            if (!Widget.ForegroundTexturePath.empty())
             {
-                fillMin = ImVec2(max.x - fillWidth, min.y);
-                fillMax = max;
+                UTexture* fgTex = ResMgr.Load<UTexture>(FString(Widget.ForegroundTexturePath.c_str()));
+                if (fgTex && fgTex->GetShaderResourceView())
+                {
+                    ImVec2 uvMin(0, 0), uvMax(1, 1);
+                    if (Widget.bRightToLeft)
+                    {
+                        uvMin.x = 1.0f - Widget.Progress;
+                    }
+                    else
+                    {
+                        uvMax.x = Widget.Progress;
+                    }
+                    DrawList->AddImage((ImTextureID)fgTex->GetShaderResourceView(), fgMin, fgMax, uvMin, uvMax);
+                }
             }
-            else
-            {
-                fillMax = ImVec2(min.x + fillWidth, max.y);
-            }
-
+        }
+        else
+        {
+            // 전경 색상 모드
             ImU32 fgColor = IM_COL32(
                 (int)(Widget.ForegroundColor[0] * 255),
                 (int)(Widget.ForegroundColor[1] * 255),
@@ -965,7 +982,7 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
                 );
             }
 
-            DrawList->AddRectFilled(fillMin, fillMax, fgColor);
+            DrawList->AddRectFilled(fgMin, fgMax, fgColor);
         }
 
         // 테두리
@@ -979,7 +996,7 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
         // 실제 텍스처 표시
         if (!Widget.TexturePath.empty())
         {
-            UTexture* tex = ResMgr.GetResource<UTexture>(FString(Widget.TexturePath.c_str()));
+            UTexture* tex = ResMgr.Load<UTexture>(FString(Widget.TexturePath.c_str()));
             if (tex && tex->GetShaderResourceView())
             {
                 // SubUV 계산

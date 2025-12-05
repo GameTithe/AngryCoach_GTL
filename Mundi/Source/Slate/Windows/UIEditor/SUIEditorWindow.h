@@ -36,7 +36,8 @@ struct FUIEditorWidget
 
     // ProgressBar
     float Progress = 1.0f;
-    EProgressBarMode ProgressBarMode = EProgressBarMode::Color;
+    EProgressBarMode ForegroundMode = EProgressBarMode::Color;  // 전경 모드
+    EProgressBarMode BackgroundMode = EProgressBarMode::Color;  // 배경 모드
     float ForegroundColor[4] = { 0.2f, 0.8f, 0.2f, 1.0f };
     float BackgroundColor[4] = { 0.2f, 0.2f, 0.2f, 0.8f };
     float BorderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -44,8 +45,8 @@ struct FUIEditorWidget
     bool bRightToLeft = false;
     float LowThreshold = 0.3f;
     float LowColor[4] = { 0.9f, 0.2f, 0.2f, 1.0f };
-    std::string ForegroundTexturePath;  // 텍스처 모드용
-    std::string BackgroundTexturePath;  // 텍스처 모드용
+    std::string ForegroundTexturePath;  // 전경 텍스처 모드용
+    std::string BackgroundTexturePath;  // 배경 텍스처 모드용
 
     // Texture
     std::string TexturePath;
