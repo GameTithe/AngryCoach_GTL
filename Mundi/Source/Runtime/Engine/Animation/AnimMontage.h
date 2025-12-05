@@ -4,6 +4,20 @@
 class UAnimSequence;
 
 /**
+ * @brief 몽타주 섹션
+ */
+struct FMontageSection
+{
+    FString Name;
+    UAnimSequence* Sequence = nullptr;
+    float BlendInTime = 0.1f;
+
+    FMontageSection() = default;
+    FMontageSection(const FString& InName, UAnimSequence* InSeq, float InBlendIn = 0.1f)
+        : Name(InName), Sequence(InSeq), BlendInTime(InBlendIn) {}
+};
+
+/**
  * @brief 몽타주 런타임 재생 상태
  */
 struct FMontagePlayState
@@ -18,6 +32,7 @@ struct FMontagePlayState
     bool bBlendingOut = false;
 
     float BlendTime = 0.0f;      // 현재 블렌드 진행 시간
+    int32 CurrentSectionIndex = 0;  // 현재 섹션 인덱스
 
     void Reset()
     {
@@ -28,6 +43,7 @@ struct FMontagePlayState
         bPlaying = false;
         bBlendingOut = false;
         BlendTime = 0.0f;
+        CurrentSectionIndex = 0;
     }
 };
 
@@ -79,9 +95,6 @@ public:
     UAnimMontage() = default;
     virtual ~UAnimMontage() = default;
 
-    /** 재생할 애니메이션 시퀀스 */
-    UAnimSequence* Sequence = nullptr;
-
     /** 블렌드 인 시간 (초) */
     float BlendInTime = 0.2f;
 
@@ -91,8 +104,30 @@ public:
     /** 루프 여부 */
     bool bLoop = false;
 
+    /** 섹션 목록 */
+    TArray<FMontageSection> Sections;
+
     /** 재생 길이 반환 */
     virtual float GetPlayLength() const override;
+
+    // ============================================================
+    // Section API
+    // ============================================================
+
+    /** 섹션 추가 */
+    void AddSection(const FString& Name, UAnimSequence* Seq, float BlendIn = 0.1f);
+
+    /** 섹션 인덱스로 시퀀스 가져오기 */
+    UAnimSequence* GetSectionSequence(int32 Index) const;
+
+    /** 섹션 이름으로 인덱스 찾기 */
+    int32 FindSectionIndex(const FString& Name) const;
+
+    /** 섹션 개수 */
+    int32 GetNumSections() const { return Sections.Num(); }
+
+    /** 섹션이 있는지 확인 */
+    bool HasSections() const { return Sections.Num() > 0; }
 
     // ============================================================
     // Serialization (Save/Load)

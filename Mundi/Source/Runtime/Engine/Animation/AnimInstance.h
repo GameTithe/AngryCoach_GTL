@@ -280,6 +280,29 @@ public:
      */
     bool IsPlayingMontage() const;
 
+    /**
+     * @brief 특정 섹션으로 점프
+     * @param SectionName 점프할 섹션 이름
+     * @return 성공 여부
+     */
+    bool JumpToSection(const FString& SectionName);
+
+    /**
+     * @brief 다음 섹션으로 이동
+     * @return 성공 여부
+     */
+    bool JumpToNextSection();
+
+    /**
+     * @brief 현재 섹션 인덱스 반환
+     */
+    int32 GetCurrentSectionIndex() const;
+
+    /**
+     * @brief 현재 몽타주 재생 위치 반환
+     */
+    float GetMontagePosition() const;
+
     // ============================================================
     // Getters
     // ============================================================

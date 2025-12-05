@@ -44,10 +44,11 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
         {
             UpdateMontage(DeltaSeconds);
 
-            if (MontageState->Weight > 0.0f && MontageState->Montage && MontageState->Montage->Sequence)
+            UAnimSequence* MontageSeq = MontageState->Montage ? MontageState->Montage->GetSectionSequence(MontageState->CurrentSectionIndex) : nullptr;
+            if (MontageState->Weight > 0.0f && MontageSeq)
             {
                 TArray<FTransform> MontagePose;
-                MontageState->Montage->Sequence->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+                MontageSeq->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
 
                 if (OwningComponent && MontagePose.Num() > 0)
                 {
@@ -105,12 +106,13 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     // 최종 포즈 계산 (기본 + 몽타주 블렌드)
     TArray<FTransform> FinalPose = BasePose;
 
-    if (MontageState && MontageState->bPlaying && MontageState->Weight > 0.0f)
+    if (MontageState && MontageState->bPlaying && MontageState->Weight > 0.0f && MontageState->Montage)
     {
-        if (MontageState->Montage && MontageState->Montage->Sequence)
+        UAnimSequence* MontageSeq = MontageState->Montage->GetSectionSequence(MontageState->CurrentSectionIndex);
+        if (MontageSeq)
         {
             TArray<FTransform> MontagePose;
-            MontageState->Montage->Sequence->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+            MontageSeq->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
 
             // 몽타주 포즈를 기본 포즈 위에 블렌드
             const float W = MontageState->Weight;
@@ -633,9 +635,9 @@ void UAnimInstance::GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPos
 
 float UAnimInstance::PlayMontage(UAnimMontage* Montage, float PlayRate)
 {
-    if (!Montage || !Montage->Sequence)
+    if (!Montage || !Montage->HasSections())
     {
-        UE_LOG("UAnimInstance::PlayMontage - Invalid montage or sequence");
+        UE_LOG("UAnimInstance::PlayMontage - Invalid montage or no sections");
         return 0.0f;
     }
 
@@ -652,6 +654,7 @@ float UAnimInstance::PlayMontage(UAnimMontage* Montage, float PlayRate)
     MontageState->bPlaying = true;
     MontageState->bBlendingOut = false;
     MontageState->BlendTime = 0.0f;
+    MontageState->CurrentSectionIndex = 0;
 
     // 노티파이 트래킹 초기화
     PreviousMontagePlayTime = 0.0f;
@@ -696,6 +699,67 @@ UAnimMontage* UAnimInstance::GetCurrentMontage() const
 bool UAnimInstance::IsPlayingMontage() const
 {
     return MontageState && MontageState->bPlaying;
+}
+
+bool UAnimInstance::JumpToSection(const FString& SectionName)
+{
+    if (!MontageState || !MontageState->bPlaying || !MontageState->Montage)
+    {
+        return false;
+    }
+
+    int32 Index = MontageState->Montage->FindSectionIndex(SectionName);
+    if (Index < 0)
+    {
+        UE_LOG("UAnimInstance::JumpToSection - Section not found: %s", SectionName.c_str());
+        return false;
+    }
+
+    MontageState->CurrentSectionIndex = Index;
+    MontageState->Position = 0.0f;
+    PreviousMontagePlayTime = 0.0f;
+
+    UE_LOG("UAnimInstance::JumpToSection - Jumped to section: %s (index %d)", SectionName.c_str(), Index);
+    return true;
+}
+
+bool UAnimInstance::JumpToNextSection()
+{
+    if (!MontageState || !MontageState->bPlaying || !MontageState->Montage)
+    {
+        return false;
+    }
+
+    int32 NextIndex = MontageState->CurrentSectionIndex + 1;
+    if (NextIndex >= MontageState->Montage->GetNumSections())
+    {
+        return false;
+    }
+
+    MontageState->CurrentSectionIndex = NextIndex;
+    MontageState->Position = 0.0f;
+    PreviousMontagePlayTime = 0.0f;
+
+    UE_LOG("UAnimInstance::JumpToNextSection - Jumped to section index %d", NextIndex);
+    return true;
+}
+
+int32 UAnimInstance::GetCurrentSectionIndex() const
+{
+    if (MontageState && MontageState->bPlaying)
+    {
+        return MontageState->CurrentSectionIndex;
+    }
+    return -1;
+}
+
+float UAnimInstance::GetMontagePosition() const
+{
+    if (MontageState && MontageState->bPlaying)
+    {
+        return MontageState->Position;
+    }
+    return 0.0f;
 }
 
 void UAnimInstance::UpdateMontage(float DeltaTime)
@@ -751,13 +815,28 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
 
     // 시간 진행
     MontageState->Position += DeltaTime * MontageState->PlayRate;
-    float Length = M->GetPlayLength();
+
+    // 현재 섹션 시퀀스 가져오기
+    UAnimSequence* CurrentSeq = M->GetSectionSequence(MontageState->CurrentSectionIndex);
+    float Length = CurrentSeq ? CurrentSeq->GetPlayLength() : M->GetPlayLength();
 
     if (MontageState->Position >= Length)
     {
-        if (M->bLoop)
+        // 섹션이 있으면 다음 섹션으로 자동 진행
+        if (M->HasSections() && MontageState->CurrentSectionIndex + 1 < M->GetNumSections())
+        {
+            MontageState->CurrentSectionIndex++;
+            MontageState->Position = 0.0f;
+            PreviousMontagePlayTime = 0.0f;
+            UE_LOG("UAnimInstance::UpdateMontage - Auto advance to section %d", MontageState->CurrentSectionIndex);
+        }
+        else if (M->bLoop)
         {
             MontageState->Position = FMath::Fmod(MontageState->Position, Length);
+            if (M->HasSections())
+            {
+                MontageState->CurrentSectionIndex = 0;  // 루프 시 첫 섹션으로
+            }
         }
         else
         {
@@ -779,16 +858,19 @@ void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
         return;
     }
 
-    UAnimSequence* MontageSeq = MontageState->Montage->Sequence;
-    if (!MontageSeq)
+    UAnimMontage* Montage = MontageState->Montage;
+
+    // 몽타주 자체 노티파이 수집 (UAnimSequenceBase 상속)
+    TArray<FPendingAnimNotify> PendingNotifies;
+    float DeltaMove = DeltaSeconds * MontageState->PlayRate;
+    Montage->GetAnimNotify(PreviousMontagePlayTime, DeltaMove, PendingNotifies);
+
+    if (PendingNotifies.Num() == 0)
     {
         return;
     }
 
-    // 노티파이 수집
-    TArray<FPendingAnimNotify> PendingNotifies;
-    float DeltaMove = DeltaSeconds * MontageState->PlayRate;
-    MontageSeq->GetAnimNotify(PreviousMontagePlayTime, DeltaMove, PendingNotifies);
+    UAnimSequence* CurrentSeq = Montage->GetSectionSequence(MontageState->CurrentSectionIndex);
 
     // 노티파이 처리
     for (const FPendingAnimNotify& Pending : PendingNotifies)
@@ -805,25 +887,25 @@ void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
             case EPendingNotifyType::Trigger:
                 if (Event.Notify)
                 {
-                    Event.Notify->Notify(OwningComponent, MontageSeq);
+                    Event.Notify->Notify(OwningComponent, CurrentSeq);
                 }
                 break;
             case EPendingNotifyType::StateBegin:
                 if (Event.NotifyState)
                 {
-                    Event.NotifyState->NotifyBegin(OwningComponent, MontageSeq, Event.Duration);
+                    Event.NotifyState->NotifyBegin(OwningComponent, CurrentSeq, Event.Duration);
                 }
                 break;
             case EPendingNotifyType::StateTick:
                 if (Event.NotifyState)
                 {
-                    Event.NotifyState->NotifyTick(OwningComponent, MontageSeq, Event.Duration);
+                    Event.NotifyState->NotifyTick(OwningComponent, CurrentSeq, Event.Duration);
                 }
                 break;
             case EPendingNotifyType::StateEnd:
                 if (Event.NotifyState)
                 {
-                    Event.NotifyState->NotifyEnd(OwningComponent, MontageSeq, Event.Duration);
+                    Event.NotifyState->NotifyEnd(OwningComponent, CurrentSeq, Event.Duration);
                 }
                 break;
             default:
