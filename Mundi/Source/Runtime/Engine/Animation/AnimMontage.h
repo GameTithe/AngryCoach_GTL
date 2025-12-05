@@ -11,10 +11,11 @@ struct FMontageSection
     FString Name;
     UAnimSequence* Sequence = nullptr;
     float BlendInTime = 0.1f;
+    float PlayRate = 1.0f;  // 섹션별 재생 속도
 
     FMontageSection() = default;
-    FMontageSection(const FString& InName, UAnimSequence* InSeq, float InBlendIn = 0.1f)
-        : Name(InName), Sequence(InSeq), BlendInTime(InBlendIn) {}
+    FMontageSection(const FString& InName, UAnimSequence* InSeq, float InBlendIn = 0.1f, float InPlayRate = 1.0f)
+        : Name(InName), Sequence(InSeq), BlendInTime(InBlendIn), PlayRate(InPlayRate) {}
 };
 
 /**

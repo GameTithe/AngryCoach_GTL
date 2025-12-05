@@ -73,6 +73,7 @@ bool UAnimMontage::Save(const FString& FilePath) const
         SectionObj["Name"] = Section.Name.c_str();
         SectionObj["SequencePath"] = Section.Sequence ? Section.Sequence->GetFilePath().c_str() : "";
         SectionObj["BlendInTime"] = Section.BlendInTime;
+        SectionObj["PlayRate"] = Section.PlayRate;
         SectionsArray.append(SectionObj);
     }
     Root["Sections"] = SectionsArray;
@@ -146,6 +147,7 @@ bool UAnimMontage::Load(const FString& FilePath)
                 }
             }
             FJsonSerializer::ReadFloat(SectionObj, "BlendInTime", Section.BlendInTime, 0.1f, false);
+            FJsonSerializer::ReadFloat(SectionObj, "PlayRate", Section.PlayRate, 1.0f, false);
 
             Sections.Add(Section);
         }

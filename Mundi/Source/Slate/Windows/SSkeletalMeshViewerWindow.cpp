@@ -204,10 +204,24 @@ void SSkeletalMeshViewerWindow::SaveAllNotifiesOnClose()
     {
         ViewerState* State = Tabs[i];
         if (!State) continue;
+
+        // 애니메이션 노티파이 저장
         if (State->CurrentAnimation)
         {
             const FString OutPath = MakeDefaultMetaPath(State->CurrentAnimation);
             State->CurrentAnimation->SaveMeta(OutPath);
+        }
+
+        // 몽타주 노티파이 저장
+        if (State->CurrentMontage)
+        {
+            const FString OutPath = MakeDefaultMetaPath(State->CurrentMontage);
+            State->CurrentMontage->SaveMeta(OutPath);
+        }
+        if (State->EditingMontage)
+        {
+            const FString OutPath = MakeDefaultMetaPath(State->EditingMontage);
+            State->EditingMontage->SaveMeta(OutPath);
         }
     }
 }
@@ -1682,10 +1696,29 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
             MontageTotalLength += Len;
         }
 
-        // 재생 시간 진행
+        // 현재 섹션 찾기 (PlayRate 적용을 위해 먼저 계산)
+        int32 CurrentPlaySection = 0;
+        for (int32 i = 0; i < SectionStartTimes.Num(); ++i)
+        {
+            float SectionEnd = SectionStartTimes[i] + SectionLengths[i];
+            if (ActiveState->MontagePreviewTime < SectionEnd || i == SectionStartTimes.Num() - 1)
+            {
+                CurrentPlaySection = i;
+                break;
+            }
+        }
+
+        // 섹션별 PlayRate 가져오기
+        float SectionPlayRate = 1.0f;
+        if (CurrentPlaySection >= 0 && CurrentPlaySection < ActiveMontage->GetNumSections())
+        {
+            SectionPlayRate = ActiveMontage->Sections[CurrentPlaySection].PlayRate;
+        }
+
+        // 재생 시간 진행 (섹션 PlayRate 적용)
         if (ActiveState->bIsPlaying && MontageTotalLength > 0.0f)
         {
-            ActiveState->MontagePreviewTime += DeltaSeconds;
+            ActiveState->MontagePreviewTime += DeltaSeconds * SectionPlayRate;
             if (ActiveState->MontagePreviewTime >= MontageTotalLength)
             {
                 if (ActiveState->bIsLooping || ActiveMontage->bLoop)
@@ -1699,7 +1732,7 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
         }
         else if (ActiveState->bIsPlayingReverse && MontageTotalLength > 0.0f)
         {
-            ActiveState->MontagePreviewTime -= DeltaSeconds;
+            ActiveState->MontagePreviewTime -= DeltaSeconds * SectionPlayRate;
             if (ActiveState->MontagePreviewTime < 0.0f)
             {
                 if (ActiveState->bIsLooping || ActiveMontage->bLoop)
@@ -2676,6 +2709,9 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                 RightClickFrame = PixelToFrame(ImGui::GetIO().MousePos.x);
             }
 
+            // 노티파이 소스 결정 (몽타주 모드면 몽타주, 아니면 CurrentAnimation)
+            UAnimSequenceBase* NotifySource = bMontagePreviewing ? static_cast<UAnimSequenceBase*>(PreviewMontage) : static_cast<UAnimSequenceBase*>(State->CurrentAnimation);
+
             // Context menu to add notifies
             if (ImGui::BeginPopupContextItem("NotifyTrackContext"))
             {
@@ -2683,7 +2719,7 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                 {
                     if (ImGui::MenuItem("Sound Notify"))
                     {
-                        if (bHasAnimation && State->CurrentAnimation)
+                        if (bHasAnimation && NotifySource)
                         {
                             float ClickFrame = RightClickFrame;
                             float TimeSec = ImClamp(ClickFrame * FrameDuration, 0.0f, PlayLength);
@@ -2691,9 +2727,9 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                             UAnimNotify_PlaySound* NewNotify = NewObject<UAnimNotify_PlaySound>();
                             if (NewNotify)
                             {
-                                // 기본 SoundNotify는 sound 없음  
+                                // 기본 SoundNotify는 sound 없음
                                 NewNotify->Sound = nullptr;
-                                State->CurrentAnimation->AddPlaySoundNotify(TimeSec, NewNotify, 0.0f); 
+                                NotifySource->AddPlaySoundNotify(TimeSec, NewNotify, 0.0f);
                             }
                         }
                     }
@@ -2703,12 +2739,12 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                 ImGui::Separator();
                 if (ImGui::MenuItem("Delete Notify"))
                 {
-                    if (bHasAnimation && State->CurrentAnimation)
+                    if (bHasAnimation && NotifySource)
                     {
                         const float ClickFrame = RightClickFrame;
                         const float ClickTimeSec = ImClamp(ClickFrame * FrameDuration, 0.0f, PlayLength);
 
-                        TArray<FAnimNotifyEvent>& Events = State->CurrentAnimation->GetAnimNotifyEvents();
+                        TArray<FAnimNotifyEvent>& Events = NotifySource->GetAnimNotifyEvents();
 
                         int DeleteIndex = -1;
                         float BestDist = 1e9f;
@@ -2752,10 +2788,10 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                 ImGui::EndPopup();
             }
 
-            if (bHasAnimation && State->CurrentAnimation)
+            if (bHasAnimation && NotifySource)
             {
                 // Draw and hit-test notifies (now draggable)
-                TArray<FAnimNotifyEvent>& Events = State->CurrentAnimation->GetAnimNotifyEvents();
+                TArray<FAnimNotifyEvent>& Events = NotifySource->GetAnimNotifyEvents();
                 for (int i = 0; i < Events.Num(); ++i)
                 {
                     FAnimNotifyEvent& Notify = Events[i];
@@ -2843,17 +2879,17 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
             // Edit popup for a clicked notify (change sound)
             if (ImGui::BeginPopup("NotifyEditPopup"))
             {
-                if (!bHasAnimation || !State->CurrentAnimation)
+                if (!bHasAnimation || !NotifySource)
                 {
                     ImGui::TextDisabled("No animation.");
                 }
-                else if (SelectedNotifyIndex < 0 || SelectedNotifyIndex >= State->CurrentAnimation->GetAnimNotifyEvents().Num())
+                else if (SelectedNotifyIndex < 0 || SelectedNotifyIndex >= NotifySource->GetAnimNotifyEvents().Num())
                 {
                     ImGui::TextDisabled("No notify selected.");
                 }
                 else
                 {
-                    TArray<FAnimNotifyEvent>& Events = State->CurrentAnimation->GetAnimNotifyEvents();
+                    TArray<FAnimNotifyEvent>& Events = NotifySource->GetAnimNotifyEvents();
                     FAnimNotifyEvent& Evt = Events[SelectedNotifyIndex];
 
                     if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_PlaySound>())
@@ -2952,9 +2988,16 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
         {
             if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
             {
+                // Ctrl + 스크롤 = 줌
                 float NewScale = State->TimelineScale * powf(1.1f, ImGui::GetIO().MouseWheel);
                 State->TimelineScale = ImClamp(NewScale, 0.1f, 100.0f);
                 State->TimelineOffset = FrameAtMouse - (ImGui::GetIO().MousePos.x - ImGui::GetCursorScreenPos().x) / State->TimelineScale;
+            }
+            else if (ImGui::GetIO().MouseWheel != 0)
+            {
+                // 일반 스크롤 = 타임라인 좌우 이동
+                float ScrollSpeed = 5.0f / State->TimelineScale;  // 줌 레벨에 따라 스크롤 속도 조절
+                State->TimelineOffset += ImGui::GetIO().MouseWheel * ScrollSpeed;
             }
             else if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle))
             {
@@ -3513,6 +3556,9 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
 
                         // 블렌드 인 시간
                         ImGui::DragFloat("Blend In##Section", &Section.BlendInTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+
+                        // 재생 속도
+                        ImGui::DragFloat("Play Rate##Section", &Section.PlayRate, 0.01f, 0.1f, 5.0f, "%.2fx");
 
                         // 시퀀스 선택 콤보
                         TArray<UAnimSequence*> AllSequences = UResourceManager::GetInstance().GetAll<UAnimSequence>();

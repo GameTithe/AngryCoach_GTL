@@ -52,6 +52,7 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
                 TArray<FTransform> FinalPose;
 
                 // 섹션 블렌딩 중이면 이전 섹션과 현재 섹션 블렌딩
+                bool bAlreadyMapped = false;
                 if (MontageState->bBlendingSection && MontageState->PreviousSectionIndex >= 0)
                 {
                     UAnimSequence* PrevSeq = M->GetSectionSequence(MontageState->PreviousSectionIndex);
@@ -64,7 +65,9 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
                         float Alpha = MontageState->SectionBlendTime / FMath::Max(MontageState->SectionBlendTotalTime, 0.001f);
                         Alpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
 
-                        BlendPoseArrays(PrevPose, CurrPose, Alpha, FinalPose);
+                        // 본 이름 기준으로 블렌딩 (스켈레톤 순서로 출력)
+                        BlendPosesByBoneName(PrevPose, PrevSeq, CurrPose, CurrentSeq, Alpha, FinalPose);
+                        bAlreadyMapped = true;
                     }
                     else
                     {
@@ -78,7 +81,18 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
                 if (OwningComponent && FinalPose.Num() > 0)
                 {
-                    OwningComponent->SetAnimationPose(FinalPose);
+                    if (bAlreadyMapped)
+                    {
+                        // BlendPosesByBoneName 결과는 이미 스켈레톤 순서
+                        OwningComponent->SetAnimationPose(FinalPose);
+                    }
+                    else
+                    {
+                        // 트랙 순서 → 스켈레톤 본 순서로 매핑
+                        TArray<FTransform> MappedPose;
+                        MapPoseToSkeleton(FinalPose, CurrentSeq, MappedPose);
+                        OwningComponent->SetAnimationPose(MappedPose);
+                    }
                 }
             }
         }
@@ -870,11 +884,19 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
     // 이전 시간 저장
     PreviousMontagePlayTime = MontageState->Position;
 
-    // 시간 진행
-    MontageState->Position += DeltaTime * MontageState->PlayRate;
-
     // 현재 섹션 시퀀스 가져오기
     UAnimSequence* CurrentSeq = M->GetSectionSequence(MontageState->CurrentSectionIndex);
+
+    // 섹션별 재생 속도 적용 (몽타주 PlayRate * 섹션 PlayRate)
+    float SectionPlayRate = 1.0f;
+    if (M->HasSections() && MontageState->CurrentSectionIndex < M->GetNumSections())
+    {
+        SectionPlayRate = M->Sections[MontageState->CurrentSectionIndex].PlayRate;
+    }
+    float EffectivePlayRate = MontageState->PlayRate * SectionPlayRate;
+
+    // 시간 진행
+    MontageState->Position += DeltaTime * EffectivePlayRate;
     float Length = CurrentSeq ? CurrentSeq->GetPlayLength() : M->GetPlayLength();
 
     // 섹션 블렌딩 진행
@@ -992,5 +1014,131 @@ void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
                 break;
             }
         }
+    }
+}
+
+// ============================================================
+// Bone Name Mapping Helpers
+// ============================================================
+
+void UAnimInstance::MapPoseToSkeleton(const TArray<FTransform>& InPose, UAnimSequence* InSequence, TArray<FTransform>& OutPose) const
+{
+    if (!CurrentSkeleton || !InSequence)
+    {
+        OutPose = InPose;
+        return;
+    }
+
+    UAnimDataModel* DataModel = InSequence->GetDataModel();
+    if (!DataModel)
+    {
+        OutPose = InPose;
+        return;
+    }
+
+    const int32 NumSkeletonBones = CurrentSkeleton->Bones.Num();
+    const TArray<FBoneAnimationTrack>& Tracks = DataModel->GetBoneAnimationTracks();
+
+    // 스켈레톤 본 개수로 초기화 (Identity로, 애니메이션이 덮어씀)
+    OutPose.SetNum(NumSkeletonBones);
+    for (int32 i = 0; i < NumSkeletonBones; ++i)
+    {
+        OutPose[i] = FTransform();
+    }
+
+    // 애니메이션 트랙을 본 이름으로 매핑
+    for (int32 TrackIdx = 0; TrackIdx < Tracks.Num() && TrackIdx < InPose.Num(); ++TrackIdx)
+    {
+        int32 BoneIdx = CurrentSkeleton->FindBoneIndex(Tracks[TrackIdx].Name);
+        if (BoneIdx != INDEX_NONE && BoneIdx < NumSkeletonBones)
+        {
+            OutPose[BoneIdx] = InPose[TrackIdx];
+        }
+    }
+}
+
+void UAnimInstance::BlendPosesByBoneName(
+    const TArray<FTransform>& FromPose, UAnimSequence* FromSeq,
+    const TArray<FTransform>& ToPose, UAnimSequence* ToSeq,
+    float Alpha, TArray<FTransform>& OutPose) const
+{
+    if (!CurrentSkeleton)
+    {
+        BlendPoseArrays(FromPose, ToPose, Alpha, OutPose);
+        return;
+    }
+
+    const int32 NumSkeletonBones = CurrentSkeleton->Bones.Num();
+    const float ClampedAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+
+    // 스켈레톤 본 개수로 초기화 (Identity로, 애니메이션이 덮어씀)
+    OutPose.SetNum(NumSkeletonBones);
+    for (int32 i = 0; i < NumSkeletonBones; ++i)
+    {
+        OutPose[i] = FTransform();
+    }
+
+    // From 애니메이션 트랙 정보
+    UAnimDataModel* FromModel = FromSeq ? FromSeq->GetDataModel() : nullptr;
+    const TArray<FBoneAnimationTrack>* FromTracks = FromModel ? &FromModel->GetBoneAnimationTracks() : nullptr;
+
+    // To 애니메이션 트랙 정보
+    UAnimDataModel* ToModel = ToSeq ? ToSeq->GetDataModel() : nullptr;
+    const TArray<FBoneAnimationTrack>* ToTracks = ToModel ? &ToModel->GetBoneAnimationTracks() : nullptr;
+
+    // 각 스켈레톤 본에 대해 블렌딩
+    for (int32 BoneIdx = 0; BoneIdx < NumSkeletonBones; ++BoneIdx)
+    {
+        const FString& BoneName = CurrentSkeleton->Bones[BoneIdx].Name;
+        FTransform FromTransform = FTransform();
+        FTransform ToTransform = FTransform();
+        bool bFoundFrom = false;
+        bool bFoundTo = false;
+
+        // From 애니메이션에서 본 찾기
+        if (FromTracks)
+        {
+            for (int32 t = 0; t < FromTracks->Num() && t < FromPose.Num(); ++t)
+            {
+                if ((*FromTracks)[t].Name.ToString() == BoneName)
+                {
+                    FromTransform = FromPose[t];
+                    bFoundFrom = true;
+                    break;
+                }
+            }
+        }
+
+        // To 애니메이션에서 본 찾기
+        if (ToTracks)
+        {
+            for (int32 t = 0; t < ToTracks->Num() && t < ToPose.Num(); ++t)
+            {
+                if ((*ToTracks)[t].Name.ToString() == BoneName)
+                {
+                    ToTransform = ToPose[t];
+                    bFoundTo = true;
+                    break;
+                }
+            }
+        }
+
+        // 블렌딩
+        if (bFoundFrom && bFoundTo)
+        {
+            OutPose[BoneIdx].Translation = FMath::Lerp(FromTransform.Translation, ToTransform.Translation, ClampedAlpha);
+            OutPose[BoneIdx].Rotation = FQuat::Slerp(FromTransform.Rotation, ToTransform.Rotation, ClampedAlpha);
+            OutPose[BoneIdx].Rotation.Normalize();
+            OutPose[BoneIdx].Scale3D = FMath::Lerp(FromTransform.Scale3D, ToTransform.Scale3D, ClampedAlpha);
+        }
+        else if (bFoundTo)
+        {
+            OutPose[BoneIdx] = ToTransform;
+        }
+        else if (bFoundFrom)
+        {
+            OutPose[BoneIdx] = FromTransform;
+        }
+        // 둘 다 없으면 바인드 포즈 유지
     }
 }

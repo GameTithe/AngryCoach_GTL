@@ -316,6 +316,22 @@ protected:
     void BlendPoseArrays(const TArray<FTransform>& FromPose, const TArray<FTransform>& ToPose, float Alpha, TArray<FTransform>& OutPose) const;
     void GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPose, float DeltaSeconds);
 
+    /**
+     * @brief 애니메이션 트랙 순서의 포즈를 스켈레톤 본 순서로 매핑
+     * @param InPose 애니메이션 트랙 순서 포즈
+     * @param InSequence 포즈를 추출한 애니메이션 시퀀스 (본 이름 정보)
+     * @param OutPose 스켈레톤 본 순서로 매핑된 포즈
+     */
+    void MapPoseToSkeleton(const TArray<FTransform>& InPose, UAnimSequence* InSequence, TArray<FTransform>& OutPose) const;
+
+    /**
+     * @brief 두 애니메이션의 포즈를 본 이름 기준으로 블렌딩
+     */
+    void BlendPosesByBoneName(
+        const TArray<FTransform>& FromPose, UAnimSequence* FromSeq,
+        const TArray<FTransform>& ToPose, UAnimSequence* ToSeq,
+        float Alpha, TArray<FTransform>& OutPose) const;
+
     // 소유 컴포넌트
     USkeletalMeshComponent* OwningComponent = nullptr;
 
