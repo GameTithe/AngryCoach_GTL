@@ -5,6 +5,7 @@
 #include "Source/Runtime/Core/Misc/JsonSerializer.h"
 #include "Source/Game/UI/GameUIManager.h"
 #include "Source/Runtime/AssetManagement/ResourceManager.h"
+#include "Source/Runtime/AssetManagement/Texture.h"
 
 // ============================================
 // FUIAsset 직렬화
@@ -35,6 +36,7 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
         if (widget.Type == "ProgressBar")
         {
             widgetObj["progress"] = widget.Progress;
+            widgetObj["progressBarMode"] = static_cast<int>(widget.ProgressBarMode);
 
             JSON fgColor = JSON::Make(JSON::Class::Array);
             fgColor.append(widget.ForegroundColor[0], widget.ForegroundColor[1],
@@ -54,6 +56,12 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
             lowColor.append(widget.LowColor[0], widget.LowColor[1],
                            widget.LowColor[2], widget.LowColor[3]);
             widgetObj["lowColor"] = lowColor;
+
+            // 텍스처 모드용 경로
+            if (!widget.ForegroundTexturePath.empty())
+                widgetObj["foregroundTexturePath"] = widget.ForegroundTexturePath;
+            if (!widget.BackgroundTexturePath.empty())
+                widgetObj["backgroundTexturePath"] = widget.BackgroundTexturePath;
         }
 
         // Texture specific
@@ -121,6 +129,10 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
             // ProgressBar
             FJsonSerializer::ReadFloat(widgetObj, "progress", widget.Progress, 1.0f, false);
 
+            int32 tempMode = 0;
+            if (FJsonSerializer::ReadInt32(widgetObj, "progressBarMode", tempMode, 0, false))
+                widget.ProgressBarMode = static_cast<EProgressBarMode>(tempMode);
+
             // Color arrays (foregroundColor, backgroundColor, lowColor)
             FLinearColor tempColor;
             if (FJsonSerializer::ReadLinearColor(widgetObj, "foregroundColor", tempColor, FLinearColor(0.2f, 0.8f, 0.2f, 1.0f), false))
@@ -148,6 +160,12 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
             FJsonSerializer::ReadFloat(widgetObj, "borderWidth", widget.BorderWidth, 2.0f, false);
             FJsonSerializer::ReadBool(widgetObj, "rightToLeft", widget.bRightToLeft, false, false);
             FJsonSerializer::ReadFloat(widgetObj, "lowThreshold", widget.LowThreshold, 0.3f, false);
+
+            // ProgressBar 텍스처 모드용 경로
+            if (FJsonSerializer::ReadString(widgetObj, "foregroundTexturePath", tempStr, "", false))
+                widget.ForegroundTexturePath = tempStr;
+            if (FJsonSerializer::ReadString(widgetObj, "backgroundTexturePath", tempStr, "", false))
+                widget.BackgroundTexturePath = tempStr;
 
             // Texture
             if (FJsonSerializer::ReadString(widgetObj, "texturePath", tempStr, "", false))
@@ -613,12 +631,121 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     {
         ImGui::Text("ProgressBar");
         if (ImGui::SliderFloat("Progress", &widget->Progress, 0.0f, 1.0f)) bModified = true;
-        if (ImGui::ColorEdit4("Foreground", widget->ForegroundColor)) bModified = true;
-        if (ImGui::ColorEdit4("Background", widget->BackgroundColor)) bModified = true;
-        if (ImGui::ColorEdit4("Low Color", widget->LowColor)) bModified = true;
+
+        // 모드 콤보박스
+        const char* modeNames[] = { "Color", "Texture" };
+        int currentMode = static_cast<int>(widget->ProgressBarMode);
+        if (ImGui::Combo("Mode", &currentMode, modeNames, IM_ARRAYSIZE(modeNames)))
+        {
+            widget->ProgressBarMode = static_cast<EProgressBarMode>(currentMode);
+            bModified = true;
+        }
+
+        if (widget->ProgressBarMode == EProgressBarMode::Color)
+        {
+            // 색상 모드
+            if (ImGui::ColorEdit4("Foreground", widget->ForegroundColor)) bModified = true;
+            if (ImGui::ColorEdit4("Background", widget->BackgroundColor)) bModified = true;
+            if (ImGui::ColorEdit4("Low Color", widget->LowColor)) bModified = true;
+            if (ImGui::SliderFloat("Low Threshold", &widget->LowThreshold, 0.0f, 1.0f)) bModified = true;
+        }
+        else
+        {
+            // 텍스처 모드 - 콤보박스로 텍스처 선택
+            UResourceManager& ResMgr = UResourceManager::GetInstance();
+            TArray<FString> TexturePaths = ResMgr.GetAllFilePaths<UTexture>();
+
+            // Foreground 텍스처
+            {
+                int fgIndex = 0;
+                for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+                {
+                    if (TexturePaths[idx] == widget->ForegroundTexturePath.c_str())
+                    {
+                        fgIndex = idx + 1;
+                        break;
+                    }
+                }
+                FString fgPreview = "None";
+                if (fgIndex > 0)
+                {
+                    std::filesystem::path p(TexturePaths[fgIndex - 1]);
+                    fgPreview = p.filename().string();
+                }
+                if (ImGui::BeginCombo("Foreground Tex", fgPreview.c_str()))
+                {
+                    bool selNone = (fgIndex == 0);
+                    if (ImGui::Selectable("None", selNone))
+                    {
+                        widget->ForegroundTexturePath = "";
+                        bModified = true;
+                    }
+                    if (selNone) ImGui::SetItemDefaultFocus();
+                    for (int i = 0; i < TexturePaths.Num(); ++i)
+                    {
+                        bool selected = (fgIndex == i + 1);
+                        std::filesystem::path p(TexturePaths[i]);
+                        FString displayName = p.filename().string();
+                        if (ImGui::Selectable(displayName.c_str(), selected))
+                        {
+                            widget->ForegroundTexturePath = TexturePaths[i].c_str();
+                            bModified = true;
+                        }
+                        if (selected) ImGui::SetItemDefaultFocus();
+                        if (ImGui::IsItemHovered())
+                            ImGui::SetTooltip("%s", TexturePaths[i].c_str());
+                    }
+                    ImGui::EndCombo();
+                }
+            }
+
+            // Background 텍스처
+            {
+                int bgIndex = 0;
+                for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+                {
+                    if (TexturePaths[idx] == widget->BackgroundTexturePath.c_str())
+                    {
+                        bgIndex = idx + 1;
+                        break;
+                    }
+                }
+                FString bgPreview = "None";
+                if (bgIndex > 0)
+                {
+                    std::filesystem::path p(TexturePaths[bgIndex - 1]);
+                    bgPreview = p.filename().string();
+                }
+                if (ImGui::BeginCombo("Background Tex", bgPreview.c_str()))
+                {
+                    bool selNone = (bgIndex == 0);
+                    if (ImGui::Selectable("None", selNone))
+                    {
+                        widget->BackgroundTexturePath = "";
+                        bModified = true;
+                    }
+                    if (selNone) ImGui::SetItemDefaultFocus();
+                    for (int i = 0; i < TexturePaths.Num(); ++i)
+                    {
+                        bool selected = (bgIndex == i + 1);
+                        std::filesystem::path p(TexturePaths[i]);
+                        FString displayName = p.filename().string();
+                        if (ImGui::Selectable(displayName.c_str(), selected))
+                        {
+                            widget->BackgroundTexturePath = TexturePaths[i].c_str();
+                            bModified = true;
+                        }
+                        if (selected) ImGui::SetItemDefaultFocus();
+                        if (ImGui::IsItemHovered())
+                            ImGui::SetTooltip("%s", TexturePaths[i].c_str());
+                    }
+                    ImGui::EndCombo();
+                }
+            }
+        }
+
         if (ImGui::DragFloat("Border Width", &widget->BorderWidth, 0.1f, 0.0f, 10.0f)) bModified = true;
         if (ImGui::Checkbox("Right to Left", &widget->bRightToLeft)) bModified = true;
-        if (ImGui::SliderFloat("Low Threshold", &widget->LowThreshold, 0.0f, 1.0f)) bModified = true;
     }
     else if (widget->Type == "Texture")
     {
@@ -740,73 +867,164 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
     ImVec2 min = ImVec2(CanvasOrigin.x + Widget.X * Zoom, CanvasOrigin.y + Widget.Y * Zoom);
     ImVec2 max = ImVec2(min.x + Widget.Width * Zoom, min.y + Widget.Height * Zoom);
 
+    UResourceManager& ResMgr = UResourceManager::GetInstance();
+
     if (Widget.Type == "ProgressBar")
     {
-        // 배경
-        ImU32 bgColor = IM_COL32(
-            (int)(Widget.BackgroundColor[0] * 255),
-            (int)(Widget.BackgroundColor[1] * 255),
-            (int)(Widget.BackgroundColor[2] * 255),
-            (int)(Widget.BackgroundColor[3] * 255)
-        );
-        DrawList->AddRectFilled(min, max, bgColor);
+        ImVec2 originalMin = min;  // 테두리용 저장
 
-        // 전경 (Progress)
-        float fillWidth = Widget.Width * Widget.Progress * Zoom;
-        ImVec2 fillMax;
-        if (Widget.bRightToLeft)
+        if (Widget.ProgressBarMode == EProgressBarMode::Texture)
         {
-            fillMax = ImVec2(max.x, max.y);
-            min.x = max.x - fillWidth;
+            // 텍스처 모드
+            // 배경 텍스처
+            if (!Widget.BackgroundTexturePath.empty())
+            {
+                UTexture* bgTex = ResMgr.GetResource<UTexture>(FString(Widget.BackgroundTexturePath.c_str()));
+                if (bgTex && bgTex->GetShaderResourceView())
+                {
+                    DrawList->AddImage((ImTextureID)bgTex->GetShaderResourceView(), min, max);
+                }
+                else
+                {
+                    DrawList->AddRectFilled(min, max, IM_COL32(60, 60, 60, 200));
+                }
+            }
+            else
+            {
+                DrawList->AddRectFilled(min, max, IM_COL32(60, 60, 60, 200));
+            }
+
+            // 전경 텍스처 (Progress 반영)
+            if (!Widget.ForegroundTexturePath.empty())
+            {
+                UTexture* fgTex = ResMgr.GetResource<UTexture>(FString(Widget.ForegroundTexturePath.c_str()));
+                if (fgTex && fgTex->GetShaderResourceView())
+                {
+                    float fillWidth = Widget.Width * Widget.Progress * Zoom;
+                    ImVec2 fgMin, fgMax;
+                    ImVec2 uvMin(0, 0), uvMax(1, 1);
+
+                    if (Widget.bRightToLeft)
+                    {
+                        fgMin = ImVec2(max.x - fillWidth, min.y);
+                        fgMax = max;
+                        uvMin.x = 1.0f - Widget.Progress;
+                    }
+                    else
+                    {
+                        fgMin = min;
+                        fgMax = ImVec2(min.x + fillWidth, max.y);
+                        uvMax.x = Widget.Progress;
+                    }
+
+                    DrawList->AddImage((ImTextureID)fgTex->GetShaderResourceView(), fgMin, fgMax, uvMin, uvMax);
+                }
+            }
         }
         else
         {
-            fillMax = ImVec2(min.x + fillWidth, max.y);
-        }
-
-        ImU32 fgColor = IM_COL32(
-            (int)(Widget.ForegroundColor[0] * 255),
-            (int)(Widget.ForegroundColor[1] * 255),
-            (int)(Widget.ForegroundColor[2] * 255),
-            (int)(Widget.ForegroundColor[3] * 255)
-        );
-
-        if (Widget.Progress <= Widget.LowThreshold)
-        {
-            fgColor = IM_COL32(
-                (int)(Widget.LowColor[0] * 255),
-                (int)(Widget.LowColor[1] * 255),
-                (int)(Widget.LowColor[2] * 255),
-                (int)(Widget.LowColor[3] * 255)
+            // 색상 모드
+            // 배경
+            ImU32 bgColor = IM_COL32(
+                (int)(Widget.BackgroundColor[0] * 255),
+                (int)(Widget.BackgroundColor[1] * 255),
+                (int)(Widget.BackgroundColor[2] * 255),
+                (int)(Widget.BackgroundColor[3] * 255)
             );
-        }
+            DrawList->AddRectFilled(min, max, bgColor);
 
-        if (!Widget.bRightToLeft)
-        {
-            DrawList->AddRectFilled(min, fillMax, fgColor);
-        }
-        else
-        {
-            DrawList->AddRectFilled(ImVec2(max.x - fillWidth, min.y), max, fgColor);
+            // 전경 (Progress)
+            float fillWidth = Widget.Width * Widget.Progress * Zoom;
+            ImVec2 fillMax;
+            ImVec2 fillMin = min;
+
+            if (Widget.bRightToLeft)
+            {
+                fillMin = ImVec2(max.x - fillWidth, min.y);
+                fillMax = max;
+            }
+            else
+            {
+                fillMax = ImVec2(min.x + fillWidth, max.y);
+            }
+
+            ImU32 fgColor = IM_COL32(
+                (int)(Widget.ForegroundColor[0] * 255),
+                (int)(Widget.ForegroundColor[1] * 255),
+                (int)(Widget.ForegroundColor[2] * 255),
+                (int)(Widget.ForegroundColor[3] * 255)
+            );
+
+            if (Widget.Progress <= Widget.LowThreshold)
+            {
+                fgColor = IM_COL32(
+                    (int)(Widget.LowColor[0] * 255),
+                    (int)(Widget.LowColor[1] * 255),
+                    (int)(Widget.LowColor[2] * 255),
+                    (int)(Widget.LowColor[3] * 255)
+                );
+            }
+
+            DrawList->AddRectFilled(fillMin, fillMax, fgColor);
         }
 
         // 테두리
         if (Widget.BorderWidth > 0)
         {
-            ImVec2 borderMin = ImVec2(CanvasOrigin.x + Widget.X * Zoom, CanvasOrigin.y + Widget.Y * Zoom);
-            ImVec2 borderMax = ImVec2(borderMin.x + Widget.Width * Zoom, borderMin.y + Widget.Height * Zoom);
-            DrawList->AddRect(borderMin, borderMax, IM_COL32(255, 255, 255, 255), 0, 0, Widget.BorderWidth);
+            DrawList->AddRect(originalMin, max, IM_COL32(255, 255, 255, 255), 0, 0, Widget.BorderWidth);
         }
     }
     else if (Widget.Type == "Texture")
     {
-        // 텍스처 플레이스홀더
-        DrawList->AddRectFilled(min, max, IM_COL32(80, 80, 120, 200));
-        DrawList->AddRect(min, max, IM_COL32(150, 150, 200, 255));
+        // 실제 텍스처 표시
+        if (!Widget.TexturePath.empty())
+        {
+            UTexture* tex = ResMgr.GetResource<UTexture>(FString(Widget.TexturePath.c_str()));
+            if (tex && tex->GetShaderResourceView())
+            {
+                // SubUV 계산
+                float uMin = 0.0f, vMin = 0.0f, uMax = 1.0f, vMax = 1.0f;
+                if (Widget.SubUV_NX > 1 || Widget.SubUV_NY > 1)
+                {
+                    int frameX = Widget.SubUV_Frame % Widget.SubUV_NX;
+                    int frameY = Widget.SubUV_Frame / Widget.SubUV_NX;
+                    float cellW = 1.0f / Widget.SubUV_NX;
+                    float cellH = 1.0f / Widget.SubUV_NY;
+                    uMin = frameX * cellW;
+                    vMin = frameY * cellH;
+                    uMax = uMin + cellW;
+                    vMax = vMin + cellH;
+                }
 
-        // 텍스처 아이콘
-        ImVec2 center = ImVec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
-        DrawList->AddText(ImVec2(center.x - 20, center.y - 5), IM_COL32(200, 200, 200, 255), "[TEX]");
+                if (Widget.bAdditive)
+                {
+                    // Additive 모드 - 더 밝게 표현 (ImGui에서 완전한 additive는 어려움)
+                    DrawList->AddImage((ImTextureID)tex->GetShaderResourceView(), min, max,
+                                       ImVec2(uMin, vMin), ImVec2(uMax, vMax), IM_COL32(255, 255, 255, 200));
+                }
+                else
+                {
+                    DrawList->AddImage((ImTextureID)tex->GetShaderResourceView(), min, max,
+                                       ImVec2(uMin, vMin), ImVec2(uMax, vMax));
+                }
+            }
+            else
+            {
+                // 텍스처 로드 실패 - 플레이스홀더
+                DrawList->AddRectFilled(min, max, IM_COL32(80, 80, 120, 200));
+                DrawList->AddRect(min, max, IM_COL32(150, 150, 200, 255));
+                ImVec2 center = ImVec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+                DrawList->AddText(ImVec2(center.x - 20, center.y - 5), IM_COL32(255, 100, 100, 255), "[ERR]");
+            }
+        }
+        else
+        {
+            // 텍스처 미설정 - 플레이스홀더
+            DrawList->AddRectFilled(min, max, IM_COL32(80, 80, 120, 200));
+            DrawList->AddRect(min, max, IM_COL32(150, 150, 200, 255));
+            ImVec2 center = ImVec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+            DrawList->AddText(ImVec2(center.x - 20, center.y - 5), IM_COL32(200, 200, 200, 255), "[TEX]");
+        }
     }
     else if (Widget.Type == "Rect")
     {
