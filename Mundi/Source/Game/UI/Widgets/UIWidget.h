@@ -37,6 +37,37 @@ enum class EUIBlendMode : uint8_t
 };
 
 /**
+ * @brief 위젯 Enter/Exit 애니메이션 타입
+ */
+enum class EWidgetAnimType : int32_t
+{
+    None,           // 애니메이션 없음
+    Fade,           // 페이드 (Opacity)
+    SlideLeft,      // 왼쪽에서 슬라이드
+    SlideRight,     // 오른쪽에서 슬라이드
+    SlideTop,       // 위에서 슬라이드
+    SlideBottom,    // 아래에서 슬라이드
+    Scale,          // 스케일 (0 -> 1)
+    FadeSlideLeft,  // 페이드 + 왼쪽 슬라이드
+    FadeSlideRight, // 페이드 + 오른쪽 슬라이드
+    FadeSlideTop,   // 페이드 + 위 슬라이드
+    FadeSlideBottom,// 페이드 + 아래 슬라이드
+    FadeScale,      // 페이드 + 스케일
+};
+
+/**
+ * @brief Enter/Exit 애니메이션 설정
+ */
+struct FWidgetAnimConfig
+{
+    EWidgetAnimType Type = EWidgetAnimType::None;
+    float Duration = 0.3f;
+    EEasingType Easing = EEasingType::EaseOut;
+    float Delay = 0.0f;
+    float Offset = 100.0f;  // 슬라이드 거리 (픽셀)
+};
+
+/**
  * @brief 애니메이션 속성 타입
  */
 enum class EAnimProperty : uint8_t
@@ -132,6 +163,18 @@ public:
     // 애니메이션 상태
     FWidgetAnimation Animation;
 
+    // Enter/Exit 애니메이션 설정
+    FWidgetAnimConfig EnterAnimConfig;
+    FWidgetAnimConfig ExitAnimConfig;
+
+    // 애니메이션 기준값 (원본 위치/크기/투명도)
+    float OriginalX = 0.0f;
+    float OriginalY = 0.0f;
+    float OriginalWidth = 100.0f;
+    float OriginalHeight = 30.0f;
+    float OriginalOpacity = 1.0f;
+    bool bOriginalCaptured = false;
+
     /**
      * @brief 위젯 렌더링 (파생 클래스에서 구현)
      */
@@ -158,6 +201,26 @@ public:
      * @brief 모든 애니메이션 즉시 중지
      */
     void StopAnimation();
+
+    /**
+     * @brief Enter 애니메이션 재생 (위젯 등장 시)
+     */
+    void PlayEnterAnimation();
+
+    /**
+     * @brief Exit 애니메이션 재생 (위젯 퇴장 시)
+     */
+    void PlayExitAnimation();
+
+    /**
+     * @brief 원본 값 캡처 (애니메이션 기준점)
+     */
+    void CaptureOriginalValues();
+
+    /**
+     * @brief 원본 값으로 복원
+     */
+    void RestoreOriginalValues();
 
     // === Lua에서 사용할 공통 setter ===
 

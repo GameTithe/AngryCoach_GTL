@@ -20,6 +20,18 @@ enum class EProgressBarMode : int32_t
 };
 
 /**
+ * @brief Enter/Exit 애니메이션 설정 (에디터용)
+ */
+struct FEditorAnimConfig
+{
+    int32_t Type = 0;       // EWidgetAnimType
+    float Duration = 0.3f;
+    int32_t Easing = 2;     // EEasingType (0=Linear, 1=EaseIn, 2=EaseOut, 3=EaseInOut)
+    float Delay = 0.0f;
+    float Offset = 100.0f;  // 슬라이드 거리 (픽셀)
+};
+
+/**
  * @brief UI 에디터에서 편집할 위젯 데이터
  */
 struct FUIEditorWidget
@@ -54,6 +66,10 @@ struct FUIEditorWidget
     int32_t SubUV_NY = 1;
     int32_t SubUV_Frame = 0;
     bool bAdditive = false;
+
+    // Animation
+    FEditorAnimConfig EnterAnim;
+    FEditorAnimConfig ExitAnim;
 
     // Binding
     std::string BindingKey;  // e.g., "Player.Health"

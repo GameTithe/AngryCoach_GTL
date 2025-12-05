@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "UICanvas.h"
 #include "ProgressBarWidget.h"
 #include "TextureWidget.h"
@@ -342,6 +342,29 @@ void UUICanvas::StopWidgetAnimation(const std::string& WidgetName)
     if (auto* Widget = FindWidget(WidgetName))
     {
         Widget->StopAnimation();
+    }
+}
+
+void UUICanvas::PlayAllEnterAnimations()
+{
+    UE_LOG("[UI] PlayAllEnterAnimations called for canvas %s, widget count=%d\n", Name.c_str(), (int)Widgets.size());
+    for (auto& Pair : Widgets)
+    {
+        if (Pair.second)
+        {
+            Pair.second->PlayEnterAnimation();
+        }
+    }
+}
+
+void UUICanvas::PlayAllExitAnimations()
+{
+    for (auto& Pair : Widgets)
+    {
+        if (Pair.second)
+        {
+            Pair.second->PlayExitAnimation();
+        }
     }
 }
 

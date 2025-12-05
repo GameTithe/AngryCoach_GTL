@@ -159,6 +159,16 @@ public:
      */
     void StopWidgetAnimation(const std::string& Name);
 
+    /**
+     * @brief 모든 위젯 Enter 애니메이션 재생
+     */
+    void PlayAllEnterAnimations();
+
+    /**
+     * @brief 모든 위젯 Exit 애니메이션 재생
+     */
+    void PlayAllExitAnimations();
+
     // ============================================
     // 캔버스 속성 설정
     // ============================================

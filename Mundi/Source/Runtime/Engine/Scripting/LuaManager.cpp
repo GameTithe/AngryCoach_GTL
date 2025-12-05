@@ -886,6 +886,42 @@ void FLuaManager::ExposeUIFunctions()
         "StopAnimation", [](UUICanvas* Self, const std::string& Name)
         {
             if (Self) Self->StopWidgetAnimation(Name);
+        },
+
+        // Enter 애니메이션 재생
+        "PlayEnterAnimation", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self)
+            {
+                if (UUIWidget* Widget = Self->FindWidget(Name))
+                {
+                    Widget->PlayEnterAnimation();
+                }
+            }
+        },
+
+        // Exit 애니메이션 재생
+        "PlayExitAnimation", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self)
+            {
+                if (UUIWidget* Widget = Self->FindWidget(Name))
+                {
+                    Widget->PlayExitAnimation();
+                }
+            }
+        },
+
+        // 모든 위젯 Enter 애니메이션 재생
+        "PlayAllEnterAnimations", [](UUICanvas* Self)
+        {
+            if (Self) Self->PlayAllEnterAnimations();
+        },
+
+        // 모든 위젯 Exit 애니메이션 재생
+        "PlayAllExitAnimations", [](UUICanvas* Self)
+        {
+            if (Self) Self->PlayAllExitAnimations();
         }
     );
 

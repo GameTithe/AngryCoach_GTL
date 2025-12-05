@@ -20,6 +20,8 @@ UProgressBarWidget::UProgressBarWidget()
 
 UProgressBarWidget::~UProgressBarWidget()
 {
+    UE_LOG("[UI] ~UProgressBarWidget: Destroying '%s', FgBitmap=%p, BgBitmap=%p, LowBitmap=%p\n",
+        Name.c_str(), ForegroundBitmap, BackgroundBitmap, LowBitmap);
     ClearTextures();
 }
 
@@ -36,6 +38,15 @@ bool UProgressBarWidget::InitWICFactory()
     );
 
     return SUCCEEDED(hr);
+}
+
+void UProgressBarWidget::ShutdownWICFactory()
+{
+    if (WICFactory)
+    {
+        WICFactory->Release();
+        WICFactory = nullptr;
+    }
 }
 
 void UProgressBarWidget::ReleaseBitmap(ID2D1Bitmap*& Bitmap)

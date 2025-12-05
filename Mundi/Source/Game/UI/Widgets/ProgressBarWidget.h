@@ -79,6 +79,11 @@ public:
     void SetBackgroundSubUVFrame(int32_t FrameIndex);
     void SetBackgroundSubUV(int32_t FrameIndex, int32_t NX, int32_t NY);
 
+    /**
+     * @brief WIC 팩토리 정리 (프로그램 종료 시 호출)
+     */
+    static void ShutdownWICFactory();
+
 private:
     // SubUV UV 계산 헬퍼
     void CalculateSubUVRect(int32_t FrameIndex, int32_t NX, int32_t NY,

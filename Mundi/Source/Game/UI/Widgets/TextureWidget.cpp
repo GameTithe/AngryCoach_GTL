@@ -15,6 +15,7 @@ UTextureWidget::UTextureWidget()
 
 UTextureWidget::~UTextureWidget()
 {
+    UE_LOG("[UI] ~UTextureWidget: Destroying '%s', Bitmap=%p\n", Name.c_str(), Bitmap);
     ReleaseTexture();
 }
 
@@ -157,6 +158,15 @@ void UTextureWidget::Render(ID2D1DeviceContext* Context)
 
     // 실제 투명도 계산 (Tint의 A와 Opacity 조합)
     float FinalOpacity = Tint.a * Opacity;
+
+    // 디버그: 렌더링 시 실제 사용되는 Opacity 확인
+    static int renderLogCount = 0;
+    if (renderLogCount < 20)
+    {
+        UE_LOG("[UI] TextureWidget::Render %s: Opacity=%.3f, Tint.a=%.3f, FinalOpacity=%.3f\n",
+            Name.c_str(), Opacity, Tint.a, FinalOpacity);
+        renderLogCount++;
+    }
 
     // 블렌드 모드 설정
     D2D1_PRIMITIVE_BLEND PrevBlend = Context->GetPrimitiveBlend();

@@ -176,6 +176,7 @@ void UGameUIManager::Shutdown()
 
     // WIC 팩토리 정리 (DXGI 리소스 해제 전에 호출해야 함)
     UTextureWidget::ShutdownWICFactory();
+    UProgressBarWidget::ShutdownWICFactory();
 
     ReleaseD2DResources();
 
@@ -235,19 +236,36 @@ void UGameUIManager::Update(float DeltaTime)
         return;
 
     // 모든 캔버스 업데이트 (위젯 애니메이션 처리)
+    static int updateLogCount = 0;
     for (auto& Pair : Canvases)
     {
         if (Pair.second)
         {
+            if (updateLogCount < 5)
+            {
+                UE_LOG("[UI] GameUIManager::Update calling canvas %s update, dt=%.4f\n",
+                    Pair.first.c_str(), DeltaTime);
+            }
             Pair.second->Update(DeltaTime);
         }
     }
+    if (updateLogCount < 5 && !Canvases.empty())
+        updateLogCount++;
 }
 
 void UGameUIManager::BeginD2DDraw()
 {
     if (!D2DContext || !SwapChain)
         return;
+
+    // 안전 장치: 기존 리소스가 있으면 먼저 해제 (EndD2DDraw가 호출되지 않은 경우 대비)
+    if (CurrentTargetBitmap || CurrentSurface)
+    {
+        SafeRelease(CurrentTargetBitmap);
+        SafeRelease(CurrentSurface);
+        CurrentTargetBitmap = nullptr;
+        CurrentSurface = nullptr;
+    }
 
     // SwapChain에서 Surface 얻기
     HRESULT hr = SwapChain->GetBuffer(0, __uuidof(IDXGISurface), (void**)&CurrentSurface);
@@ -344,9 +362,11 @@ void UGameUIManager::RemoveCanvas(const std::string& Name)
 
 void UGameUIManager::RemoveAllCanvases()
 {
+    UE_LOG("[UI] RemoveAllCanvases: Removing %d canvases\n", (int)Canvases.size());
     Canvases.clear();
     SortedCanvases.clear();
     bCanvasesSortDirty = false;
+    UE_LOG("[UI] RemoveAllCanvases: Done\n");
 }
 
 void UGameUIManager::SetCanvasVisible(const std::string& Name, bool bVisible)
@@ -502,6 +522,50 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
 
         // Z-Order 설정
         canvas->SetWidgetZOrder(widgetName.c_str(), zOrder);
+
+        // Animation 설정
+        if (UUIWidget* widget = canvas->FindWidget(widgetName.c_str()))
+        {
+            // Enter Animation
+            JSON enterAnimObj;
+            if (FJsonSerializer::ReadObject(widgetObj, "enterAnim", enterAnimObj, JSON(), false))
+            {
+                int32 animType = 0;
+                FJsonSerializer::ReadInt32(enterAnimObj, "type", animType, 0, false);
+                widget->EnterAnimConfig.Type = static_cast<EWidgetAnimType>(animType);
+                FJsonSerializer::ReadFloat(enterAnimObj, "duration", widget->EnterAnimConfig.Duration, 0.3f, false);
+                int32 easing = 2;
+                FJsonSerializer::ReadInt32(enterAnimObj, "easing", easing, 2, false);
+                widget->EnterAnimConfig.Easing = static_cast<EEasingType>(easing);
+                FJsonSerializer::ReadFloat(enterAnimObj, "delay", widget->EnterAnimConfig.Delay, 0.0f, false);
+                FJsonSerializer::ReadFloat(enterAnimObj, "offset", widget->EnterAnimConfig.Offset, 100.0f, false);
+                UE_LOG("[UI] Loaded enterAnim for %s: type=%d, duration=%.2f\n",
+                    widgetName.c_str(), animType, widget->EnterAnimConfig.Duration);
+            }
+            else
+            {
+                UE_LOG("[UI] No enterAnim found for %s\n", widgetName.c_str());
+            }
+
+            // Exit Animation
+            JSON exitAnimObj;
+            if (FJsonSerializer::ReadObject(widgetObj, "exitAnim", exitAnimObj, JSON(), false))
+            {
+                int32 animType = 0;
+                FJsonSerializer::ReadInt32(exitAnimObj, "type", animType, 0, false);
+                widget->ExitAnimConfig.Type = static_cast<EWidgetAnimType>(animType);
+                FJsonSerializer::ReadFloat(exitAnimObj, "duration", widget->ExitAnimConfig.Duration, 0.3f, false);
+                int32 easing = 2;
+                FJsonSerializer::ReadInt32(exitAnimObj, "easing", easing, 2, false);
+                widget->ExitAnimConfig.Easing = static_cast<EEasingType>(easing);
+                FJsonSerializer::ReadFloat(exitAnimObj, "delay", widget->ExitAnimConfig.Delay, 0.0f, false);
+                FJsonSerializer::ReadFloat(exitAnimObj, "offset", widget->ExitAnimConfig.Offset, 100.0f, false);
+            }
+
+            // 원본 값 캡처 (애니메이션 기준점 저장)
+            widget->CaptureOriginalValues();
+            // Enter 애니메이션은 Lua에서 직접 제어
+        }
     }
 
     return canvas;

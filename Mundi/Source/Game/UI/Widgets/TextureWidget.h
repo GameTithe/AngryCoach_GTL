@@ -33,8 +33,7 @@ public:
     // 기본 흰색 (원본 색상 유지)
     D2D1_COLOR_F Tint;
 
-    // === 투명도 ===
-    float Opacity = 1.0f;
+    // 투명도는 부모 클래스 UUIWidget::Opacity 사용
 
     // === 블렌드 모드 ===
     EUIBlendMode BlendMode = EUIBlendMode::Normal;

@@ -81,6 +81,30 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
             widgetObj["bind"] = widget.BindingKey;
         }
 
+        // Enter Animation
+        if (widget.EnterAnim.Type != 0)
+        {
+            JSON enterAnim = JSON::Make(JSON::Class::Object);
+            enterAnim["type"] = widget.EnterAnim.Type;
+            enterAnim["duration"] = widget.EnterAnim.Duration;
+            enterAnim["easing"] = widget.EnterAnim.Easing;
+            enterAnim["delay"] = widget.EnterAnim.Delay;
+            enterAnim["offset"] = widget.EnterAnim.Offset;
+            widgetObj["enterAnim"] = enterAnim;
+        }
+
+        // Exit Animation
+        if (widget.ExitAnim.Type != 0)
+        {
+            JSON exitAnim = JSON::Make(JSON::Class::Object);
+            exitAnim["type"] = widget.ExitAnim.Type;
+            exitAnim["duration"] = widget.ExitAnim.Duration;
+            exitAnim["easing"] = widget.ExitAnim.Easing;
+            exitAnim["delay"] = widget.ExitAnim.Delay;
+            exitAnim["offset"] = widget.ExitAnim.Offset;
+            widgetObj["exitAnim"] = exitAnim;
+        }
+
         widgetsArray.append(widgetObj);
     }
     doc["widgets"] = widgetsArray;
@@ -189,6 +213,36 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
             // Binding
             if (FJsonSerializer::ReadString(widgetObj, "bind", tempStr, "", false))
                 widget.BindingKey = tempStr;
+
+            // Enter Animation
+            JSON enterAnimObj;
+            if (FJsonSerializer::ReadObject(widgetObj, "enterAnim", enterAnimObj, JSON(), false))
+            {
+                int32 animType = 0;
+                FJsonSerializer::ReadInt32(enterAnimObj, "type", animType, 0, false);
+                widget.EnterAnim.Type = animType;
+                FJsonSerializer::ReadFloat(enterAnimObj, "duration", widget.EnterAnim.Duration, 0.3f, false);
+                int32 easing = 2;
+                FJsonSerializer::ReadInt32(enterAnimObj, "easing", easing, 2, false);
+                widget.EnterAnim.Easing = easing;
+                FJsonSerializer::ReadFloat(enterAnimObj, "delay", widget.EnterAnim.Delay, 0.0f, false);
+                FJsonSerializer::ReadFloat(enterAnimObj, "offset", widget.EnterAnim.Offset, 100.0f, false);
+            }
+
+            // Exit Animation
+            JSON exitAnimObj;
+            if (FJsonSerializer::ReadObject(widgetObj, "exitAnim", exitAnimObj, JSON(), false))
+            {
+                int32 animType = 0;
+                FJsonSerializer::ReadInt32(exitAnimObj, "type", animType, 0, false);
+                widget.ExitAnim.Type = animType;
+                FJsonSerializer::ReadFloat(exitAnimObj, "duration", widget.ExitAnim.Duration, 0.3f, false);
+                int32 easing = 2;
+                FJsonSerializer::ReadInt32(exitAnimObj, "easing", easing, 2, false);
+                widget.ExitAnim.Easing = easing;
+                FJsonSerializer::ReadFloat(exitAnimObj, "delay", widget.ExitAnim.Delay, 0.0f, false);
+                FJsonSerializer::ReadFloat(exitAnimObj, "offset", widget.ExitAnim.Offset, 100.0f, false);
+            }
 
             Widgets.push_back(widget);
         }
@@ -947,6 +1001,55 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     {
         ImGui::Text("Rect");
         if (ImGui::ColorEdit4("Color", widget->ForegroundColor)) bModified = true;
+    }
+
+    // === Animation 설정 ===
+    ImGui::Separator();
+    if (ImGui::CollapsingHeader("Animation", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        const char* animTypeNames[] = {
+            "None", "Fade", "Slide Left", "Slide Right", "Slide Top", "Slide Bottom",
+            "Scale", "Fade+Slide Left", "Fade+Slide Right", "Fade+Slide Top", "Fade+Slide Bottom", "Fade+Scale"
+        };
+        const char* easingNames[] = { "Linear", "Ease In", "Ease Out", "Ease In/Out" };
+
+        // Enter Animation
+        ImGui::Text("Enter Animation");
+        ImGui::PushID("EnterAnim");
+        if (ImGui::Combo("Type##Enter", &widget->EnterAnim.Type, animTypeNames, IM_ARRAYSIZE(animTypeNames))) bModified = true;
+        if (widget->EnterAnim.Type != 0)
+        {
+            if (ImGui::DragFloat("Duration##Enter", &widget->EnterAnim.Duration, 0.01f, 0.0f, 5.0f, "%.2f s")) bModified = true;
+            if (ImGui::Combo("Easing##Enter", &widget->EnterAnim.Easing, easingNames, IM_ARRAYSIZE(easingNames))) bModified = true;
+            if (ImGui::DragFloat("Delay##Enter", &widget->EnterAnim.Delay, 0.01f, 0.0f, 5.0f, "%.2f s")) bModified = true;
+            // Slide 타입일 경우에만 Offset 표시
+            if (widget->EnterAnim.Type >= 2 && widget->EnterAnim.Type <= 4 ||
+                widget->EnterAnim.Type >= 7 && widget->EnterAnim.Type <= 10)
+            {
+                if (ImGui::DragFloat("Offset##Enter", &widget->EnterAnim.Offset, 1.0f, 0.0f, 500.0f, "%.0f px")) bModified = true;
+            }
+        }
+        ImGui::PopID();
+
+        ImGui::Spacing();
+
+        // Exit Animation
+        ImGui::Text("Exit Animation");
+        ImGui::PushID("ExitAnim");
+        if (ImGui::Combo("Type##Exit", &widget->ExitAnim.Type, animTypeNames, IM_ARRAYSIZE(animTypeNames))) bModified = true;
+        if (widget->ExitAnim.Type != 0)
+        {
+            if (ImGui::DragFloat("Duration##Exit", &widget->ExitAnim.Duration, 0.01f, 0.0f, 5.0f, "%.2f s")) bModified = true;
+            if (ImGui::Combo("Easing##Exit", &widget->ExitAnim.Easing, easingNames, IM_ARRAYSIZE(easingNames))) bModified = true;
+            if (ImGui::DragFloat("Delay##Exit", &widget->ExitAnim.Delay, 0.01f, 0.0f, 5.0f, "%.2f s")) bModified = true;
+            // Slide 타입일 경우에만 Offset 표시
+            if (widget->ExitAnim.Type >= 2 && widget->ExitAnim.Type <= 4 ||
+                widget->ExitAnim.Type >= 7 && widget->ExitAnim.Type <= 10)
+            {
+                if (ImGui::DragFloat("Offset##Exit", &widget->ExitAnim.Offset, 1.0f, 0.0f, 500.0f, "%.0f px")) bModified = true;
+            }
+        }
+        ImGui::PopID();
     }
 
     ImGui::Separator();
