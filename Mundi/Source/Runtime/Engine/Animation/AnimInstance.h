@@ -5,7 +5,9 @@
 // Forward declarations
 class UAnimationStateMachine;
 class UAnimSequence;
+class UAnimMontage;
 class USkeletalMeshComponent;
+struct FMontagePlayState;
 
 /**
  * @brief 애니메이션 재생 상태를 관리하는 구조체
@@ -251,6 +253,34 @@ public:
 
 
     // ============================================================
+    // Montage API
+    // ============================================================
+
+    /**
+     * @brief 몽타주 재생
+     * @param Montage 재생할 몽타주
+     * @param PlayRate 재생 속도
+     * @return 재생 길이 (초)
+     */
+    float PlayMontage(UAnimMontage* Montage, float PlayRate = 1.0f);
+
+    /**
+     * @brief 몽타주 정지
+     * @param BlendOutTime 블렌드 아웃 시간 (-1이면 몽타주 기본값 사용)
+     */
+    void StopMontage(float BlendOutTime = -1.0f);
+
+    /**
+     * @brief 현재 재생 중인 몽타주 반환
+     */
+    UAnimMontage* GetCurrentMontage() const;
+
+    /**
+     * @brief 몽타주 재생 중인지 확인
+     */
+    bool IsPlayingMontage() const;
+
+    // ============================================================
     // Getters
     // ============================================================
 
@@ -298,6 +328,16 @@ protected:
 
     //마스킹 데이터
     bool bUseUpperBody = false;
-    TArray<bool> UpperBodyMask; // true면 상체 
+    TArray<bool> UpperBodyMask; // true면 상체
+
+    // ============================================================
+    // Montage State
+    // ============================================================
+
+    /** 몽타주 재생 상태 */
+    FMontagePlayState* MontageState = nullptr;
+
+    /** 몽타주 업데이트 */
+    void UpdateMontage(float DeltaTime);
 };
 

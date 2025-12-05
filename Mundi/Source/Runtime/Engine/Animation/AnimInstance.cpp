@@ -4,6 +4,7 @@
 #include "AnimTypes.h"
 #include "AnimationStateMachine.h"
 #include "AnimSequence.h"
+#include "AnimMontage.h"
 // For notify dispatching
 #include "Source/Runtime/Engine/Animation/AnimNotify.h"
 
@@ -38,6 +39,22 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     // PoseProvider 또는 Sequence가 있어야 재생 가능
     if (!CurrentPlayState.PoseProvider && !CurrentPlayState.Sequence)
     {
+        // 몽타주만 재생 중인 경우도 처리
+        if (MontageState && MontageState->bPlaying)
+        {
+            UpdateMontage(DeltaSeconds);
+
+            if (MontageState->Weight > 0.0f && MontageState->Montage && MontageState->Montage->Sequence)
+            {
+                TArray<FTransform> MontagePose;
+                MontageState->Montage->Sequence->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+
+                if (OwningComponent && MontagePose.Num() > 0)
+                {
+                    OwningComponent->SetAnimationPose(MontagePose);
+                }
+            }
+        }
         return;
     }
 
@@ -47,6 +64,8 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     // 현재 상태 시간 갱신
     AdvancePlayState(CurrentPlayState, DeltaSeconds);
 
+    // 기본 포즈 계산
+    TArray<FTransform> BasePose;
     const bool bIsBlending = (BlendTimeRemaining > 0.0f && (BlendTargetState.Sequence != nullptr || BlendTargetState.PoseProvider != nullptr));
 
     if (bIsBlending)
@@ -62,13 +81,7 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
         EvaluatePoseForState(CurrentPlayState, FromPose, DeltaSeconds);
         EvaluatePoseForState(BlendTargetState, TargetPose, DeltaSeconds);
 
-        TArray<FTransform> BlendedPose;
-        BlendPoseArrays(FromPose, TargetPose, BlendAlpha, BlendedPose);
-
-        if (OwningComponent && BlendedPose.Num() > 0)
-        {
-            OwningComponent->SetAnimationPose(BlendedPose);
-        }
+        BlendPoseArrays(FromPose, TargetPose, BlendAlpha, BasePose);
 
         BlendTimeRemaining = FMath::Max(BlendTimeRemaining - DeltaSeconds, 0.0f);
         if (BlendTimeRemaining <= 1e-4f)
@@ -81,15 +94,41 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
             BlendTotalTime = 0.0f;
         }
     }
-    else if (OwningComponent)
+    else
     {
-        TArray<FTransform> Pose;
-        EvaluatePoseForState(CurrentPlayState, Pose, DeltaSeconds);
+        EvaluatePoseForState(CurrentPlayState, BasePose, DeltaSeconds);
+    }
 
-        if (Pose.Num() > 0)
+    // 몽타주 업데이트
+    UpdateMontage(DeltaSeconds);
+
+    // 최종 포즈 계산 (기본 + 몽타주 블렌드)
+    TArray<FTransform> FinalPose = BasePose;
+
+    if (MontageState && MontageState->bPlaying && MontageState->Weight > 0.0f)
+    {
+        if (MontageState->Montage && MontageState->Montage->Sequence)
         {
-            OwningComponent->SetAnimationPose(Pose);
+            TArray<FTransform> MontagePose;
+            MontageState->Montage->Sequence->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+
+            // 몽타주 포즈를 기본 포즈 위에 블렌드
+            const float W = MontageState->Weight;
+            const int32 NumBones = FMath::Min(BasePose.Num(), MontagePose.Num());
+
+            for (int32 i = 0; i < NumBones; ++i)
+            {
+                FinalPose[i].Translation = FMath::Lerp(BasePose[i].Translation, MontagePose[i].Translation, W);
+                FinalPose[i].Rotation = FQuat::Slerp(BasePose[i].Rotation, MontagePose[i].Rotation, W);
+                FinalPose[i].Scale3D = FMath::Lerp(BasePose[i].Scale3D, MontagePose[i].Scale3D, W);
+            }
         }
+    }
+
+    // 최종 포즈 적용
+    if (OwningComponent && FinalPose.Num() > 0)
+    {
+        OwningComponent->SetAnimationPose(FinalPose);
     }
 
     // 노티파이 트리거
@@ -586,4 +625,140 @@ void UAnimInstance::GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPos
         }
     }
 
+}
+
+// ============================================================
+// Montage API
+// ============================================================
+
+float UAnimInstance::PlayMontage(UAnimMontage* Montage, float PlayRate)
+{
+    if (!Montage || !Montage->Sequence)
+    {
+        UE_LOG("UAnimInstance::PlayMontage - Invalid montage or sequence");
+        return 0.0f;
+    }
+
+    // 기존 몽타주 정리
+    if (!MontageState)
+    {
+        MontageState = new FMontagePlayState();
+    }
+
+    MontageState->Montage = Montage;
+    MontageState->Position = 0.0f;
+    MontageState->PlayRate = PlayRate;
+    MontageState->Weight = 0.0f;
+    MontageState->bPlaying = true;
+    MontageState->bBlendingOut = false;
+    MontageState->BlendTime = 0.0f;
+
+    float Duration = Montage->GetPlayLength() / PlayRate;
+
+    UE_LOG("UAnimInstance::PlayMontage - Playing montage (BlendIn: %.2f, BlendOut: %.2f, Duration: %.2f)",
+        Montage->BlendInTime, Montage->BlendOutTime, Duration);
+
+    return Duration;
+}
+
+void UAnimInstance::StopMontage(float BlendOutTime)
+{
+    if (!MontageState || !MontageState->bPlaying || MontageState->bBlendingOut)
+    {
+        return;
+    }
+
+    MontageState->bBlendingOut = true;
+    MontageState->BlendTime = 0.0f;
+
+    // -1이면 몽타주 기본값 사용
+    if (BlendOutTime >= 0.0f && MontageState->Montage)
+    {
+        MontageState->Montage->BlendOutTime = BlendOutTime;
+    }
+
+    UE_LOG("UAnimInstance::StopMontage - Stopping montage with blend out: %.2f",
+        MontageState->Montage ? MontageState->Montage->BlendOutTime : BlendOutTime);
+}
+
+UAnimMontage* UAnimInstance::GetCurrentMontage() const
+{
+    if (MontageState && MontageState->bPlaying)
+    {
+        return MontageState->Montage;
+    }
+    return nullptr;
+}
+
+bool UAnimInstance::IsPlayingMontage() const
+{
+    return MontageState && MontageState->bPlaying;
+}
+
+void UAnimInstance::UpdateMontage(float DeltaTime)
+{
+    if (!MontageState || !MontageState->bPlaying || !MontageState->Montage)
+    {
+        return;
+    }
+
+    UAnimMontage* M = MontageState->Montage;
+
+    // 블렌드 인 처리
+    if (!MontageState->bBlendingOut && MontageState->Weight < 1.0f)
+    {
+        MontageState->BlendTime += DeltaTime;
+        if (M->BlendInTime > 0.0f)
+        {
+            MontageState->Weight = FMath::Clamp(MontageState->BlendTime / M->BlendInTime, 0.0f, 1.0f);
+        }
+        else
+        {
+            MontageState->Weight = 1.0f;
+        }
+    }
+
+    // 블렌드 아웃 처리
+    if (MontageState->bBlendingOut)
+    {
+        MontageState->BlendTime += DeltaTime;
+        if (M->BlendOutTime > 0.0f)
+        {
+            MontageState->Weight = 1.0f - FMath::Clamp(MontageState->BlendTime / M->BlendOutTime, 0.0f, 1.0f);
+        }
+        else
+        {
+            MontageState->Weight = 0.0f;
+        }
+
+        if (MontageState->Weight <= 0.0f)
+        {
+            MontageState->bPlaying = false;
+            MontageState->Montage = nullptr;
+            UE_LOG("UAnimInstance::UpdateMontage - Montage finished");
+            return;
+        }
+    }
+
+    // 시간 진행
+    MontageState->Position += DeltaTime * MontageState->PlayRate;
+    float Length = M->GetPlayLength();
+
+    if (MontageState->Position >= Length)
+    {
+        if (M->bLoop)
+        {
+            MontageState->Position = FMath::Fmod(MontageState->Position, Length);
+        }
+        else
+        {
+            // 끝나면 자동 블렌드 아웃
+            if (!MontageState->bBlendingOut)
+            {
+                MontageState->bBlendingOut = true;
+                MontageState->BlendTime = 0.0f;
+                UE_LOG("UAnimInstance::UpdateMontage - Montage reached end, starting blend out");
+            }
+        }
+    }
 }
