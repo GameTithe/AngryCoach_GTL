@@ -400,6 +400,12 @@ void SUIEditorWindow::RenderToolbar()
     }
     ImGui::SameLine();
 
+    if (ImGui::Button("Save As"))
+    {
+        SaveAssetAs();
+    }
+    ImGui::SameLine();
+
     ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
     ImGui::SameLine();
 
