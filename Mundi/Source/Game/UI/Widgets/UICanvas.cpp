@@ -179,6 +179,125 @@ void UUICanvas::SetWidgetRightToLeft(const std::string& WidgetName, bool bRTL)
 }
 
 // ============================================
+// ProgressBar 텍스처 설정
+// ============================================
+
+bool UUICanvas::SetProgressBarForegroundTexture(const std::string& WidgetName, const std::string& Path, ID2D1DeviceContext* Context)
+{
+    if (!Context)
+        return false;
+
+    if (auto* Widget = dynamic_cast<UProgressBarWidget*>(FindWidget(WidgetName)))
+    {
+        std::wstring WidePath(Path.begin(), Path.end());
+        return Widget->LoadForegroundTexture(WidePath.c_str(), Context);
+    }
+    return false;
+}
+
+bool UUICanvas::SetProgressBarBackgroundTexture(const std::string& WidgetName, const std::string& Path, ID2D1DeviceContext* Context)
+{
+    if (!Context)
+        return false;
+
+    if (auto* Widget = dynamic_cast<UProgressBarWidget*>(FindWidget(WidgetName)))
+    {
+        std::wstring WidePath(Path.begin(), Path.end());
+        return Widget->LoadBackgroundTexture(WidePath.c_str(), Context);
+    }
+    return false;
+}
+
+bool UUICanvas::SetProgressBarLowTexture(const std::string& WidgetName, const std::string& Path, ID2D1DeviceContext* Context)
+{
+    if (!Context)
+        return false;
+
+    if (auto* Widget = dynamic_cast<UProgressBarWidget*>(FindWidget(WidgetName)))
+    {
+        std::wstring WidePath(Path.begin(), Path.end());
+        return Widget->LoadLowTexture(WidePath.c_str(), Context);
+    }
+    return false;
+}
+
+void UUICanvas::SetProgressBarTextureOpacity(const std::string& WidgetName, float Opacity)
+{
+    if (auto* Widget = dynamic_cast<UProgressBarWidget*>(FindWidget(WidgetName)))
+    {
+        Widget->SetTextureOpacity(Opacity);
+    }
+}
+
+void UUICanvas::ClearProgressBarTextures(const std::string& WidgetName)
+{
+    if (auto* Widget = dynamic_cast<UProgressBarWidget*>(FindWidget(WidgetName)))
+    {
+        Widget->ClearTextures();
+    }
+}
+
+// ============================================
+// SubUV 설정
+// ============================================
+
+void UUICanvas::SetTextureSubUVGrid(const std::string& WidgetName, int32_t NX, int32_t NY)
+{
+    if (auto* Widget = dynamic_cast<UTextureWidget*>(FindWidget(WidgetName)))
+    {
+        Widget->SetSubUVGrid(NX, NY);
+    }
+}
+
+void UUICanvas::SetTextureSubUVFrame(const std::string& WidgetName, int32_t FrameIndex)
+{
+    if (auto* Widget = dynamic_cast<UTextureWidget*>(FindWidget(WidgetName)))
+    {
+        Widget->SetSubUVFrame(FrameIndex);
+    }
+}
+
+void UUICanvas::SetTextureSubUV(const std::string& WidgetName, int32_t FrameIndex, int32_t NX, int32_t NY)
+{
+    if (auto* Widget = dynamic_cast<UTextureWidget*>(FindWidget(WidgetName)))
+    {
+        Widget->SetSubUVFrameWithGrid(FrameIndex, NX, NY);
+    }
+}
+
+void UUICanvas::SetProgressBarForegroundSubUV(const std::string& WidgetName, int32_t FrameIndex, int32_t NX, int32_t NY)
+{
+    if (auto* Widget = dynamic_cast<UProgressBarWidget*>(FindWidget(WidgetName)))
+    {
+        Widget->SetForegroundSubUV(FrameIndex, NX, NY);
+    }
+}
+
+void UUICanvas::SetProgressBarBackgroundSubUV(const std::string& WidgetName, int32_t FrameIndex, int32_t NX, int32_t NY)
+{
+    if (auto* Widget = dynamic_cast<UProgressBarWidget*>(FindWidget(WidgetName)))
+    {
+        Widget->SetBackgroundSubUV(FrameIndex, NX, NY);
+    }
+}
+
+void UUICanvas::SetTextureBlendMode(const std::string& WidgetName, EUIBlendMode Mode)
+{
+    if (auto* Widget = dynamic_cast<UTextureWidget*>(FindWidget(WidgetName)))
+    {
+        Widget->SetBlendMode(Mode);
+    }
+}
+
+void UUICanvas::SetTextureAdditive(const std::string& WidgetName, bool bAdditive)
+{
+    if (auto* Widget = dynamic_cast<UTextureWidget*>(FindWidget(WidgetName)))
+    {
+        Widget->SetAdditive(bAdditive);
+    }
+}
+
+// ============================================
 // 위젯 애니메이션
 // ============================================
 

@@ -98,6 +98,30 @@ public:
     void SetWidgetBackgroundColor(const std::string& Name, float R, float G, float B, float A);
     void SetWidgetRightToLeft(const std::string& Name, bool bRTL);
 
+    // ProgressBar 텍스처 설정
+    bool SetProgressBarForegroundTexture(const std::string& Name, const std::string& Path, ID2D1DeviceContext* Context);
+    bool SetProgressBarBackgroundTexture(const std::string& Name, const std::string& Path, ID2D1DeviceContext* Context);
+    bool SetProgressBarLowTexture(const std::string& Name, const std::string& Path, ID2D1DeviceContext* Context);
+    void SetProgressBarTextureOpacity(const std::string& Name, float Opacity);
+    void ClearProgressBarTextures(const std::string& Name);
+
+    // ============================================
+    // SubUV 설정 함수
+    // ============================================
+
+    // TextureWidget용 SubUV
+    void SetTextureSubUVGrid(const std::string& Name, int32_t NX, int32_t NY);
+    void SetTextureSubUVFrame(const std::string& Name, int32_t FrameIndex);
+    void SetTextureSubUV(const std::string& Name, int32_t FrameIndex, int32_t NX, int32_t NY);
+
+    // ProgressBar용 SubUV
+    void SetProgressBarForegroundSubUV(const std::string& Name, int32_t FrameIndex, int32_t NX, int32_t NY);
+    void SetProgressBarBackgroundSubUV(const std::string& Name, int32_t FrameIndex, int32_t NX, int32_t NY);
+
+    // 블렌드 모드
+    void SetTextureBlendMode(const std::string& Name, EUIBlendMode Mode);
+    void SetTextureAdditive(const std::string& Name, bool bAdditive);
+
     // ============================================
     // 위젯 애니메이션 함수
     // ============================================
