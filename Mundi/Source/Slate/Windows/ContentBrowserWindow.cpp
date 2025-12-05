@@ -452,6 +452,13 @@ void UContentBrowserWindow::HandleDoubleClick(FFileEntry& Entry)
             UE_LOG("Failed to load PhysicsAsset from: %s", Entry.FileNameUTF8.c_str());
         }
     }
+    else if (ext == ".uiasset")
+    {
+        // UI Editor를 열고 해당 에셋 로드
+        USlateManager::GetInstance().OpenUIEditor();
+        // TODO: 에셋 로드 기능 추가 (OpenUIEditorWithAsset 함수 구현 필요)
+        UE_LOG("Opening UIEditor for: %s", Entry.FileNameUTF8.c_str());
+    }
     else
     {
         UE_LOG("Unsupported file type: %s", ext.c_str());

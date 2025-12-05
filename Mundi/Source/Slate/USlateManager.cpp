@@ -362,6 +362,34 @@ void USlateManager::CloseParticleViewer()
     g_ParticleViewerWindow = nullptr; // 전역 포인터 업데이트
 }
 
+// ============================================================
+// UI Editor
+// ============================================================
+void USlateManager::OpenUIEditor()
+{
+    if (UIEditorWindow)
+        return;
+
+    UIEditorWindow = new SUIEditorWindow();
+
+    // 창 크기/위치 설정
+    const float toolbarHeight = 50.0f;
+    const float availableHeight = Rect.GetHeight() - toolbarHeight;
+    const float w = Rect.GetWidth() * 0.85f;
+    const float h = availableHeight * 0.85f;
+    const float x = Rect.Left + (Rect.GetWidth() - w) * 0.5f;
+    const float y = Rect.Top + toolbarHeight + (availableHeight - h) * 0.5f;
+
+    UIEditorWindow->Initialize(x, y, w, h, Device);
+}
+
+void USlateManager::CloseUIEditor()
+{
+    if (!UIEditorWindow) return;
+    delete UIEditorWindow;
+    UIEditorWindow = nullptr;
+}
+
 void USlateManager::CloseAnimationGraphEditor()
 {
     if (!AnimationGraphEditorWindow)
@@ -587,6 +615,11 @@ void USlateManager::Render()
     {
         AnimationGraphEditorWindow->RenderBlendSpacePreviewViewport();
         AnimationGraphEditorWindow->OnRender();
+    }
+
+    if (UIEditorWindow && UIEditorWindow->IsOpen())
+    {
+        UIEditorWindow->OnRender();
     }
 }
 
@@ -967,6 +1000,12 @@ void USlateManager::Shutdown()
     {
         delete ParticleViewerWindow;
         ParticleViewerWindow = nullptr;
+    }
+
+    if (UIEditorWindow)
+    {
+        delete UIEditorWindow;
+        UIEditorWindow = nullptr;
     }
 }
 

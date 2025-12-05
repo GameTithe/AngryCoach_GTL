@@ -935,65 +935,6 @@ void FLuaManager::ExposeUIFunctions()
         UGameUIManager::Get().SetCanvasZOrder(Name, Z);
     });
 
-    // ========================================
-    // 게임 상태 관련 함수들
-    // ========================================
-
-    // 게임 상태 설정
-    GameUI.set_function("SetGameState", [](const std::string& State)
-    {
-        if (State == "MainMenu")
-            UGameUIManager::Get().SetGameState(EGameUIState::MainMenu);
-        else if (State == "InGame")
-            UGameUIManager::Get().SetGameState(EGameUIState::InGame);
-        else if (State == "Paused")
-            UGameUIManager::Get().SetGameState(EGameUIState::Paused);
-        else if (State == "Result")
-            UGameUIManager::Get().SetGameState(EGameUIState::Result);
-    });
-
-    // HUD 가시성 설정
-    GameUI.set_function("SetHUDVisible", [](bool bVisible)
-    {
-        UGameUIManager::Get().SetHUDVisible(bVisible);
-    });
-
-    // 타이머 설정
-    GameUI.set_function("SetTimer", [](float Time)
-    {
-        UGameUIManager::Get().SetGameTimer(Time);
-    });
-
-    // 플레이어 체력 설정 (기존 HUD용)
-    GameUI.set_function("SetPlayer1Health", [](float Current, float Max)
-    {
-        auto& Data = UGameUIManager::Get().GetPlayer1Data();
-        Data.CurrentHealth = Current;
-        Data.MaxHealth = Max;
-    });
-
-    GameUI.set_function("SetPlayer2Health", [](float Current, float Max)
-    {
-        auto& Data = UGameUIManager::Get().GetPlayer2Data();
-        Data.CurrentHealth = Current;
-        Data.MaxHealth = Max;
-    });
-
-    // 플레이어 스태미나 설정 (기존 HUD용)
-    GameUI.set_function("SetPlayer1Stamina", [](float Current, float Max)
-    {
-        auto& Data = UGameUIManager::Get().GetPlayer1Data();
-        Data.CurrentStamina = Current;
-        Data.MaxStamina = Max;
-    });
-
-    GameUI.set_function("SetPlayer2Stamina", [](float Current, float Max)
-    {
-        auto& Data = UGameUIManager::Get().GetPlayer2Data();
-        Data.CurrentStamina = Current;
-        Data.MaxStamina = Max;
-    });
-
     // 뷰포트 정보 가져오기
     GameUI.set_function("GetViewportWidth", []() -> float
     {
