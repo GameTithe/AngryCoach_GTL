@@ -653,6 +653,9 @@ float UAnimInstance::PlayMontage(UAnimMontage* Montage, float PlayRate)
     MontageState->bBlendingOut = false;
     MontageState->BlendTime = 0.0f;
 
+    // 노티파이 트래킹 초기화
+    PreviousMontagePlayTime = 0.0f;
+
     float Duration = Montage->GetPlayLength() / PlayRate;
 
     UE_LOG("UAnimInstance::PlayMontage - Playing montage (BlendIn: %.2f, BlendOut: %.2f, Duration: %.2f)",
@@ -740,6 +743,12 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
         }
     }
 
+    // 노티파이 트리거 (시간 진행 전에)
+    TriggerMontageNotifies(DeltaTime);
+
+    // 이전 시간 저장
+    PreviousMontagePlayTime = MontageState->Position;
+
     // 시간 진행
     MontageState->Position += DeltaTime * MontageState->PlayRate;
     float Length = M->GetPlayLength();
@@ -758,6 +767,67 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
                 MontageState->bBlendingOut = true;
                 MontageState->BlendTime = 0.0f;
                 UE_LOG("UAnimInstance::UpdateMontage - Montage reached end, starting blend out");
+            }
+        }
+    }
+}
+
+void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
+{
+    if (!MontageState || !MontageState->bPlaying || !MontageState->Montage)
+    {
+        return;
+    }
+
+    UAnimSequence* MontageSeq = MontageState->Montage->Sequence;
+    if (!MontageSeq)
+    {
+        return;
+    }
+
+    // 노티파이 수집
+    TArray<FPendingAnimNotify> PendingNotifies;
+    float DeltaMove = DeltaSeconds * MontageState->PlayRate;
+    MontageSeq->GetAnimNotify(PreviousMontagePlayTime, DeltaMove, PendingNotifies);
+
+    // 노티파이 처리
+    for (const FPendingAnimNotify& Pending : PendingNotifies)
+    {
+        const FAnimNotifyEvent& Event = *Pending.Event;
+
+        UE_LOG("Montage Notify Triggered: %s at %.2f",
+            Event.NotifyName.ToString().c_str(), Event.TriggerTime);
+
+        if (OwningComponent)
+        {
+            switch (Pending.Type)
+            {
+            case EPendingNotifyType::Trigger:
+                if (Event.Notify)
+                {
+                    Event.Notify->Notify(OwningComponent, MontageSeq);
+                }
+                break;
+            case EPendingNotifyType::StateBegin:
+                if (Event.NotifyState)
+                {
+                    Event.NotifyState->NotifyBegin(OwningComponent, MontageSeq, Event.Duration);
+                }
+                break;
+            case EPendingNotifyType::StateTick:
+                if (Event.NotifyState)
+                {
+                    Event.NotifyState->NotifyTick(OwningComponent, MontageSeq, Event.Duration);
+                }
+                break;
+            case EPendingNotifyType::StateEnd:
+                if (Event.NotifyState)
+                {
+                    Event.NotifyState->NotifyEnd(OwningComponent, MontageSeq, Event.Duration);
+                }
+                break;
+            default:
+                break;
             }
         }
     }

@@ -337,7 +337,13 @@ protected:
     /** 몽타주 재생 상태 */
     FMontagePlayState* MontageState = nullptr;
 
+    /** 이전 프레임 몽타주 재생 시간 (노티파이 검출용) */
+    float PreviousMontagePlayTime = 0.0f;
+
     /** 몽타주 업데이트 */
     void UpdateMontage(float DeltaTime);
+
+    /** 몽타주 노티파이 트리거 */
+    void TriggerMontageNotifies(float DeltaSeconds);
 };
 
