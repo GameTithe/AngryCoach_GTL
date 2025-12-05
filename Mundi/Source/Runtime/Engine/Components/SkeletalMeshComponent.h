@@ -147,6 +147,11 @@ public:
     void SetAnimationPose(const TArray<FTransform>& InPose);
 
     /**
+     * @brief 현재 로컬 포즈 가져오기
+     */
+    const TArray<FTransform>& GetCurrentLocalSpacePose() const { return CurrentLocalSpacePose; }
+
+    /**
      * @brief AnimInstance 가져오기
      */
     UAnimInstance* GetAnimInstance() const { return AnimInstance; }

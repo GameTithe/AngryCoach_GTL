@@ -12,6 +12,9 @@
 #include "BoneAnchorComponent.h"
 #include "SkinningStats.h"
 #include "Source/Runtime/Engine/Animation/AnimSequence.h"
+#include "Source/Runtime/Engine/Animation/AnimMontage.h"
+#include "Source/Runtime/Engine/Animation/AnimInstance.h"
+#include "Source/Runtime/Engine/Animation/AnimTypes.h"
 #include "Source/Runtime/Engine/Collision/Picking.h"
 #include "Source/Runtime/Engine/Animation/AnimNotify_PlaySound.h"
 #include "Source/Runtime/AssetManagement/ResourceManager.h"
@@ -1654,6 +1657,213 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
         ActiveState->bBoneLinesDirty = true;
     }
 
+    // ============================================================
+    // 몽타주 모드 재생 처리
+    // ============================================================
+    UAnimMontage* ActiveMontage = nullptr;
+    if (ActiveState->AssetBrowserMode == EAssetBrowserMode::Montage)
+    {
+        ActiveMontage = ActiveState->bCreatingNewMontage ? ActiveState->EditingMontage : ActiveState->CurrentMontage;
+    }
+
+    if (ActiveMontage && ActiveMontage->HasSections())
+    {
+        // 섹션별 시작 시간/길이 계산
+        float MontageTotalLength = 0.0f;
+        TArray<float> SectionStartTimes;
+        TArray<float> SectionLengths;
+
+        for (int32 i = 0; i < ActiveMontage->GetNumSections(); ++i)
+        {
+            SectionStartTimes.Add(MontageTotalLength);
+            UAnimSequence* Seq = ActiveMontage->GetSectionSequence(i);
+            float Len = Seq ? Seq->GetPlayLength() : 0.0f;
+            SectionLengths.Add(Len);
+            MontageTotalLength += Len;
+        }
+
+        // 재생 시간 진행
+        if (ActiveState->bIsPlaying && MontageTotalLength > 0.0f)
+        {
+            ActiveState->MontagePreviewTime += DeltaSeconds;
+            if (ActiveState->MontagePreviewTime >= MontageTotalLength)
+            {
+                if (ActiveState->bIsLooping || ActiveMontage->bLoop)
+                    ActiveState->MontagePreviewTime = std::fmodf(ActiveState->MontagePreviewTime, MontageTotalLength);
+                else
+                {
+                    ActiveState->MontagePreviewTime = MontageTotalLength;
+                    ActiveState->bIsPlaying = false;
+                }
+            }
+        }
+        else if (ActiveState->bIsPlayingReverse && MontageTotalLength > 0.0f)
+        {
+            ActiveState->MontagePreviewTime -= DeltaSeconds;
+            if (ActiveState->MontagePreviewTime < 0.0f)
+            {
+                if (ActiveState->bIsLooping || ActiveMontage->bLoop)
+                    ActiveState->MontagePreviewTime += MontageTotalLength;
+                else
+                {
+                    ActiveState->MontagePreviewTime = 0.0f;
+                    ActiveState->bIsPlayingReverse = false;
+                }
+            }
+        }
+
+        // 현재 섹션 찾기
+        int32 NewSection = 0;
+        float LocalTime = ActiveState->MontagePreviewTime;
+        for (int32 i = 0; i < SectionStartTimes.Num(); ++i)
+        {
+            float SectionEnd = SectionStartTimes[i] + SectionLengths[i];
+            if (ActiveState->MontagePreviewTime < SectionEnd || i == SectionStartTimes.Num() - 1)
+            {
+                NewSection = i;
+                LocalTime = ActiveState->MontagePreviewTime - SectionStartTimes[i];
+                LocalTime = FMath::Clamp(LocalTime, 0.0f, SectionLengths[i]);
+                break;
+            }
+        }
+
+        // 섹션 변경 감지 -> 블렌딩 시작
+        if (NewSection != ActiveState->CurrentMontageSection)
+        {
+            if (ActiveState->CurrentMontageSection >= 0 && NewSection < ActiveMontage->GetNumSections())
+            {
+                float BlendTime = ActiveMontage->Sections[NewSection].BlendInTime;
+                UE_LOG("[Montage] Section %d -> %d, BlendTime: %.3f", ActiveState->CurrentMontageSection, NewSection, BlendTime);
+                if (BlendTime > 0.0f)
+                {
+                    ActiveState->PrevMontageSection = ActiveState->CurrentMontageSection;
+                    ActiveState->PrevSectionEndTime = SectionLengths[ActiveState->CurrentMontageSection] - 0.001f;
+                    ActiveState->SectionBlendTime = 0.0f;
+                    ActiveState->SectionBlendDuration = BlendTime;
+                }
+                else
+                {
+                    ActiveState->PrevMontageSection = -1;
+                }
+            }
+            ActiveState->CurrentMontageSection = NewSection;
+        }
+
+        // 블렌드 진행
+        bool bBlending = (ActiveState->PrevMontageSection >= 0 &&
+                          ActiveState->SectionBlendDuration > 0.0f &&
+                          ActiveState->SectionBlendTime < ActiveState->SectionBlendDuration);
+
+        if (ActiveState->PrevMontageSection >= 0)
+        {
+            ActiveState->SectionBlendTime += DeltaSeconds;
+            if (ActiveState->SectionBlendTime >= ActiveState->SectionBlendDuration)
+            {
+                ActiveState->PrevMontageSection = -1;
+                bBlending = false;
+            }
+        }
+
+        // 애니메이션 설정
+        UAnimSequence* CurrSeq = ActiveMontage->GetSectionSequence(NewSection);
+        USkeletalMeshComponent* MeshComp = nullptr;
+        if (CurrSeq && ActiveState->PreviewActor)
+        {
+            MeshComp = ActiveState->PreviewActor->GetSkeletalMeshComponent();
+            if (MeshComp)
+            {
+                if (ActiveState->CurrentAnimation != CurrSeq)
+                {
+                    ActiveState->CurrentAnimation = CurrSeq;
+                    MeshComp->SetAnimation(CurrSeq);
+                }
+                MeshComp->SetAnimationTime(LocalTime);
+                ActiveState->CurrentAnimTime = LocalTime;
+                MeshComp->SetPlaying(ActiveState->bIsPlaying || ActiveState->bIsPlayingReverse);
+            }
+        }
+
+        ActiveState->bBoneLinesDirty = true;
+        ActiveState->bTimeChanged = false;
+
+        // World Tick (TickAnimation 실행됨)
+        if (ActiveState->World)
+        {
+            FPhysScene* PhysScene = ActiveState->World->GetPhysScene();
+            if (PhysScene && ActiveState->bSimulatePhysics)
+                PhysScene->WaitForSimulation();
+            ActiveState->World->Tick(DeltaSeconds);
+            if (PhysScene && ActiveState->bSimulatePhysics)
+                PhysScene->StepSimulation(DeltaSeconds);
+            if (ActiveState->World->GetGizmoActor())
+                ActiveState->World->GetGizmoActor()->ProcessGizmoModeSwitch();
+        }
+
+        // 블렌딩 포즈 적용 (World->Tick 이후, TickAnimation 결과 덮어쓰기)
+        if (bBlending && MeshComp && ActiveState->PrevMontageSection >= 0)
+        {
+            UAnimSequence* PrevSeq = ActiveMontage->GetSectionSequence(ActiveState->PrevMontageSection);
+            if (PrevSeq && CurrSeq)
+            {
+                USkeletalMesh* SkelMesh = MeshComp->GetSkeletalMesh();
+                if (!SkelMesh || !SkelMesh->GetSkeletalMeshData()) return;
+                const FSkeleton& Skeleton = SkelMesh->GetSkeletalMeshData()->Skeleton;
+                int32 SkeletonBones = Skeleton.Bones.Num();
+
+                // 현재 로컬 포즈 복사 (기본값)
+                TArray<FTransform> BlendedPose = MeshComp->GetCurrentLocalSpacePose();
+                if (BlendedPose.Num() != SkeletonBones) return;
+
+                float Alpha = ActiveState->SectionBlendTime / ActiveState->SectionBlendDuration;
+                Alpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+
+                // 이전 애니메이션 포즈 추출 및 매핑
+                UAnimDataModel* PrevModel = PrevSeq->GetDataModel();
+                UAnimDataModel* CurrModel = CurrSeq->GetDataModel();
+                if (!PrevModel || !CurrModel) return;
+
+                FAnimExtractContext PrevCtx(ActiveState->PrevSectionEndTime, true);
+                FAnimExtractContext CurrCtx(LocalTime, true);
+                FPoseContext PrevPoseCtx(PrevModel->GetNumBoneTracks());
+                FPoseContext CurrPoseCtx(CurrModel->GetNumBoneTracks());
+
+                PrevSeq->GetAnimationPose(PrevPoseCtx, PrevCtx);
+                CurrSeq->GetAnimationPose(CurrPoseCtx, CurrCtx);
+
+                const TArray<FBoneAnimationTrack>& PrevTracks = PrevModel->GetBoneAnimationTracks();
+                const TArray<FBoneAnimationTrack>& CurrTracks = CurrModel->GetBoneAnimationTracks();
+
+                // 본 이름으로 매핑하여 블렌딩
+                for (int32 i = 0; i < CurrTracks.Num(); ++i)
+                {
+                    int32 BoneIdx = Skeleton.FindBoneIndex(CurrTracks[i].Name);
+                    if (BoneIdx == INDEX_NONE || BoneIdx >= SkeletonBones) continue;
+
+                    FTransform CurrTrans = CurrPoseCtx.Pose[i];
+                    FTransform PrevTrans = CurrTrans; // 기본값
+
+                    // 이전 애니메이션에서 같은 본 찾기
+                    for (int32 j = 0; j < PrevTracks.Num(); ++j)
+                    {
+                        if (PrevTracks[j].Name == CurrTracks[i].Name)
+                        {
+                            PrevTrans = PrevPoseCtx.Pose[j];
+                            break;
+                        }
+                    }
+
+                    // 블렌딩
+                    BlendedPose[BoneIdx].Translation = FMath::Lerp(PrevTrans.Translation, CurrTrans.Translation, Alpha);
+                    BlendedPose[BoneIdx].Rotation = FQuat::Slerp(PrevTrans.Rotation, CurrTrans.Rotation, Alpha);
+                    BlendedPose[BoneIdx].Scale3D = FMath::Lerp(PrevTrans.Scale3D, CurrTrans.Scale3D, Alpha);
+                }
+
+                MeshComp->SetAnimationPose(BlendedPose);
+            }
+        }
+        return;
+    }
+
     if (!ActiveState->CurrentAnimation || !ActiveState->CurrentAnimation->GetDataModel())
     {
         if (ActiveState->World)
@@ -2141,27 +2351,64 @@ void SSkeletalMeshViewerWindow::ExpandToSelectedBone(ViewerState* State, int32 B
 
 void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
 {
-    bool bHasAnimation = !!(State->CurrentAnimation);
-    
+    // ============================================================
+    // 몽타주 모드 체크 (Montage 탭에서 몽타주 선택 시 자동 활성화)
+    // ============================================================
+    UAnimMontage* PreviewMontage = nullptr;
+    bool bMontagePreviewing = false;
+
+    // Montage 탭이고 몽타주가 선택되어 있으면 자동으로 몽타주 타임라인 표시
+    if (State->AssetBrowserMode == EAssetBrowserMode::Montage)
+    {
+        PreviewMontage = State->bCreatingNewMontage ? State->EditingMontage : State->CurrentMontage;
+        if (PreviewMontage && PreviewMontage->HasSections())
+        {
+            bMontagePreviewing = true;
+        }
+    }
+
+    // 몽타주 전체 길이 및 섹션별 시작 시간 계산
+    float MontageTotalLength = 0.0f;
+    TArray<float> SectionStartTimes;  // 각 섹션의 시작 시간
+    TArray<float> SectionLengths;     // 각 섹션의 길이
+    if (bMontagePreviewing && PreviewMontage)
+    {
+        for (int32 i = 0; i < PreviewMontage->GetNumSections(); ++i)
+        {
+            SectionStartTimes.Add(MontageTotalLength);
+            UAnimSequence* Seq = PreviewMontage->GetSectionSequence(i);
+            float SecLen = Seq ? Seq->GetPlayLength() : 0.0f;
+            SectionLengths.Add(SecLen);
+            MontageTotalLength += SecLen;
+        }
+    }
+
+    bool bHasAnimation = !!(State->CurrentAnimation) || bMontagePreviewing;
+
     UAnimDataModel* DataModel = nullptr;
-    if (bHasAnimation)
+    if (State->CurrentAnimation && !bMontagePreviewing)
     {
          DataModel = State->CurrentAnimation->GetDataModel();
     }
 
     float PlayLength = 0.0f;
-    int32 FrameRate = 0;
+    int32 FrameRate = 30;  // 기본 30fps
     int32 NumberOfFrames = 0;
     int32 NumberOfKeys = 0;
 
-    if (DataModel)
+    if (bMontagePreviewing)
+    {
+        PlayLength = MontageTotalLength;
+        NumberOfFrames = static_cast<int32>(MontageTotalLength * 30.0f);  // 30fps 기준
+    }
+    else if (DataModel)
     {
         PlayLength = DataModel->GetPlayLength();
         FrameRate = DataModel->GetFrameRate();
         NumberOfFrames = DataModel->GetNumberOfFrames();
         NumberOfKeys = DataModel->GetNumberOfKeys();
     }
-    
+
     float FrameDuration = 0.0f;
     if (bHasAnimation && NumberOfFrames > 0)
     {
@@ -2171,6 +2418,9 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
     {
         FrameDuration = (1.0f / 30.0f); // 애니메이션 없을 시 30fps로 가정
     }
+
+    // 몽타주 미리보기 시 현재 시간 참조 변경
+    float& CurrentTime = bMontagePreviewing ? State->MontagePreviewTime : State->CurrentAnimTime;
 
     float ControlHeight = ImGui::GetFrameHeightWithSpacing();
      
@@ -2256,7 +2506,22 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
 
             if (bHasAnimation)
             {
-                float PlayheadFrame = State->CurrentAnimTime / FrameDuration;
+                // 몽타주 미리보기 시 섹션 경계선 그리기
+                if (bMontagePreviewing && PreviewMontage)
+                {
+                    for (int32 i = 0; i < SectionStartTimes.Num(); ++i)
+                    {
+                        float SectionFrame = SectionStartTimes[i] / FrameDuration;
+                        float SectionX = FrameToPixel(SectionFrame);
+                        if (SectionX >= P.x && SectionX <= P.x + Size.x)
+                        {
+                            // 섹션 경계선 (녹색 점선)
+                            DrawList->AddLine(ImVec2(SectionX, P.y), ImVec2(SectionX, P.y + Size.y), IM_COL32(100, 255, 100, 200), 2.0f);
+                        }
+                    }
+                }
+
+                float PlayheadFrame = CurrentTime / FrameDuration;
                 float PlayheadX = FrameToPixel(PlayheadFrame);
                 if (PlayheadX >= P.x && PlayheadX <= P.x + Size.x)
                 {
@@ -2267,7 +2532,119 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
         ImGui::EndChild();
         ImGui::PopStyleColor();
 
-        // --- 1.3. 노티파이 트랙 행 ---
+        // --- 1.3. 몽타주 섹션 트랙 (몽타주 미리보기 시에만) ---
+        if (bMontagePreviewing && PreviewMontage)
+        {
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            bool bSectionTrackVisible = ImGui::TreeNodeEx("섹션", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Leaf);
+
+            ImGui::TableSetColumnIndex(1);
+            float SectionTrackHeight = ImGui::GetTextLineHeight() * 2.0f;
+            ImVec2 SectionTrackSize = ImVec2(ImGui::GetContentRegionAvail().x, SectionTrackHeight);
+
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.12f, 0.18f, 1.0f));
+            if (ImGui::BeginChild("SectionTrack", SectionTrackSize, false, ImGuiWindowFlags_NoScrollbar))
+            {
+                ImDrawList* DrawList = ImGui::GetWindowDrawList();
+                ImVec2 P = ImGui::GetCursorScreenPos();
+                ImVec2 Size = ImGui::GetWindowSize();
+
+                auto FrameToPixel = [&](float Frame) { return P.x + (Frame - State->TimelineOffset) * State->TimelineScale; };
+                auto PixelToFrame = [&](float Pixel) { return (Pixel - P.x) / State->TimelineScale + State->TimelineOffset; };
+
+                // 입력 처리용 InvisibleButton
+                ImGui::InvisibleButton("##SectionTrackInput", Size);
+                if (ImGui::IsItemHovered())
+                {
+                    bIsTimelineHovered = true;
+                    FrameAtMouse = PixelToFrame(ImGui::GetIO().MousePos.x);
+                }
+
+                // 각 섹션을 색상 블록으로 표시
+                ImU32 SectionColors[] = {
+                    IM_COL32(80, 120, 200, 180),   // 파랑
+                    IM_COL32(200, 120, 80, 180),   // 주황
+                    IM_COL32(80, 200, 120, 180),   // 초록
+                    IM_COL32(200, 80, 180, 180),   // 보라
+                    IM_COL32(200, 200, 80, 180),   // 노랑
+                };
+                int NumColors = sizeof(SectionColors) / sizeof(SectionColors[0]);
+
+                for (int32 i = 0; i < PreviewMontage->GetNumSections(); ++i)
+                {
+                    float StartFrame = SectionStartTimes[i] / FrameDuration;
+                    float EndFrame = (SectionStartTimes[i] + SectionLengths[i]) / FrameDuration;
+
+                    float XStart = FrameToPixel(StartFrame);
+                    float XEnd = FrameToPixel(EndFrame);
+
+                    if (XEnd < P.x || XStart > P.x + Size.x) continue;
+
+                    float ViewXStart = ImMax(XStart, P.x);
+                    float ViewXEnd = ImMin(XEnd, P.x + Size.x);
+
+                    if (ViewXEnd > ViewXStart)
+                    {
+                        ImU32 Color = SectionColors[i % NumColors];
+                        bool bIsSelected = (State->SelectedMontageSection == i);
+                        if (bIsSelected)
+                        {
+                            Color = IM_COL32(255, 255, 255, 200);
+                        }
+
+                        // 섹션 배경
+                        DrawList->AddRectFilled(
+                            ImVec2(ViewXStart, P.y + 2),
+                            ImVec2(ViewXEnd, P.y + Size.y - 2),
+                            Color,
+                            4.0f
+                        );
+
+                        // 섹션 테두리
+                        DrawList->AddRect(
+                            ImVec2(ViewXStart, P.y + 2),
+                            ImVec2(ViewXEnd, P.y + Size.y - 2),
+                            IM_COL32(255, 255, 255, 100),
+                            4.0f
+                        );
+
+                        // 섹션 이름 표시
+                        FMontageSection& Section = PreviewMontage->Sections[i];
+                        ImGui::PushClipRect(ImVec2(ViewXStart, P.y), ImVec2(ViewXEnd, P.y + Size.y), true);
+                        DrawList->AddText(ImVec2(XStart + 4, P.y + 4), IM_COL32_WHITE, Section.Name.c_str());
+                        ImGui::PopClipRect();
+
+                        // 클릭으로 섹션 선택 및 시간 점프
+                        if (ImGui::IsMouseHoveringRect(ImVec2(ViewXStart, P.y), ImVec2(ViewXEnd, P.y + Size.y)) &&
+                            ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+                        {
+                            State->SelectedMontageSection = i;
+                            State->MontagePreviewTime = SectionStartTimes[i];
+                            State->bIsPlaying = false;
+                        }
+                    }
+                }
+
+                // 플레이헤드
+                float PlayheadFrame = CurrentTime / FrameDuration;
+                float PlayheadX = FrameToPixel(PlayheadFrame);
+                if (PlayheadX >= P.x && PlayheadX <= P.x + Size.x)
+                {
+                    DrawList->AddLine(ImVec2(PlayheadX, P.y), ImVec2(PlayheadX, P.y + Size.y), IM_COL32(255, 0, 0, 255), 2.0f);
+                }
+            }
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+
+            if (bSectionTrackVisible)
+            {
+                ImGui::TreePop();
+            }
+        }
+
+        // --- 1.4. 노티파이 트랙 행 ---
         ImGui::TableNextRow();
         
         ImGui::TableSetColumnIndex(0);
@@ -2375,7 +2752,7 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                 ImGui::EndPopup();
             }
 
-            if (bHasAnimation)
+            if (bHasAnimation && State->CurrentAnimation)
             {
                 // Draw and hit-test notifies (now draggable)
                 TArray<FAnimNotifyEvent>& Events = State->CurrentAnimation->GetAnimNotifyEvents();
@@ -2554,7 +2931,7 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
 
             if (bHasAnimation)
             {
-                float PlayheadFrame = State->CurrentAnimTime / FrameDuration;
+                float PlayheadFrame = CurrentTime / FrameDuration;
                 float PlayheadX = FrameToPixel(PlayheadFrame);
                 if (PlayheadX >= P.x && PlayheadX <= P.x + Size.x)
                 {
@@ -2570,7 +2947,7 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
             ImGui::TreePop();
         }
 
-        // --- 1.4. 타임라인 패닝, 줌, 스크러빙 (테이블 내에서 처리) ---
+        // --- 1.5. 타임라인 패닝, 줌, 스크러빙 (테이블 내에서 처리) ---
         if (bHasAnimation && bIsTimelineHovered)
         {
             if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
@@ -2586,9 +2963,37 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
             }
             else if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
             {
-                State->CurrentAnimTime = ImClamp(FrameAtMouse * FrameDuration, 0.0f, PlayLength);
+                CurrentTime = ImClamp(FrameAtMouse * FrameDuration, 0.0f, PlayLength);
                 State->bIsPlaying = false;
                 State->bTimeChanged = true;
+
+                // 몽타주 미리보기 시 해당 섹션의 애니메이션 업데이트
+                if (bMontagePreviewing && PreviewMontage && State->PreviewActor)
+                {
+                    USkeletalMeshComponent* MeshComp = State->PreviewActor->GetSkeletalMeshComponent();
+                    if (MeshComp)
+                    {
+                        // 현재 시간이 어느 섹션에 속하는지 찾기
+                        float AccumTime = 0.0f;
+                        for (int32 i = 0; i < SectionStartTimes.Num(); ++i)
+                        {
+                            float SectionEnd = SectionStartTimes[i] + SectionLengths[i];
+                            if (CurrentTime < SectionEnd || i == SectionStartTimes.Num() - 1)
+                            {
+                                UAnimSequence* Seq = PreviewMontage->GetSectionSequence(i);
+                                if (Seq)
+                                {
+                                    float LocalTime = CurrentTime - SectionStartTimes[i];
+                                    LocalTime = ImClamp(LocalTime, 0.0f, SectionLengths[i]);
+                                    MeshComp->SetAnimation(Seq);
+                                    State->CurrentAnimation = Seq;
+                                    State->CurrentAnimTime = LocalTime;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -2605,20 +3010,20 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
     {
         const ImVec2 IconSizeVec(IconSize, IconSize);
         
-        // 1. [첫 프레임] 버튼 
+        // 1. [첫 프레임] 버튼
         if (IconFirstFrame && IconFirstFrame->GetShaderResourceView())
         {
             if (ImGui::ImageButton("##FirstFrameBtn", (void*)IconFirstFrame->GetShaderResourceView(), IconSizeVec))
             {
                 if (bHasAnimation)
                 {
-                    State->CurrentAnimTime = 0.0f;
+                    CurrentTime = 0.0f;
                     State->bIsPlaying = false;
                 }
             }
         }
-        
-        ImGui::SameLine(); 
+
+        ImGui::SameLine();
 
         // 2. [이전 프레임] 버튼
         if (IconPrevFrame && IconPrevFrame->GetShaderResourceView())
@@ -2627,10 +3032,11 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
             {
                 if (bHasAnimation)
                 {
-                    State->CurrentAnimTime = ImMax(0.0f, State->CurrentAnimTime - FrameDuration); State->bIsPlaying = false;
+                    CurrentTime = ImMax(0.0f, CurrentTime - FrameDuration);
+                    State->bIsPlaying = false;
                     State->bTimeChanged = true;
                 }
-            } 
+            }
         }
         ImGui::SameLine();
         
@@ -2699,7 +3105,7 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                 ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
             }
                 
-            if (ImGui::ImageButton("##PlayPauseBtn", (void*)CurrentPlayIcon->GetShaderResourceView(), IconSizeVec)) 
+            if (ImGui::ImageButton("##PlayPauseBtn", (void*)CurrentPlayIcon->GetShaderResourceView(), IconSizeVec))
             {
                 if (bIsPlaying)
                 {
@@ -2723,29 +3129,30 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
         // 6. [다음 프레임] 버튼
         if (IconNextFrame && IconNextFrame->GetShaderResourceView())
         {
-            if (ImGui::ImageButton("##NextFrameBtn", (void*)IconNextFrame->GetShaderResourceView(), IconSizeVec)) 
+            if (ImGui::ImageButton("##NextFrameBtn", (void*)IconNextFrame->GetShaderResourceView(), IconSizeVec))
             {
                 if (bHasAnimation)
                 {
-                    State->CurrentAnimTime = ImMin(PlayLength, State->CurrentAnimTime + FrameDuration); State->bIsPlaying = false;
+                    CurrentTime = ImMin(PlayLength, CurrentTime + FrameDuration);
+                    State->bIsPlaying = false;
                     State->bTimeChanged = true;
                 }
-            } 
+            }
         }
         ImGui::SameLine();
 
         // 7. [마지막 프레임] 버튼
         if (IconLastFrame && IconLastFrame->GetShaderResourceView())
         {
-            if (ImGui::ImageButton("##LastFrameBtn", (void*)IconLastFrame->GetShaderResourceView(), IconSizeVec)) 
-            { 
+            if (ImGui::ImageButton("##LastFrameBtn", (void*)IconLastFrame->GetShaderResourceView(), IconSizeVec))
+            {
                 if (bHasAnimation)
                 {
-                    State->CurrentAnimTime = PlayLength;
+                    CurrentTime = PlayLength;
                     State->bIsPlaying = false;
                     State->bTimeChanged = true;
                 }
-            } 
+            }
         }
         ImGui::SameLine();
 
@@ -2769,9 +3176,16 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
             {
                 ImGui::PopStyleColor(); 
             }
-        } 
+        }
         ImGui::SameLine();
-        ImGui::TextDisabled("(%.2f / %.2f)", State->CurrentAnimTime, PlayLength);
+        ImGui::TextDisabled("(%.2f / %.2f)", CurrentTime, PlayLength);
+
+        // 몽타주 모드 표시
+        if (bMontagePreviewing && PreviewMontage)
+        {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.8f, 0.4f, 0.8f, 1.0f), "[Montage: %d sections]", PreviewMontage->GetNumSections());
+        }
     }
     ImGui::EndChild();
 }
@@ -2790,6 +3204,18 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
         if (ImGui::BeginTabItem("Animation"))
         {
             State->AssetBrowserMode = EAssetBrowserMode::Animation;
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Montage"))
+        {
+            // 몽타주 탭 진입 시 CurrentAnimation 초기화
+            if (State->AssetBrowserMode != EAssetBrowserMode::Montage)
+            {
+                State->CurrentAnimation = nullptr;
+                State->MontagePreviewTime = 0.0f;
+            }
+            State->AssetBrowserMode = EAssetBrowserMode::Montage;
             ImGui::EndTabItem();
         }
 
@@ -2888,6 +3314,371 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                     }
                 }
             }
+        }
+    }
+    else if (State->AssetBrowserMode == EAssetBrowserMode::Montage)
+    {
+        // --- Montage Editor Content ---
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.50f, 0.25f, 0.50f, 0.8f));
+        ImGui::Text("Montage Editor");
+        ImGui::PopStyleColor();
+
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.60f, 0.35f, 0.60f, 0.7f));
+        ImGui::Separator();
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
+
+        // 새 몽타주 생성 버튼
+        if (ImGui::Button("New Montage"))
+        {
+            State->bCreatingNewMontage = true;
+            State->EditingMontage = NewObject<UAnimMontage>();
+            State->MontageNameBuffer[0] = '\0';
+            State->SelectedMontageSection = -1;
+        }
+
+        ImGui::SameLine();
+
+        // 몽타주 파일 로드 버튼
+        if (ImGui::Button("Load .montage.json..."))
+        {
+            std::filesystem::path Sel = FPlatformProcess::OpenLoadFileDialog(
+                UTF8ToWide(GDataDir) + L"/Montages", L"json", L"Montage Files");
+            if (!Sel.empty())
+            {
+                FString PathUtf8 = WideToUTF8(Sel.generic_wstring());
+                UAnimMontage* LoadedMontage = UResourceManager::GetInstance().Load<UAnimMontage>(PathUtf8);
+                if (LoadedMontage)
+                {
+                    State->CurrentMontage = LoadedMontage;
+                    State->EditingMontage = nullptr;
+                    State->bCreatingNewMontage = false;
+                    State->MontagePreviewTime = 0.0f;
+
+                    // 첫 번째 섹션의 시퀀스로 초기화
+                    if (LoadedMontage->HasSections())
+                    {
+                        UAnimSequence* FirstSeq = LoadedMontage->GetSectionSequence(0);
+                        State->CurrentAnimation = FirstSeq;
+                        State->CurrentAnimTime = 0.0f;
+                        if (FirstSeq && State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
+                        {
+                            State->PreviewActor->GetSkeletalMeshComponent()->SetAnimation(FirstSeq);
+                        }
+                    }
+                    else
+                    {
+                        State->CurrentAnimation = nullptr;
+                    }
+                }
+            }
+        }
+
+        ImGui::Separator();
+
+        // 기존 몽타주 목록
+        ImGui::Text("Loaded Montages:");
+        TArray<UAnimMontage*> Montages = UResourceManager::GetInstance().GetAll<UAnimMontage>();
+        for (UAnimMontage* Montage : Montages)
+        {
+            if (!Montage) continue;
+
+            FString MontPath = Montage->GetFilePath();
+            FString DisplayName = MontPath;
+            size_t lastSlash = DisplayName.find_last_of("/\\");
+            if (lastSlash != FString::npos)
+            {
+                DisplayName = DisplayName.substr(lastSlash + 1);
+            }
+            if (DisplayName.empty()) DisplayName = "Unnamed Montage";
+
+            bool bIsSelected = (State->CurrentMontage == Montage);
+            if (ImGui::Selectable(DisplayName.c_str(), bIsSelected))
+            {
+                State->CurrentMontage = Montage;
+                State->EditingMontage = nullptr;
+                State->bCreatingNewMontage = false;
+                State->MontagePreviewTime = 0.0f;
+
+                // 첫 번째 섹션의 시퀀스로 초기화
+                if (Montage->HasSections())
+                {
+                    UAnimSequence* FirstSeq = Montage->GetSectionSequence(0);
+                    State->CurrentAnimation = FirstSeq;
+                    State->CurrentAnimTime = 0.0f;
+                    if (FirstSeq && State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
+                    {
+                        State->PreviewActor->GetSkeletalMeshComponent()->SetAnimation(FirstSeq);
+                    }
+                }
+                else
+                {
+                    State->CurrentAnimation = nullptr;
+                }
+            }
+        }
+
+        ImGui::Separator();
+
+        // 현재 편집 중인 몽타주 (새로 생성 중이거나 선택된 몽타주)
+        UAnimMontage* ActiveMontage = State->bCreatingNewMontage ? State->EditingMontage : State->CurrentMontage;
+        if (ActiveMontage)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.40f, 0.20f, 0.40f, 0.8f));
+            if (ImGui::CollapsingHeader("Montage Properties", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::PopStyleColor();
+
+                // 몽타주 이름 (새로 생성 시에만 편집 가능)
+                if (State->bCreatingNewMontage)
+                {
+                    ImGui::InputText("Name", State->MontageNameBuffer, sizeof(State->MontageNameBuffer));
+                }
+                else
+                {
+                    FString Path = ActiveMontage->GetFilePath();
+                    ImGui::Text("Path: %s", Path.c_str());
+                }
+
+                // 블렌드 시간
+                ImGui::DragFloat("Blend In Time", &ActiveMontage->BlendInTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+                ImGui::DragFloat("Blend Out Time", &ActiveMontage->BlendOutTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+                ImGui::Checkbox("Loop", &ActiveMontage->bLoop);
+
+                ImGui::Separator();
+
+                // 섹션 편집
+                ImGui::Text("Sections (%d):", ActiveMontage->GetNumSections());
+
+                // 섹션 추가 버튼
+                if (ImGui::Button("+ Add Section"))
+                {
+                    FString SectionName = "Section_" + std::to_string(ActiveMontage->GetNumSections());
+                    ActiveMontage->AddSection(SectionName, nullptr, 0.1f);
+                }
+
+                // 섹션 목록
+                for (int32 i = 0; i < ActiveMontage->GetNumSections(); ++i)
+                {
+                    ImGui::PushID(i);
+
+                    FMontageSection& Section = ActiveMontage->Sections[i];
+                    bool bSectionSelected = (State->SelectedMontageSection == i);
+
+                    // 섹션 헤더
+                    FString SectionLabel = Section.Name + " [" + std::to_string(i) + "]";
+                    if (Section.Sequence)
+                    {
+                        SectionLabel += " - " + Section.Sequence->GetFilePath();
+                        size_t pos = SectionLabel.find_last_of("/\\");
+                        if (pos != FString::npos)
+                        {
+                            FString SeqName = Section.Sequence->GetFilePath();
+                            size_t seqPos = SeqName.find_last_of("/\\");
+                            if (seqPos != FString::npos) SeqName = SeqName.substr(seqPos + 1);
+                            SectionLabel = Section.Name + " [" + std::to_string(i) + "] - " + SeqName;
+                        }
+                    }
+
+                    ImGuiTreeNodeFlags NodeFlags = ImGuiTreeNodeFlags_OpenOnArrow;
+                    if (bSectionSelected) NodeFlags |= ImGuiTreeNodeFlags_Selected;
+
+                    bool bOpen = ImGui::TreeNodeEx(SectionLabel.c_str(), NodeFlags);
+
+                    if (ImGui::IsItemClicked())
+                    {
+                        State->SelectedMontageSection = i;
+                        // 섹션 시작 시간 계산
+                        float SectionStart = 0.0f;
+                        for (int32 j = 0; j < i; ++j)
+                        {
+                            UAnimSequence* PrevSeq = ActiveMontage->GetSectionSequence(j);
+                            SectionStart += PrevSeq ? PrevSeq->GetPlayLength() : 0.0f;
+                        }
+                        State->MontagePreviewTime = SectionStart;
+                        State->bIsPlaying = false;
+                        State->bIsPlayingReverse = false;
+                    }
+
+                    if (bOpen)
+                    {
+                        // 섹션 이름 편집
+                        char NameBuf[64];
+                        strncpy_s(NameBuf, Section.Name.c_str(), sizeof(NameBuf) - 1);
+                        if (ImGui::InputText("Name##Section", NameBuf, sizeof(NameBuf)))
+                        {
+                            Section.Name = NameBuf;
+                        }
+
+                        // 블렌드 인 시간
+                        ImGui::DragFloat("Blend In##Section", &Section.BlendInTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+
+                        // 시퀀스 선택 콤보
+                        TArray<UAnimSequence*> AllSequences = UResourceManager::GetInstance().GetAll<UAnimSequence>();
+
+                        // 현재 스켈레톤과 호환되는 시퀀스만 필터링
+                        TArray<UAnimSequence*> CompatibleSequences;
+                        for (UAnimSequence* Seq : AllSequences)
+                        {
+                            if (Seq && Seq->IsCompatibleWith(SkeletonBoneNames))
+                            {
+                                CompatibleSequences.Add(Seq);
+                            }
+                        }
+
+                        FString CurrentSeqName = Section.Sequence ? Section.Sequence->GetFilePath() : "None";
+                        size_t seqSlash = CurrentSeqName.find_last_of("/\\");
+                        if (seqSlash != FString::npos) CurrentSeqName = CurrentSeqName.substr(seqSlash + 1);
+                        if (CurrentSeqName.empty()) CurrentSeqName = "None";
+
+                        if (ImGui::BeginCombo("Sequence##Section", CurrentSeqName.c_str()))
+                        {
+                            // None 옵션
+                            if (ImGui::Selectable("None", Section.Sequence == nullptr))
+                            {
+                                Section.Sequence = nullptr;
+                            }
+
+                            for (UAnimSequence* Seq : CompatibleSequences)
+                            {
+                                FString SeqName = Seq->GetFilePath();
+                                size_t sp = SeqName.find_last_of("/\\");
+                                if (sp != FString::npos) SeqName = SeqName.substr(sp + 1);
+
+                                bool bSelected = (Section.Sequence == Seq);
+                                if (ImGui::Selectable(SeqName.c_str(), bSelected))
+                                {
+                                    Section.Sequence = Seq;
+                                    // 선택한 시퀀스를 바로 미리보기
+                                    if (State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
+                                    {
+                                        State->PreviewActor->GetSkeletalMeshComponent()->SetAnimation(Seq);
+                                    }
+                                    State->CurrentAnimation = Seq;
+                                    State->CurrentAnimTime = 0.0f;
+                                    State->bIsPlaying = false;
+                                }
+                            }
+
+                            ImGui::EndCombo();
+                        }
+
+                        // 섹션 삭제 버튼
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
+                        if (ImGui::Button("Delete Section"))
+                        {
+                            ActiveMontage->Sections.RemoveAt(i);
+                            if (State->SelectedMontageSection >= ActiveMontage->GetNumSections())
+                            {
+                                State->SelectedMontageSection = ActiveMontage->GetNumSections() - 1;
+                            }
+                            ImGui::PopStyleColor();
+                            ImGui::TreePop();
+                            ImGui::PopID();
+                            break; // 배열 수정됨, 루프 종료
+                        }
+                        ImGui::PopStyleColor();
+
+                        ImGui::TreePop();
+                    }
+
+                    ImGui::PopID();
+                }
+
+                ImGui::Separator();
+
+                // 저장 버튼
+                if (ImGui::Button("Save Montage"))
+                {
+                    FString SavePath;
+                    if (State->bCreatingNewMontage)
+                    {
+                        // 새 몽타주 저장 경로 선택
+                        FString DefaultName = State->MontageNameBuffer[0] ? State->MontageNameBuffer : "NewMontage";
+                        std::filesystem::path Sel = FPlatformProcess::OpenSaveFileDialog(
+                            UTF8ToWide(GDataDir) + L"/Montages",
+                            UTF8ToWide(DefaultName + ".montage.json"),
+                            L"json", L"Montage Files");
+                        if (!Sel.empty())
+                        {
+                            SavePath = WideToUTF8(Sel.generic_wstring());
+                        }
+                    }
+                    else
+                    {
+                        // 기존 경로에 저장
+                        SavePath = ActiveMontage->GetFilePath();
+                        if (SavePath.empty())
+                        {
+                            std::filesystem::path Sel = FPlatformProcess::OpenSaveFileDialog(
+                                UTF8ToWide(GDataDir) + L"/Montages",
+                                L"Montage.montage.json",
+                                L"json", L"Montage Files");
+                            if (!Sel.empty())
+                            {
+                                SavePath = WideToUTF8(Sel.generic_wstring());
+                            }
+                        }
+                    }
+
+                    if (!SavePath.empty())
+                    {
+                        if (ActiveMontage->Save(SavePath))
+                        {
+                            ActiveMontage->SetFilePath(SavePath);
+                            // 새로 생성한 경우 ResourceManager에 등록
+                            if (State->bCreatingNewMontage)
+                            {
+                                UResourceManager::GetInstance().Add<UAnimMontage>(SavePath, ActiveMontage);
+                                State->CurrentMontage = ActiveMontage;
+                                State->EditingMontage = nullptr;
+                                State->bCreatingNewMontage = false;
+                            }
+                            UE_LOG("Montage saved to: %s", SavePath.c_str());
+                        }
+                    }
+                }
+
+                ImGui::SameLine();
+
+                // Save As 버튼
+                if (ImGui::Button("Save As..."))
+                {
+                    std::filesystem::path Sel = FPlatformProcess::OpenSaveFileDialog(
+                        UTF8ToWide(GDataDir) + L"/Montages",
+                        L"Montage.montage.json",
+                        L"json", L"Montage Files");
+                    if (!Sel.empty())
+                    {
+                        FString SavePath = WideToUTF8(Sel.generic_wstring());
+                        if (ActiveMontage->Save(SavePath))
+                        {
+                            UE_LOG("Montage saved to: %s", SavePath.c_str());
+                        }
+                    }
+                }
+
+                // 새로 생성 중인 경우 취소 버튼
+                if (State->bCreatingNewMontage)
+                {
+                    ImGui::SameLine();
+                    if (ImGui::Button("Cancel"))
+                    {
+                        DeleteObject(State->EditingMontage);
+                        State->EditingMontage = nullptr;
+                        State->bCreatingNewMontage = false;
+                    }
+                }
+            }
+            else
+            {
+                ImGui::PopStyleColor();
+            }
+        }
+        else
+        {
+            ImGui::TextDisabled("No montage selected. Create a new one or load existing.");
         }
     }
     else if (State->AssetBrowserMode == EAssetBrowserMode::PhysicsAsset)

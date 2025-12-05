@@ -44,15 +44,41 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
         {
             UpdateMontage(DeltaSeconds);
 
-            UAnimSequence* MontageSeq = MontageState->Montage ? MontageState->Montage->GetSectionSequence(MontageState->CurrentSectionIndex) : nullptr;
-            if (MontageState->Weight > 0.0f && MontageSeq)
-            {
-                TArray<FTransform> MontagePose;
-                MontageSeq->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+            UAnimMontage* M = MontageState->Montage;
+            UAnimSequence* CurrentSeq = M ? M->GetSectionSequence(MontageState->CurrentSectionIndex) : nullptr;
 
-                if (OwningComponent && MontagePose.Num() > 0)
+            if (MontageState->Weight > 0.0f && CurrentSeq)
+            {
+                TArray<FTransform> FinalPose;
+
+                // 섹션 블렌딩 중이면 이전 섹션과 현재 섹션 블렌딩
+                if (MontageState->bBlendingSection && MontageState->PreviousSectionIndex >= 0)
                 {
-                    OwningComponent->SetAnimationPose(MontagePose);
+                    UAnimSequence* PrevSeq = M->GetSectionSequence(MontageState->PreviousSectionIndex);
+                    if (PrevSeq)
+                    {
+                        TArray<FTransform> PrevPose, CurrPose;
+                        PrevSeq->EvaluatePose(MontageState->PreviousSectionEndTime, DeltaSeconds, PrevPose);
+                        CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, CurrPose);
+
+                        float Alpha = MontageState->SectionBlendTime / FMath::Max(MontageState->SectionBlendTotalTime, 0.001f);
+                        Alpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+
+                        BlendPoseArrays(PrevPose, CurrPose, Alpha, FinalPose);
+                    }
+                    else
+                    {
+                        CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, FinalPose);
+                    }
+                }
+                else
+                {
+                    CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, FinalPose);
+                }
+
+                if (OwningComponent && FinalPose.Num() > 0)
+                {
+                    OwningComponent->SetAnimationPose(FinalPose);
                 }
             }
         }
@@ -108,11 +134,34 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
     if (MontageState && MontageState->bPlaying && MontageState->Weight > 0.0f && MontageState->Montage)
     {
-        UAnimSequence* MontageSeq = MontageState->Montage->GetSectionSequence(MontageState->CurrentSectionIndex);
-        if (MontageSeq)
+        UAnimMontage* M = MontageState->Montage;
+        UAnimSequence* CurrentSeq = M->GetSectionSequence(MontageState->CurrentSectionIndex);
+        if (CurrentSeq)
         {
             TArray<FTransform> MontagePose;
-            MontageSeq->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+
+            // 섹션 블렌딩 중이면 이전/현재 섹션 블렌드
+            if (MontageState->bBlendingSection && MontageState->PreviousSectionIndex >= 0)
+            {
+                UAnimSequence* PrevSeq = M->GetSectionSequence(MontageState->PreviousSectionIndex);
+                if (PrevSeq)
+                {
+                    TArray<FTransform> PrevPose, CurrPose;
+                    PrevSeq->EvaluatePose(MontageState->PreviousSectionEndTime, DeltaSeconds, PrevPose);
+                    CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, CurrPose);
+
+                    float Alpha = MontageState->SectionBlendTime / FMath::Max(MontageState->SectionBlendTotalTime, 0.001f);
+                    BlendPoseArrays(PrevPose, CurrPose, FMath::Clamp(Alpha, 0.0f, 1.0f), MontagePose);
+                }
+                else
+                {
+                    CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+                }
+            }
+            else
+            {
+                CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+            }
 
             // 몽타주 포즈를 기본 포즈 위에 블렌드
             const float W = MontageState->Weight;
@@ -377,8 +426,8 @@ void UAnimInstance::TriggerAnimNotifies(float DeltaSeconds)
     {
         const FAnimNotifyEvent& Event = *Pending.Event;
 
-        UE_LOG("AnimNotify Triggered: %s at %.2f (Type: %d)",
-            Event.NotifyName.ToString().c_str(), Event.TriggerTime, (int)Pending.Type);
+        //UE_LOG("AnimNotify Triggered: %s at %.2f (Type: %d)",
+        //    Event.NotifyName.ToString().c_str(), Event.TriggerTime, (int)Pending.Type);
 
         // Dispatch to notifies using the same policy as SkeletalMeshComponent
         if (OwningComponent)
@@ -755,9 +804,17 @@ int32 UAnimInstance::GetCurrentSectionIndex() const
 
 float UAnimInstance::GetMontagePosition() const
 {
-    if (MontageState && MontageState->bPlaying)
+    if (MontageState && MontageState->bPlaying && MontageState->Montage)
     {
-        return MontageState->Position;
+        // 전체 몽타주 위치 계산 (이전 섹션들 길이 + 현재 섹션 내 위치)
+        float TotalPos = 0.0f;
+        UAnimMontage* M = MontageState->Montage;
+        for (int32 i = 0; i < MontageState->CurrentSectionIndex; ++i)
+        {
+            UAnimSequence* Seq = M->GetSectionSequence(i);
+            TotalPos += Seq ? Seq->GetPlayLength() : 0.0f;
+        }
+        return TotalPos + MontageState->Position;
     }
     return 0.0f;
 }
@@ -820,32 +877,55 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
     UAnimSequence* CurrentSeq = M->GetSectionSequence(MontageState->CurrentSectionIndex);
     float Length = CurrentSeq ? CurrentSeq->GetPlayLength() : M->GetPlayLength();
 
+    // 섹션 블렌딩 진행
+    if (MontageState->bBlendingSection)
+    {
+        MontageState->SectionBlendTime += DeltaTime;
+        if (MontageState->SectionBlendTime >= MontageState->SectionBlendTotalTime)
+        {
+            MontageState->bBlendingSection = false;
+            MontageState->PreviousSectionIndex = -1;
+        }
+    }
+
     if (MontageState->Position >= Length)
     {
         // 섹션이 있으면 다음 섹션으로 자동 진행
         if (M->HasSections() && MontageState->CurrentSectionIndex + 1 < M->GetNumSections())
         {
-            MontageState->CurrentSectionIndex++;
+            int32 NextSection = MontageState->CurrentSectionIndex + 1;
+            float NextBlendTime = M->Sections[NextSection].BlendInTime;
+
+            // 블렌딩 시작
+            if (NextBlendTime > 0.0f)
+            {
+                MontageState->bBlendingSection = true;
+                MontageState->SectionBlendTime = 0.0f;
+                MontageState->SectionBlendTotalTime = NextBlendTime;
+                MontageState->PreviousSectionIndex = MontageState->CurrentSectionIndex;
+                MontageState->PreviousSectionEndTime = Length;
+            }
+
+            MontageState->CurrentSectionIndex = NextSection;
             MontageState->Position = 0.0f;
             PreviousMontagePlayTime = 0.0f;
-            UE_LOG("UAnimInstance::UpdateMontage - Auto advance to section %d", MontageState->CurrentSectionIndex);
+            UE_LOG("UAnimInstance::UpdateMontage - Section %d -> %d (Blend: %.2f)", MontageState->PreviousSectionIndex, NextSection, NextBlendTime);
         }
         else if (M->bLoop)
         {
             MontageState->Position = FMath::Fmod(MontageState->Position, Length);
             if (M->HasSections())
             {
-                MontageState->CurrentSectionIndex = 0;  // 루프 시 첫 섹션으로
+                MontageState->CurrentSectionIndex = 0;
             }
         }
         else
         {
-            // 끝나면 자동 블렌드 아웃
             if (!MontageState->bBlendingOut)
             {
                 MontageState->bBlendingOut = true;
                 MontageState->BlendTime = 0.0f;
-                UE_LOG("UAnimInstance::UpdateMontage - Montage reached end, starting blend out");
+                UE_LOG("UAnimInstance::UpdateMontage - Montage finished");
             }
         }
     }
@@ -877,8 +957,8 @@ void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
     {
         const FAnimNotifyEvent& Event = *Pending.Event;
 
-        UE_LOG("Montage Notify Triggered: %s at %.2f",
-            Event.NotifyName.ToString().c_str(), Event.TriggerTime);
+        //UE_LOG("Montage Notify Triggered: %s at %.2f",
+        //    Event.NotifyName.ToString().c_str(), Event.TriggerTime);
 
         if (OwningComponent)
         {

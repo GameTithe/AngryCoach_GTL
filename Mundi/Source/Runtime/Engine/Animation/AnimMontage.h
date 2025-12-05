@@ -34,6 +34,13 @@ struct FMontagePlayState
     float BlendTime = 0.0f;      // 현재 블렌드 진행 시간
     int32 CurrentSectionIndex = 0;  // 현재 섹션 인덱스
 
+    // 섹션 블렌딩
+    bool bBlendingSection = false;
+    float SectionBlendTime = 0.0f;
+    float SectionBlendTotalTime = 0.0f;
+    int32 PreviousSectionIndex = -1;
+    float PreviousSectionEndTime = 0.0f;  // 이전 섹션 마지막 시간
+
     void Reset()
     {
         Montage = nullptr;
@@ -44,6 +51,11 @@ struct FMontagePlayState
         bBlendingOut = false;
         BlendTime = 0.0f;
         CurrentSectionIndex = 0;
+        bBlendingSection = false;
+        SectionBlendTime = 0.0f;
+        SectionBlendTotalTime = 0.0f;
+        PreviousSectionIndex = -1;
+        PreviousSectionEndTime = 0.0f;
     }
 };
 
