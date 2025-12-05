@@ -28,6 +28,15 @@ enum class EEasingType : uint8_t
 };
 
 /**
+ * @brief 블렌드 모드
+ */
+enum class EUIBlendMode : uint8_t
+{
+    Normal,     // 기본 (Source Over) - 알파 채널 사용
+    Additive,   // 가산 블렌딩 - 검은 배경이 투명해짐
+};
+
+/**
  * @brief 애니메이션 속성 타입
  */
 enum class EAnimProperty : uint8_t

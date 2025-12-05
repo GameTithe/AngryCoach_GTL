@@ -138,6 +138,13 @@ void UTextureWidget::Render(ID2D1DeviceContext* Context)
     // 실제 투명도 계산 (Tint의 A와 Opacity 조합)
     float FinalOpacity = Tint.a * Opacity;
 
+    // 블렌드 모드 설정
+    D2D1_PRIMITIVE_BLEND PrevBlend = Context->GetPrimitiveBlend();
+    if (BlendMode == EUIBlendMode::Additive)
+    {
+        Context->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_ADD);
+    }
+
     // 비트맵 그리기
     Context->DrawBitmap(
         Bitmap,
@@ -146,6 +153,12 @@ void UTextureWidget::Render(ID2D1DeviceContext* Context)
         D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
         SrcRect
     );
+
+    // 블렌드 모드 복원
+    if (BlendMode == EUIBlendMode::Additive)
+    {
+        Context->SetPrimitiveBlend(PrevBlend);
+    }
 }
 
 void UTextureWidget::SetUV(float u0, float v0, float u1, float v1)
@@ -164,4 +177,44 @@ void UTextureWidget::SetTint(float R, float G, float B, float A)
 void UTextureWidget::SetOpacity(float Alpha)
 {
     Opacity = (std::max)(0.0f, (std::min)(1.0f, Alpha));
+}
+
+void UTextureWidget::SetSubUVGrid(int32_t NX, int32_t NY)
+{
+    SubImages_Horizontal = (std::max)(1, NX);
+    SubImages_Vertical = (std::max)(1, NY);
+}
+
+void UTextureWidget::SetSubUVFrame(int32_t FrameIndex)
+{
+    int32_t TotalFrames = SubImages_Horizontal * SubImages_Vertical;
+    if (TotalFrames <= 1)
+    {
+        // SubUV 비활성화 상태, 전체 이미지 사용
+        U0 = 0.0f; V0 = 0.0f;
+        U1 = 1.0f; V1 = 1.0f;
+        return;
+    }
+
+    // 프레임 인덱스 클램프
+    FrameIndex = (std::max)(0, (std::min)(FrameIndex, TotalFrames - 1));
+
+    // 타일 좌표 계산
+    int32_t tileX = FrameIndex % SubImages_Horizontal;
+    int32_t tileY = FrameIndex / SubImages_Horizontal;
+
+    // UV 스케일 및 오프셋 계산
+    float scaleX = 1.0f / static_cast<float>(SubImages_Horizontal);
+    float scaleY = 1.0f / static_cast<float>(SubImages_Vertical);
+
+    U0 = tileX * scaleX;
+    V0 = tileY * scaleY;
+    U1 = U0 + scaleX;
+    V1 = V0 + scaleY;
+}
+
+void UTextureWidget::SetSubUVFrameWithGrid(int32_t FrameIndex, int32_t NX, int32_t NY)
+{
+    SetSubUVGrid(NX, NY);
+    SetSubUVFrame(FrameIndex);
 }

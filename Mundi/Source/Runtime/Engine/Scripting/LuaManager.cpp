@@ -721,6 +721,59 @@ void FLuaManager::ExposeUIFunctions()
             if (Self) Self->SetWidgetRightToLeft(Name, bRTL);
         },
 
+        // ProgressBar 텍스처 설정
+        "SetProgressBarForegroundTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
+        {
+            if (!Self) return false;
+            return Self->SetProgressBarForegroundTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
+        },
+        "SetProgressBarBackgroundTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
+        {
+            if (!Self) return false;
+            return Self->SetProgressBarBackgroundTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
+        },
+        "SetProgressBarLowTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
+        {
+            if (!Self) return false;
+            return Self->SetProgressBarLowTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
+        },
+        "SetProgressBarTextureOpacity", [](UUICanvas* Self, const std::string& Name, float Opacity)
+        {
+            if (Self) Self->SetProgressBarTextureOpacity(Name, Opacity);
+        },
+        "ClearProgressBarTextures", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self) Self->ClearProgressBarTextures(Name);
+        },
+
+        // SubUV 설정
+        "SetTextureSubUVGrid", [](UUICanvas* Self, const std::string& Name, int NX, int NY)
+        {
+            if (Self) Self->SetTextureSubUVGrid(Name, NX, NY);
+        },
+        "SetTextureSubUVFrame", [](UUICanvas* Self, const std::string& Name, int FrameIndex)
+        {
+            if (Self) Self->SetTextureSubUVFrame(Name, FrameIndex);
+        },
+        "SetTextureSubUV", [](UUICanvas* Self, const std::string& Name, int FrameIndex, int NX, int NY)
+        {
+            if (Self) Self->SetTextureSubUV(Name, FrameIndex, NX, NY);
+        },
+        "SetProgressBarForegroundSubUV", [](UUICanvas* Self, const std::string& Name, int FrameIndex, int NX, int NY)
+        {
+            if (Self) Self->SetProgressBarForegroundSubUV(Name, FrameIndex, NX, NY);
+        },
+        "SetProgressBarBackgroundSubUV", [](UUICanvas* Self, const std::string& Name, int FrameIndex, int NX, int NY)
+        {
+            if (Self) Self->SetProgressBarBackgroundSubUV(Name, FrameIndex, NX, NY);
+        },
+
+        // 블렌드 모드
+        "SetTextureAdditive", [](UUICanvas* Self, const std::string& Name, bool bAdditive)
+        {
+            if (Self) Self->SetTextureAdditive(Name, bAdditive);
+        },
+
         // 위젯 삭제
         "RemoveWidget", [](UUICanvas* Self, const std::string& Name)
         {
