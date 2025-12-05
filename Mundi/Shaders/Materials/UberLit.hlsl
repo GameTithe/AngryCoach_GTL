@@ -13,6 +13,10 @@
 #define USE_GPU_SKINNING 0
 #endif
 
+#ifndef USE_CARTOON_SHADING
+#define USE_CARTOON_SHADING 0
+#endif
+
 // --- Material 구조체 (OBJ 머티리얼 정보) ---
 // 주의: SPECULAR_COLOR 매크로에서 사용하므로 include 전에 정의 필요
 struct FMaterial
@@ -75,6 +79,16 @@ cbuffer FLightShadowmBufferType : register(b5)
     float SlopeScaledBias;
     float2 ShadowPadding;
 };
+
+#if USE_CARTOON_SHADING
+cbuffer CartoonParamsBuffer : register(b6)
+{
+    float CartoonOutlineThreshold;   // Outline detection threshold
+    int CartoonShadingLevels;        // Number of cel shading levels
+    float CartoonSpecularThreshold;  // Specular highlight threshold
+    float CartoonRimIntensity;       // Rim light intensity
+};
+#endif
 
 // --- Material.SpecularColor 지원 매크로 ---
 // LightingCommon.hlsl의 CalculateSpecular에서 Material.SpecularColor를 사용하도록 설정
@@ -533,6 +547,114 @@ PS_OUTPUT mainPS(PS_INPUT Input)
         baseColor.rgb = lerp(baseColor.rgb, LerpColor.rgb, LerpColor.a);
     }
 
+#if USE_CARTOON_SHADING
+    // ═══════════════════════════════════════════════════════
+    // CARTOON SHADING (Cel Shading + Outline)
+    // ═══════════════════════════════════════════════════════
+
+    // Outline Detection
+    // viewDir과 normal 값으로 간단한게 구함
+    float rimDot = dot(normal, viewDir);
+    if (rimDot < CartoonOutlineThreshold)
+    {
+        Output.Color = float4(0.0f, 0.0f, 0.0f, 1.0f);  // Black outline
+        return Output;
+    }
+    
+    // 2. Cel Shading
+    float3 litColor = float3(0.0f, 0.0f, 0.0f);  
+    
+    // Ambient light
+    float3 Ka = bHasMaterial ? Material.AmbientColor : baseColor.rgb;
+    bool bIsDefaultKa = all(abs(Ka) < 0.01f) || all(abs(Ka - 1.0f) < 0.01f);
+    if (bIsDefaultKa)
+    {
+        Ka = baseColor.rgb;
+    }
+    litColor += CalculateAmbientLight(AmbientLight, Ka);
+    
+    // Directional light with quantization
+    if (any(DirectionalLight.Color.rgb > 0.0f))
+    {
+        float3 lightDir = -normalize(DirectionalLight.Direction);
+        float NdotL = saturate(dot(normal, lightDir));
+    
+        // saturate(NdotL) 은 0 ~ 1
+        // NdotL * Levels = 0 ~ Levels, 인데 floor를 취하니까 0, 1, ... , Level이 되고
+        // 거기에 Level 나누기를 해주니까 양자화가 된다.
+        float quantizedNdotL = floor(NdotL * CartoonShadingLevels) / CartoonShadingLevels; 
+        float3 diffuse = DirectionalLight.Color.rgb * quantizedNdotL * baseColor.rgb;
+    
+        // Quantized specular (sharp highlight)
+        float3 halfVector = normalize(lightDir + viewDir);
+        float NdotH = saturate(dot(normal, halfVector));
+        float specularFactor = pow(NdotH, specPower);
+        // 어느 정도 밝기 이상이여야 Specular를 나타내겠다는 의도
+        float quantizedSpecular = step(CartoonSpecularThreshold, specularFactor); 
+    
+        float3 specular = DirectionalLight.Color.rgb * quantizedSpecular * SPECULAR_COLOR;
+    
+        // Shadow factor
+        float shadowFactor = 1.0f;
+    //    if (DirectionalLight.bCastShadows)
+    //    {
+    //        shadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, DirectionalLight.Cascades[0], g_ShadowAtlas2D, g_ShadowSample);
+    //    }
+    //
+        litColor += (diffuse + specular) * shadowFactor;
+    }
+    
+    // Point lights with quantization
+    for (int i = 0; i < PointLightCount; i++)
+    {
+        FPointLightInfo light = g_PointLightList[i];
+     
+        if (!any(light.Color.rgb > 0.0f))
+            continue;
+    
+        float3 lightDir = light.Position - Input.WorldPos;
+        float distance = length(lightDir);
+        lightDir = normalize(lightDir);
+    
+        // Attenuation
+        float attenuation = saturate(1.0f - (distance / light.AttenuationRadius));
+        attenuation *= attenuation;
+    
+        // diffuse 양자화, 위의 방법과 동일
+        float NdotL = saturate(dot(normal, lightDir));
+        float quantizedNdotL = floor(NdotL * CartoonShadingLevels) / CartoonShadingLevels;
+        float3 diffuse = light.Color.rgb * quantizedNdotL * baseColor.rgb * attenuation;
+    
+        // specular 양자화
+        float3 halfVector = normalize(lightDir + viewDir);
+        float NdotH = saturate(dot(normal, halfVector));
+        float specularFactor = pow(NdotH, specPower);
+        float quantizedSpecular = step(CartoonSpecularThreshold, specularFactor);
+        float3 specular = light.Color.rgb * quantizedSpecular * SPECULAR_COLOR * attenuation;
+    
+        litColor += diffuse + specular;
+    }
+    
+    // Rim Lighting (optional enhancement for cartoon style)
+    float rimPower = 3.0f;
+    float rim = 1.0f - saturate(rimDot);
+    rim = pow(rim, rimPower);
+    litColor += baseColor.rgb * rim * CartoonRimIntensity;
+     
+    float finalAlpha = baseColor.a;
+    if (bHasMaterial)
+    {
+        finalAlpha *= (1.0f - Material.Transparency);
+    }
+    
+    Output.Color = float4(litColor.rgb, finalAlpha);
+    Output.Color.rgb = (1 - CascadeAreaDebugBlendValue) * Output.Color.rgb + CascadeAreaDebugBlendValue * CascadeAreaDebugColor;
+    return Output; 
+#else
+    // ═══════════════════════════════════════════════════════
+    // STANDARD PHONG SHADING
+    // ═══════════════════════════════════════════════════════
+
     float3 litColor = float3(0.0f, 0.0f, 0.0f);
 
     // Ambient light (OBJ/MTL 표준: La × Ka)
@@ -610,12 +732,14 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     {
         finalAlpha *= (1.0f - Material.Transparency);
     }
-    
+
     Output.Color = float4(litColor, finalAlpha);
     Output.Color.rgb = (1 - CascadeAreaDebugBlendValue) * Output.Color.rgb + CascadeAreaDebugBlendValue * CascadeAreaDebugColor;
     return Output;
 
-#else
+#endif  // USE_CARTOON_SHADING
+
+#else  // LIGHTING_MODEL_PHONG
     // 조명 모델 미정의 - StaticMeshShader 동작 사용
     float4 finalPixel = Input.Color;
 

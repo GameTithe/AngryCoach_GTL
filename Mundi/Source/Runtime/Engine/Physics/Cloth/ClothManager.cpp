@@ -75,16 +75,19 @@ namespace
 void FClothManager::Initialize()
 {
 	nv::cloth::InitializeNvCloth(&g_ClothAllocator, &g_ClothErrorCallback, &g_ClothAssertHandler, nullptr);
-	
+
 	CreateFactory();
 	CreateSolver();
+
+	bInit = true;
 }
 
 void FClothManager::Shutdown()
 {
+	// 4. Solver 삭제
 	if (solver)
 	{
-		UE_LOG("[ClothComponent] Deleting solver\n");
+		UE_LOG("ClothManager: Shutdown: Deleting solver");
 		NV_CLOTH_DELETE(solver);
 		solver = nullptr;
 	}
@@ -93,11 +96,12 @@ void FClothManager::Shutdown()
 	// 6. Factory 해제
 	if (factory)
 	{
-		UE_LOG("[ClothComponent] Destroying factory\n");
+		UE_LOG("ClothManager: Shutdown: Destroying factory");
 		NvClothDestroyFactory(factory);
 		factory = nullptr;
 
 	}
+
 }
 
 void FClothManager::CreateSolver()
@@ -105,37 +109,60 @@ void FClothManager::CreateSolver()
 	if (!factory)
 		return;
 
-	solver = factory->createSolver(); 
+	solver = factory->createSolver();
+
 }
+
 
 void FClothManager::CreateFactory()
-{ 
+{
 	factory = NvClothCreateFactoryCPU();
-
 	if (factory == nullptr)
 	{
-		UE_LOG("ClothManager: Faitled To Create Factory"); 
-	}
-}
-
-
-void FClothManager::AddClothToSolver(nv::cloth::Cloth* Cloth)
-{
-	if (solver)
-	{
-		solver->addCloth(Cloth);
+		UE_LOG("ClothManager: CreateFactory: Failed");
 	}
 }
 
 void FClothManager::ClothSimulation(float DeltaSeconds)
 {
-	solver->beginSimulation(DeltaSeconds);
-	
-	for (int i = 0; i < solver->getSimulationChunkCount(); ++i)
+	if (!solver)
 	{
+		UE_LOG("[ClothManager] ClothSimulation: Solver is NULL");
+		return;
+	}
+
+	int32 chunkCount = solver->getSimulationChunkCount();
+	if (chunkCount == 0)
+	{
+		// Cloth가 하나도 추가되지 않았음
+		return;
+	}
+
+	solver->beginSimulation(DeltaSeconds);
+
+	for (int i = 0; i < chunkCount; ++i)
+	{
+		// multi thread로 병렬화 가능
 		solver->simulateChunk(i);
 	}
-	
+
 	solver->endSimulation();
 }
 
+void FClothManager::AddClothToSolver(nv::cloth::Cloth* Cloth)
+{
+	if (!Cloth)
+	{
+		UE_LOG("[ClothManager] AddClothToSolver: Cloth is NULL");
+		return;
+	}
+
+	if (!solver)
+	{
+		UE_LOG("[ClothManager] AddClothToSolver: Solver is NULL");
+		return;
+	}
+
+	solver->addCloth(Cloth);
+	UE_LOG("[ClothManager] Added cloth to solver. Total chunks: %d", solver->getSimulationChunkCount());
+}

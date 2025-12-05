@@ -105,6 +105,12 @@ public:
 	void SetColorParameterValue(const FString& ParameterName, const FLinearColor& Value);	// 벡터 파라미터 값을 런타임에 변경하는 함수 (실시간 수정 시 사용)
 	void SetOverriddenVectorParameters(const TMap<FString, FLinearColor>& InVectors);	// 덮어쓴 벡터 맵 설정 (로드 시 사용)
 
+	// ───── Shader Macro Override ────────────────────────────
+	void SetShaderMacros(const TArray<FShaderMacro>& InMacros);	// 셰이더 매크로 덮어쓰기
+	void AddShaderMacro(const FShaderMacro& InMacro);				// 셰이더 매크로 추가
+	void ClearShaderMacroOverrides();								// 셰이더 매크로 덮어쓰기 제거
+	bool HasShaderMacroOverrides() const { return !OverriddenShaderMacros.IsEmpty(); }
+
 protected:
 	// 생성자에서 부모 머티리얼의 포인터를 저장합니다.
 	UMaterialInstanceDynamic(UMaterialInterface* InParentMaterial);
@@ -116,6 +122,7 @@ private:
 	TMap<EMaterialTextureSlot, UTexture*> OverriddenTextures;
 	TMap<FString, float> OverriddenScalarParameters;
 	TMap<FString, FLinearColor> OverriddenColorParameters;
+	TArray<FShaderMacro> OverriddenShaderMacros;	// 셰이더 매크로 덮어쓰기
 
 	// GetMaterialInfo()가 호출될 때마다 부모의 정보를 복사하고
 	// 아래 값들로 덮어쓴 뒤 반환하기 위한 캐시 데이터입니다.

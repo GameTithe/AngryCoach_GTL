@@ -10,7 +10,7 @@
 #include "USlateManager.h"
 #include <ObjManager.h>
 #include <roapi.h>
-
+#include "Source/Runtime/Engine/Physics/Cloth/ClothManager.h"
 #include "Source/Runtime/Debug/CrashHandler.h"
 #include "Source/Game/UI/GameUIManager.h"
 
@@ -342,6 +342,9 @@ void UEditorEngine::MainLoop()
         }
 
         Tick(DeltaSeconds);
+
+        FClothManager::GetInstance().ClothSimulation(DeltaSeconds);
+        
         Render();
         
         // Shader Hot Reloading - Call AFTER render to avoid mid-frame resource conflicts

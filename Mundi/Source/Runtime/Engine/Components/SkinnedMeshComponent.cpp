@@ -209,6 +209,12 @@ void USkinnedMeshComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMes
          ShaderMacros.Add(FShaderMacro("USE_GPU_SKINNING", "1"));
       }
 
+      // ───── Cartoon Shading Support ─────
+      if (bUseCartoonShading)
+      {
+         ShaderMacros.Add(FShaderMacro(UShader::MACRO_USE_CARTOON_SHADING, "1"));
+      }
+
       if (0 < MaterialToUse->GetShaderMacros().Num())
       {
          ShaderMacros.Append(MaterialToUse->GetShaderMacros());
@@ -246,6 +252,15 @@ void USkinnedMeshComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMes
       BatchElement.WorldMatrix = GetWorldMatrix();
       BatchElement.ObjectID = InternalIndex;
       BatchElement.PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+      // ───── Cartoon Rendering Parameters ─────
+      if (bUseCartoonShading)
+      {
+         BatchElement.CartoonOutlineThreshold = CartoonOutlineThreshold;
+         BatchElement.CartoonShadingLevels = CartoonShadingLevels;
+         BatchElement.CartoonSpecularThreshold = CartoonSpecularThreshold;
+         BatchElement.CartoonRimIntensity = CartoonRimIntensity;
+      }
 
       OutMeshBatchElements.Add(BatchElement);
    }   

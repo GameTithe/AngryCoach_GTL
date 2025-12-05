@@ -1358,7 +1358,7 @@ struct FTransform
 
 	FMatrix ToMatrix() const;
 
-	// Child 로컬 좌표계의 점을 부모 좌표계 변환과 합성. 호출하는 Transform의 결과 좌표계로 변환
+	//	 호출하는 Transform의 결과 좌표계로 변환
 	FTransform GetWorldTransform(const FTransform& ChildTransform) const
 	{
 		FTransform Result;
@@ -1492,6 +1492,12 @@ struct FTransform
 			Scale3D == Other.Scale3D;
 	}
 	bool operator!=(const FTransform& Other) const { return !(*this == Other); }
+
+	/** Translation 반환 */
+	FVector GetLocation() const
+	{
+		return Translation;
+	}
 };
 
 // ─────────────────────────────

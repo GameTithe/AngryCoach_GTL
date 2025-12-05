@@ -275,6 +275,16 @@ struct FParticleEmitterType
     FVector Padding0;        // 16바이트 정렬
 };
 
+// b6: Cartoon Rendering Parameters
+struct alignas(16) FCartoonParamsBufferType
+{
+    float CartoonOutlineThreshold;   // Outline detection threshold
+    int32 CartoonShadingLevels;      // Number of cel shading levels
+    float CartoonSpecularThreshold;  // Specular highlight threshold
+    float CartoonRimIntensity;       // Rim light intensity
+};
+static_assert(sizeof(FCartoonParamsBufferType) % 16 == 0, "CB must be 16-byte aligned");
+
 #define CONSTANT_BUFFER_INFO(TYPE, SLOT, VS, PS) \
 constexpr uint32 TYPE##Slot = SLOT;\
 constexpr bool TYPE##IsVS = VS;\
@@ -303,7 +313,8 @@ MACRO(FViewportConstants)           \
 MACRO(FTileCullingBufferType)       \
 MACRO(FPointLightShadowBufferType)  \
 MACRO(FSubUVBufferType) \
-MACRO(FParticleEmitterType)
+MACRO(FParticleEmitterType) \
+MACRO(FCartoonParamsBufferType)
 
 // 16 바이트 패딩 어썰트
 #define STATIC_ASSERT_CBUFFER_ALIGNMENT(Type) \
@@ -334,6 +345,7 @@ CONSTANT_BUFFER_INFO(FTileCullingBufferType, 11, false, true)  // b11, PS only (
 CONSTANT_BUFFER_INFO(FPointLightShadowBufferType, 12, true, true)  // b12, VS+PS
 CONSTANT_BUFFER_INFO(FSubUVBufferType, 2, true, true)  // b2, VS+PS (ParticleSprite.hlsl용)
 CONSTANT_BUFFER_INFO(FParticleEmitterType, 3, true, false)  // b3, VS (ParticleSprite.hlsl용)
+CONSTANT_BUFFER_INFO(FCartoonParamsBufferType, 6, false, true)  // b6, PS only (Cartoon Shading)
 
 
 

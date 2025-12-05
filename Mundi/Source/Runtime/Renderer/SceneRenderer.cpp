@@ -1587,6 +1587,23 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			CurrentSkinNormalMatrixSRV = Batch.GPUSkinNormalMatrixSRV;
 		}
 
+		// ───── Cartoon Rendering Parameters (b6) ─────
+		// Cartoon Shading이 활성화된 경우에만 Constant Buffer 전달
+		static FCartoonParamsBufferType CurrentCartoonParams{0.55f, 3, 0.5f, 0.3f};
+		FCartoonParamsBufferType NewCartoonParams{
+			Batch.CartoonOutlineThreshold,
+			Batch.CartoonShadingLevels,
+			Batch.CartoonSpecularThreshold,
+			Batch.CartoonRimIntensity
+		};
+
+		// 값이 변경되었을 때만 업데이트
+		if (std::memcmp(&CurrentCartoonParams, &NewCartoonParams, sizeof(FCartoonParamsBufferType)) != 0)
+		{
+			RHIDevice->SetAndUpdateConstantBuffer(NewCartoonParams);
+			CurrentCartoonParams = NewCartoonParams;
+		}
+
 		if (CurrentInstancingSRV)
 		{
 			ID3D11ShaderResourceView* SRV = nullptr;

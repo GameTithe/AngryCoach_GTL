@@ -454,6 +454,41 @@ const FMaterialInfo& UMaterialInstanceDynamic::GetMaterialInfo() const
 
 const TArray<FShaderMacro> UMaterialInstanceDynamic::GetShaderMacros() const
 {
+	// 오버라이드된 매크로가 있으면 부모 매크로와 합쳐서 반환
+	if (!OverriddenShaderMacros.IsEmpty())
+	{
+		TArray<FShaderMacro> CombinedMacros;
+
+		// 부모 매크로를 먼저 추가
+		if (ParentMaterial)
+		{
+			CombinedMacros = ParentMaterial->GetShaderMacros();
+		}
+
+		// 오버라이드 매크로 추가 (중복 제거)
+		for (const FShaderMacro& OverrideMacro : OverriddenShaderMacros)
+		{
+			bool bFound = false;
+			for (FShaderMacro& Macro : CombinedMacros)
+			{
+				if (Macro.Name == OverrideMacro.Name)
+				{
+					Macro.Definition = OverrideMacro.Definition;
+					bFound = true;
+					break;
+				}
+			}
+
+			if (!bFound)
+			{
+				CombinedMacros.push_back(OverrideMacro);
+			}
+		}
+
+		return CombinedMacros;
+	}
+
+	// 오버라이드가 없으면 부모의 것을 그대로 반환
 	if (ParentMaterial)
 	{
 		return ParentMaterial->GetShaderMacros();
@@ -498,4 +533,28 @@ void UMaterialInstanceDynamic::SetOverriddenVectorParameters(const TMap<FString,
 {
 	OverriddenColorParameters = InVectors;
 	bIsCachedMaterialInfoDirty = true; // 벡터 값이 변경되었으므로 캐시를 갱신해야 함
+}
+
+void UMaterialInstanceDynamic::SetShaderMacros(const TArray<FShaderMacro>& InMacros)
+{
+	OverriddenShaderMacros = InMacros;
+}
+
+void UMaterialInstanceDynamic::AddShaderMacro(const FShaderMacro& InMacro)
+{
+	// 중복 체크: 같은 이름의 매크로가 이미 있으면 제거
+	for (int32 i = 0; i < OverriddenShaderMacros.size(); ++i)
+	{
+		if (OverriddenShaderMacros[i].Name == InMacro.Name)
+		{
+			OverriddenShaderMacros.erase(OverriddenShaderMacros.begin() + i);
+			break;
+		}
+	}
+	OverriddenShaderMacros.push_back(InMacro);
+}
+
+void UMaterialInstanceDynamic::ClearShaderMacroOverrides()
+{
+	OverriddenShaderMacros.clear();
 }
