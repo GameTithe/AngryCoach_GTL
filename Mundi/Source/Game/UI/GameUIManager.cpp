@@ -4,6 +4,8 @@
 #include "Widgets/UICanvas.h"
 #include "Widgets/ProgressBarWidget.h"
 #include "Widgets/TextureWidget.h"
+#include "Source/Runtime/Core/Misc/JsonSerializer.h"
+#include "Source/Slate/GlobalConsole.h"
 
 #include <d2d1_1.h>
 #include <dwrite.h>
@@ -169,8 +171,11 @@ void UGameUIManager::CreateTextFormats()
 
 void UGameUIManager::Shutdown()
 {
-    // 캔버스 정리
+    // 캔버스 정리 (위젯들의 D2D 리소스도 함께 해제됨)
     RemoveAllCanvases();
+
+    // WIC 팩토리 정리 (DXGI 리소스 해제 전에 호출해야 함)
+    UTextureWidget::ShutdownWICFactory();
 
     ReleaseD2DResources();
 
@@ -359,6 +364,147 @@ void UGameUIManager::SetCanvasZOrder(const std::string& Name, int32_t Z)
         Canvas->SetZOrder(Z);
         bCanvasesSortDirty = true;
     }
+}
+
+UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
+{
+    // JSON 파일 로드
+    std::wstring widePath(FilePath.begin(), FilePath.end());
+    JSON doc;
+    if (!FJsonSerializer::LoadJsonFromFile(doc, widePath))
+    {
+        return nullptr;
+    }
+
+    // 에셋 이름 읽기
+    FString assetName;
+    FJsonSerializer::ReadString(doc, "name", assetName, "UIAsset", false);
+
+    // 같은 이름의 캔버스가 있으면 삭제
+    RemoveCanvas(assetName.c_str());
+
+    // 캔버스 생성
+    UUICanvas* canvas = CreateCanvas(assetName.c_str(), 0);
+    if (!canvas)
+    {
+        return nullptr;
+    }
+
+    // 위젯 배열 읽기
+    JSON widgetsArray;
+    if (!FJsonSerializer::ReadArray(doc, "widgets", widgetsArray, JSON(), false))
+    {
+        return canvas;
+    }
+
+    for (int i = 0; i < widgetsArray.length(); i++)
+    {
+        const JSON& widgetObj = widgetsArray[i];
+
+        FString widgetName, widgetType;
+        FJsonSerializer::ReadString(widgetObj, "name", widgetName, "", false);
+        FJsonSerializer::ReadString(widgetObj, "type", widgetType, "", false);
+
+        float x = 0, y = 0, w = 100, h = 30;
+        FJsonSerializer::ReadFloat(widgetObj, "x", x, 0.0f, false);
+        FJsonSerializer::ReadFloat(widgetObj, "y", y, 0.0f, false);
+        FJsonSerializer::ReadFloat(widgetObj, "width", w, 100.0f, false);
+        FJsonSerializer::ReadFloat(widgetObj, "height", h, 30.0f, false);
+
+        int32 zOrder = 0;
+        FJsonSerializer::ReadInt32(widgetObj, "zOrder", zOrder, 0, false);
+
+        if (widgetType == "ProgressBar")
+        {
+            canvas->CreateProgressBar(widgetName.c_str(), x, y, w, h);
+
+            float progress = 1.0f;
+            FJsonSerializer::ReadFloat(widgetObj, "progress", progress, 1.0f, false);
+            canvas->SetWidgetProgress(widgetName.c_str(), progress);
+
+            // 전경/배경 모드 읽기
+            int32 fgMode = 0, bgMode = 0;
+            FJsonSerializer::ReadInt32(widgetObj, "foregroundMode", fgMode, 0, false);
+            FJsonSerializer::ReadInt32(widgetObj, "backgroundMode", bgMode, 0, false);
+
+            // 배경 설정
+            if (bgMode == 1) // Texture
+            {
+                FString bgTexPath;
+                if (FJsonSerializer::ReadString(widgetObj, "backgroundTexturePath", bgTexPath, "", false) && !bgTexPath.empty())
+                {
+                    canvas->SetProgressBarBackgroundTexture(widgetName.c_str(), bgTexPath.c_str(), D2DContext);
+                }
+            }
+            else // Color
+            {
+                FLinearColor bgColor;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "backgroundColor", bgColor, FLinearColor(0.2f, 0.2f, 0.2f, 0.8f), false))
+                {
+                    canvas->SetWidgetBackgroundColor(widgetName.c_str(), bgColor.R, bgColor.G, bgColor.B, bgColor.A);
+                }
+            }
+
+            // 전경 설정
+            if (fgMode == 1) // Texture
+            {
+                FString fgTexPath;
+                if (FJsonSerializer::ReadString(widgetObj, "foregroundTexturePath", fgTexPath, "", false) && !fgTexPath.empty())
+                {
+                    canvas->SetProgressBarForegroundTexture(widgetName.c_str(), fgTexPath.c_str(), D2DContext);
+                }
+            }
+            else // Color
+            {
+                FLinearColor fgColor;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "foregroundColor", fgColor, FLinearColor(0.2f, 0.8f, 0.2f, 1.0f), false))
+                {
+                    canvas->SetWidgetForegroundColor(widgetName.c_str(), fgColor.R, fgColor.G, fgColor.B, fgColor.A);
+                }
+                // Note: LowColor/LowThreshold는 현재 UICanvas에서 미지원
+            }
+
+            bool bRTL = false;
+            FJsonSerializer::ReadBool(widgetObj, "rightToLeft", bRTL, false, false);
+            canvas->SetWidgetRightToLeft(widgetName.c_str(), bRTL);
+        }
+        else if (widgetType == "Texture")
+        {
+            FString texPath;
+            FJsonSerializer::ReadString(widgetObj, "texturePath", texPath, "", false);
+
+            canvas->CreateTextureWidget(widgetName.c_str(), texPath.c_str(), x, y, w, h, D2DContext);
+
+            // SubUV 설정
+            int32 nx = 1, ny = 1, frame = 0;
+            FJsonSerializer::ReadInt32(widgetObj, "subUV_NX", nx, 1, false);
+            FJsonSerializer::ReadInt32(widgetObj, "subUV_NY", ny, 1, false);
+            FJsonSerializer::ReadInt32(widgetObj, "subUV_Frame", frame, 0, false);
+            if (nx > 1 || ny > 1)
+            {
+                canvas->SetTextureSubUV(widgetName.c_str(), frame, nx, ny);
+            }
+
+            bool bAdditive = false;
+            FJsonSerializer::ReadBool(widgetObj, "additive", bAdditive, false, false);
+            canvas->SetTextureAdditive(widgetName.c_str(), bAdditive);
+        }
+        else if (widgetType == "Rect")
+        {
+            canvas->CreateRect(widgetName.c_str(), x, y, w, h);
+
+            FLinearColor color;
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "foregroundColor", color, FLinearColor(1, 1, 1, 1), false))
+            {
+                canvas->SetWidgetForegroundColor(widgetName.c_str(), color.R, color.G, color.B, color.A);
+            }
+        }
+
+        // Z-Order 설정
+        canvas->SetWidgetZOrder(widgetName.c_str(), zOrder);
+    }
+
+    return canvas;
 }
 
 void UGameUIManager::UpdateCanvasSortOrder()

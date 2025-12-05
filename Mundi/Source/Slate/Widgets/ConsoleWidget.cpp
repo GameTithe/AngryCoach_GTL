@@ -49,8 +49,6 @@ UConsoleWidget::~UConsoleWidget()
 
 void UConsoleWidget::Initialize()
 {
-	ClearLog();
-
 	// Help 커맨드를 입력했을 때 콘솔에 표시할 명령어 목록
 	HelpCommandList.Add("HELP");
 	HelpCommandList.Add("HISTORY");

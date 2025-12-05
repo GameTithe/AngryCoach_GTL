@@ -12,6 +12,7 @@
 #include <roapi.h>
 
 #include "Source/Runtime/Debug/CrashHandler.h"
+#include "Source/Game/UI/GameUIManager.h"
 
 float UEditorEngine::ClientWidth = 1024.0f;
 float UEditorEngine::ClientHeight = 1024.0f;
@@ -325,6 +326,9 @@ void UEditorEngine::MainLoop()
                 WorldContexts.pop_back();
                 ObjectFactory::DeleteObject(GWorld);
             }
+
+            // PIE 종료 시 GameUI 캔버스 모두 정리
+            UGameUIManager::Get().RemoveAllCanvases();
 
             GWorld = WorldContexts[0].World;
             GWorld->GetSelectionManager()->ClearSelection();

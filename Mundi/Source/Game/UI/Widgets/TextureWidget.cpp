@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "TextureWidget.h"
+#include "Source/Slate/GlobalConsole.h"
 
 #pragma comment(lib, "windowscodecs.lib")
 
@@ -22,6 +23,16 @@ bool UTextureWidget::InitWICFactory()
     if (WICFactory)
         return true;
 
+    // COM 초기화 (WIC는 COM 기반)
+    // COINIT_MULTITHREADED는 D3D11과 호환됨
+    // 이미 초기화된 경우 S_FALSE 또는 RPC_E_CHANGED_MODE 반환하므로 안전
+    HRESULT hrCom = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    if (FAILED(hrCom) && hrCom != RPC_E_CHANGED_MODE)
+    {
+        // RPC_E_CHANGED_MODE는 다른 모드로 이미 초기화된 경우 - 무시 가능
+        return false;
+    }
+
     HRESULT hr = CoCreateInstance(
         CLSID_WICImagingFactory,
         nullptr,
@@ -38,6 +49,15 @@ void UTextureWidget::ReleaseTexture()
     {
         Bitmap->Release();
         Bitmap = nullptr;
+    }
+}
+
+void UTextureWidget::ShutdownWICFactory()
+{
+    if (WICFactory)
+    {
+        WICFactory->Release();
+        WICFactory = nullptr;
     }
 }
 
@@ -188,6 +208,7 @@ void UTextureWidget::SetSubUVGrid(int32_t NX, int32_t NY)
 void UTextureWidget::SetSubUVFrame(int32_t FrameIndex)
 {
     int32_t TotalFrames = SubImages_Horizontal * SubImages_Vertical;
+
     if (TotalFrames <= 1)
     {
         // SubUV 비활성화 상태, 전체 이미지 사용

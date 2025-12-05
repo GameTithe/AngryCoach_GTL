@@ -945,4 +945,10 @@ void FLuaManager::ExposeUIFunctions()
     {
         return UGameUIManager::Get().GetViewportHeight();
     });
+
+    // .uiasset 파일 로드
+    GameUI.set_function("LoadUIAsset", [](const std::string& FilePath) -> UUICanvas*
+    {
+        return UGameUIManager::Get().LoadUIAsset(FilePath);
+    });
 }

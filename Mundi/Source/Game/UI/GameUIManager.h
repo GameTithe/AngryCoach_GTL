@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <d2d1_1.h>
 #include <dwrite.h>
@@ -98,6 +98,13 @@ public:
      * @brief 캔버스 Z순서 설정
      */
     void SetCanvasZOrder(const std::string& Name, int32_t Z);
+
+    /**
+     * @brief .uiasset 파일에서 UI를 로드하여 캔버스와 위젯 생성
+     * @param FilePath .uiasset 파일 경로
+     * @return 생성된 캔버스 포인터 (실패 시 nullptr)
+     */
+    UUICanvas* LoadUIAsset(const std::string& FilePath);
 
 private:
     UGameUIManager() = default;

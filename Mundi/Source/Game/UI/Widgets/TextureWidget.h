@@ -86,6 +86,11 @@ public:
      */
     int32_t GetTotalFrames() const { return SubImages_Horizontal * SubImages_Vertical; }
 
+    /**
+     * @brief WIC 팩토리 정리 (프로그램 종료 시 호출)
+     */
+    static void ShutdownWICFactory();
+
 private:
     // WIC 팩토리 (이미지 로딩용)
     static IWICImagingFactory* WICFactory;
