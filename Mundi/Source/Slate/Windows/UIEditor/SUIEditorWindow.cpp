@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "PlatformProcess.h"
 #include "Source/Runtime/Core/Misc/JsonSerializer.h"
+#include "Source/Game/UI/GameUIManager.h"
 
 // ============================================
 // FUIAsset 직렬화
@@ -196,6 +197,15 @@ bool SUIEditorWindow::Initialize(float StartX, float StartY, float Width, float 
 {
     Device = InDevice;
     SetRect(StartX, StartY, StartX + Width, StartY + Height);
+
+    // 실제 게임 뷰포트 크기로 캔버스 크기 설정
+    float vpWidth = UGameUIManager::Get().GetViewportWidth();
+    float vpHeight = UGameUIManager::Get().GetViewportHeight();
+    if (vpWidth > 0 && vpHeight > 0)
+    {
+        CanvasSize = ImVec2(vpWidth, vpHeight);
+    }
+
     return true;
 }
 
@@ -386,13 +396,25 @@ void SUIEditorWindow::RenderToolbar()
     ImGui::SameLine();
     if (ImGui::Button("-"))
     {
-        CanvasZoom = std::max(0.25f, CanvasZoom - 0.25f);
+        ZoomAroundCenter(CanvasZoom - 0.1f);
     }
     ImGui::SameLine();
     if (ImGui::Button("+"))
     {
-        CanvasZoom = std::min(4.0f, CanvasZoom + 0.25f);
+        ZoomAroundCenter(CanvasZoom + 0.1f);
     }
+    ImGui::SameLine();
+    if (ImGui::Button("Fit"))
+    {
+        bInitialZoomCalculated = false;  // 다음 렌더에서 재계산
+    }
+
+    ImGui::SameLine();
+    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::SameLine();
+
+    // 캔버스(뷰포트) 크기 표시
+    ImGui::TextDisabled("Canvas: %.0fx%.0f", CanvasSize.x, CanvasSize.y);
 
     ImGui::Separator();
 }
@@ -423,6 +445,26 @@ void SUIEditorWindow::RenderCanvas(float Width, float Height)
     ImVec2 canvasPos = ImGui::GetCursorScreenPos();
     ImVec2 canvasSize = ImVec2(Width - 10, Height - 10);
 
+    // 패널 크기 저장 (툴바 줌 버튼에서 사용)
+    CanvasPanelSize = canvasSize;
+
+    // 첫 렌더링 시 캔버스가 패널에 맞도록 줌 계산
+    if (!bInitialZoomCalculated && CanvasSize.x > 0 && CanvasSize.y > 0)
+    {
+        float zoomX = canvasSize.x / CanvasSize.x;
+        float zoomY = canvasSize.y / CanvasSize.y;
+        CanvasZoom = std::min(zoomX, zoomY) * 0.95f;  // 95%로 약간 여유
+        CanvasZoom = std::clamp(CanvasZoom, 0.1f, 4.0f);
+
+        // 캔버스를 패널 중앙에 배치
+        float scaledW = CanvasSize.x * CanvasZoom;
+        float scaledH = CanvasSize.y * CanvasZoom;
+        CanvasPan.x = (canvasSize.x - scaledW) * 0.5f;
+        CanvasPan.y = (canvasSize.y - scaledH) * 0.5f;
+
+        bInitialZoomCalculated = true;
+    }
+
     // 캔버스 배경
     drawList->AddRectFilled(canvasPos, ImVec2(canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y),
                             IM_COL32(40, 40, 40, 255));
@@ -436,7 +478,7 @@ void SUIEditorWindow::RenderCanvas(float Width, float Height)
         DrawGrid(drawList, canvasPos, canvasSize, CanvasZoom);
     }
 
-    // 캔버스 영역 표시 (1920x1080 기본)
+    // 캔버스 영역 표시 (실제 뷰포트 크기)
     ImVec2 canvasBoundsMin = ImVec2(canvasPos.x + CanvasPan.x, canvasPos.y + CanvasPan.y);
     ImVec2 canvasBoundsMax = ImVec2(canvasBoundsMin.x + CanvasSize.x * CanvasZoom,
                                      canvasBoundsMin.y + CanvasSize.y * CanvasZoom);
@@ -461,11 +503,11 @@ void SUIEditorWindow::RenderCanvas(float Width, float Height)
 
     if (ImGui::IsItemHovered())
     {
-        // 마우스 휠 줌
+        // 마우스 휠 줌 (패널 중앙 기준)
         float wheel = ImGui::GetIO().MouseWheel;
         if (wheel != 0)
         {
-            CanvasZoom = std::clamp(CanvasZoom + wheel * 0.1f, 0.25f, 4.0f);
+            ZoomAroundCenter(CanvasZoom + wheel * 0.1f);
         }
 
         // 마우스 드래그 (패닝 - 중간 버튼 또는 Alt+좌클릭)
@@ -862,6 +904,31 @@ int32_t SUIEditorWindow::HitTestHandle(ImVec2 CanvasPos)
 {
     // TODO: 핸들 히트 테스트 구현
     return -1;
+}
+
+void SUIEditorWindow::ZoomAroundCenter(float NewZoom)
+{
+    NewZoom = std::clamp(NewZoom, 0.1f, 4.0f);
+
+    if (CanvasPanelSize.x > 0 && CanvasPanelSize.y > 0)
+    {
+        float oldZoom = CanvasZoom;
+
+        // 패널 중앙 좌표
+        ImVec2 panelCenter = ImVec2(CanvasPanelSize.x * 0.5f, CanvasPanelSize.y * 0.5f);
+
+        // 패널 중앙에 해당하는 캔버스 좌표 계산
+        ImVec2 canvasCoord = ImVec2(
+            (panelCenter.x - CanvasPan.x) / oldZoom,
+            (panelCenter.y - CanvasPan.y) / oldZoom
+        );
+
+        // 새 줌 적용 후 같은 캔버스 좌표가 패널 중앙에 유지되도록 Pan 조정
+        CanvasPan.x = panelCenter.x - canvasCoord.x * NewZoom;
+        CanvasPan.y = panelCenter.y - canvasCoord.y * NewZoom;
+    }
+
+    CanvasZoom = NewZoom;
 }
 
 void SUIEditorWindow::CreateWidget(const std::string& Type)

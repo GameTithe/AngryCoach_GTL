@@ -910,10 +910,13 @@ void UMainToolbarWidget::HandleKeyboardShortcuts()
         PendingCommand = EToolbarCommand::LoadScene;
     }
 
-    // Ctrl+Alt+P: Open UI Editor
-    if (io.KeyCtrl && io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_P, false))
+    // Ctrl+Shift+P: Toggle UI Editor
+    if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_P, false))
     {
-        USlateManager::GetInstance().OpenUIEditor();
+        if (USlateManager::GetInstance().IsUIEditorOpen())
+            USlateManager::GetInstance().CloseUIEditor();
+        else
+            USlateManager::GetInstance().OpenUIEditor();
     }
 
 #ifdef _EDITOR

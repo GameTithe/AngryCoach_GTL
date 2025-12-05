@@ -122,6 +122,9 @@ private:
     // 위젯 생성
     void CreateWidget(const std::string& Type);
 
+    // 줌 헬퍼 (패널 중앙 기준)
+    void ZoomAroundCenter(float NewZoom);
+
 private:
     ID3D11Device* Device = nullptr;
 
@@ -137,6 +140,7 @@ private:
     float CanvasZoom = 1.0f;
     ImVec2 CanvasPan = ImVec2(0, 0);
     ImVec2 CanvasSize = ImVec2(1920, 1080);  // 기본 캔버스 크기
+    ImVec2 CanvasPanelSize = ImVec2(0, 0);   // 현재 캔버스 패널 크기 (줌 계산용)
 
     // 드래그 상태
     bool bDraggingWidget = false;
@@ -164,6 +168,7 @@ private:
     // 윈도우 상태
     bool bIsOpen = true;
     bool bInitialPlacementDone = false;
+    bool bInitialZoomCalculated = false;
 
     // 에셋 경로
     std::filesystem::path UIAssetPath;
