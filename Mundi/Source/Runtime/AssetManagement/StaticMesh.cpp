@@ -96,7 +96,7 @@ bool UStaticMesh::Load(const FString& InFilePath, ID3D11Device* InDevice, EVerte
         CreateIndexBuffer(StaticMeshAsset, InDevice);
         CreateLocalBound(StaticMeshAsset);
         CreateBodySetupFromBounds();
-        InitConvexMesh();
+        //InitConvexMesh();
         VertexCount = static_cast<uint32>(StaticMeshAsset->Vertices.size());
         IndexCount = static_cast<uint32>(StaticMeshAsset->Indices.size());
     }
