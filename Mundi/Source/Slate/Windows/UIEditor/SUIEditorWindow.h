@@ -11,6 +11,15 @@ struct ID3D11Device;
 struct ID3D11ShaderResourceView;
 
 /**
+ * @brief ProgressBar 렌더링 모드
+ */
+enum class EProgressBarMode : int32_t
+{
+    Color = 0,      // 단색으로 렌더링
+    Texture = 1     // 텍스처로 렌더링
+};
+
+/**
  * @brief UI 에디터에서 편집할 위젯 데이터
  */
 struct FUIEditorWidget
@@ -27,6 +36,7 @@ struct FUIEditorWidget
 
     // ProgressBar
     float Progress = 1.0f;
+    EProgressBarMode ProgressBarMode = EProgressBarMode::Color;
     float ForegroundColor[4] = { 0.2f, 0.8f, 0.2f, 1.0f };
     float BackgroundColor[4] = { 0.2f, 0.2f, 0.2f, 0.8f };
     float BorderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -34,6 +44,8 @@ struct FUIEditorWidget
     bool bRightToLeft = false;
     float LowThreshold = 0.3f;
     float LowColor[4] = { 0.9f, 0.2f, 0.2f, 1.0f };
+    std::string ForegroundTexturePath;  // 텍스처 모드용
+    std::string BackgroundTexturePath;  // 텍스처 모드용
 
     // Texture
     std::string TexturePath;

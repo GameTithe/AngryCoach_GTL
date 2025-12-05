@@ -4,6 +4,7 @@
 #include "PlatformProcess.h"
 #include "Source/Runtime/Core/Misc/JsonSerializer.h"
 #include "Source/Game/UI/GameUIManager.h"
+#include "Source/Runtime/AssetManagement/ResourceManager.h"
 
 // ============================================
 // FUIAsset 직렬화
@@ -510,8 +511,9 @@ void SUIEditorWindow::RenderCanvas(float Width, float Height)
             ZoomAroundCenter(CanvasZoom + wheel * 0.1f);
         }
 
-        // 마우스 드래그 (패닝 - 중간 버튼 또는 Alt+좌클릭)
-        if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle) ||
+        // 마우스 드래그 (패닝 - 우클릭, 중간 버튼 또는 Alt+좌클릭)
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Right) ||
+            ImGui::IsMouseDragging(ImGuiMouseButton_Middle) ||
             (ImGui::IsMouseDragging(ImGuiMouseButton_Left) && ImGui::GetIO().KeyAlt))
         {
             ImVec2 delta = ImGui::GetIO().MouseDelta;
@@ -622,12 +624,61 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     {
         ImGui::Text("Texture");
 
-        char pathBuf[512];
-        strncpy_s(pathBuf, widget->TexturePath.c_str(), sizeof(pathBuf) - 1);
-        if (ImGui::InputText("Path", pathBuf, sizeof(pathBuf)))
+        // 텍스처 콤보박스
+        UResourceManager& ResMgr = UResourceManager::GetInstance();
+        TArray<FString> TexturePaths = ResMgr.GetAllFilePaths<UTexture>();
+
+        // 현재 선택된 인덱스 찾기
+        int CurrentIndex = 0; // 0 = None
+        for (int idx = 0; idx < TexturePaths.Num(); ++idx)
         {
-            widget->TexturePath = pathBuf;
-            bModified = true;
+            if (TexturePaths[idx] == widget->TexturePath.c_str())
+            {
+                CurrentIndex = idx + 1;
+                break;
+            }
+        }
+
+        // 프리뷰 텍스트 (파일명만 표시)
+        FString Preview = "None";
+        if (CurrentIndex > 0)
+        {
+            std::filesystem::path p(TexturePaths[CurrentIndex - 1]);
+            Preview = p.filename().string();
+        }
+
+        if (ImGui::BeginCombo("Texture", Preview.c_str()))
+        {
+            // None 옵션
+            bool selNone = (CurrentIndex == 0);
+            if (ImGui::Selectable("None", selNone))
+            {
+                widget->TexturePath = "";
+                bModified = true;
+            }
+            if (selNone) ImGui::SetItemDefaultFocus();
+
+            // 텍스처 목록
+            for (int i = 0; i < TexturePaths.Num(); ++i)
+            {
+                bool selected = (CurrentIndex == i + 1);
+                std::filesystem::path p(TexturePaths[i]);
+                FString DisplayName = p.filename().string();
+
+                if (ImGui::Selectable(DisplayName.c_str(), selected))
+                {
+                    widget->TexturePath = TexturePaths[i].c_str();
+                    bModified = true;
+                }
+                if (selected) ImGui::SetItemDefaultFocus();
+
+                // 툴팁으로 전체 경로 표시
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("%s", TexturePaths[i].c_str());
+                }
+            }
+            ImGui::EndCombo();
         }
 
         ImGui::Text("SubUV");
