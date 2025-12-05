@@ -84,6 +84,15 @@ bool UAnimMontage::Save(const FString& FilePath) const
     if (bSuccess)
     {
         UE_LOG("UAnimMontage::Save - Saved montage to %s (%d sections)", FilePath.c_str(), Sections.Num());
+
+        // 노티파이도 저장 (.montage.notify.json)
+        FString NotifyPath = FilePath;
+        size_t pos = NotifyPath.rfind(".montage.json");
+        if (pos != FString::npos)
+        {
+            NotifyPath = NotifyPath.substr(0, pos) + ".montage.notify.json";
+            SaveMeta(NotifyPath);
+        }
     }
 
     return bSuccess;
@@ -143,6 +152,16 @@ bool UAnimMontage::Load(const FString& FilePath)
     }
 
     UE_LOG("UAnimMontage::Load - Loaded montage from %s (%d sections)", FilePath.c_str(), Sections.Num());
+
+    // 노티파이도 로드 (.montage.notify.json)
+    FString NotifyPath = FilePath;
+    size_t pos = NotifyPath.rfind(".montage.json");
+    if (pos != FString::npos)
+    {
+        NotifyPath = NotifyPath.substr(0, pos) + ".montage.notify.json";
+        LoadMeta(NotifyPath);
+    }
+
     return true;
 }
 
