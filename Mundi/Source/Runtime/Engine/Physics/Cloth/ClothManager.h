@@ -16,6 +16,11 @@ public:
 	static FClothManager& GetInstance()
 	{
 		static FClothManager Instance;
+
+		if (!Instance.bInit)
+		{
+			Instance.Initialize();
+		}
 		return Instance;
 	}
 	 
@@ -34,4 +39,6 @@ public:
 protected: 
 	nv::cloth::Factory* factory;
 	nv::cloth::Solver* solver;
+
+	bool bInit = false; 
 };

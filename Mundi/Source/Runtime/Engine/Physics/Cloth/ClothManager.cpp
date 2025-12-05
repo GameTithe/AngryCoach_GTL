@@ -78,6 +78,8 @@ void FClothManager::Initialize()
 
 	CreateFactory();
 	CreateSolver();
+
+	bInit = true;
 }
 
 void FClothManager::Shutdown()

@@ -62,12 +62,7 @@ protected:
      * @brief CPU 스키닝 최종 결과물. 렌더러가 이 데이터를 사용합니다.
      */
     TArray<FNormalVertex> NormalSkinnedVertices;
-
-    // Cloth Comp에서 VertexBuffer를 업데이트 해줘야하기 때문에 Getter,Setter를 Protected로 만들었다. 
-    ID3D11Buffer* GetCPUSkinnedVertexBuffer() { return CPUSkinnedVertexBuffer; }
-    void SetCPUSkinnedVertexBuffer(ID3D11Buffer* InVertexBuffer) { CPUSkinnedVertexBuffer = InVertexBuffer; }
-
-private:
+     
     FVector SkinVertexPosition(const FSkinnedVertex& InVertex) const;
     FVector SkinVertexNormal(const FSkinnedVertex& InVertex) const;
     FVector4 SkinVertexTangent(const FSkinnedVertex& InVertex) const;
@@ -78,7 +73,7 @@ private:
     TArray<FMatrix> FinalSkinningMatrices;
     TArray<FMatrix> FinalSkinningNormalMatrices;
     bool bSkinningMatricesDirty = true;
-    
+     
     /**
      * @brief CPU 스키닝에서 진행하기 때문에, Component별로 VertexBuffer를 가지고 스키닝 업데이트를 진행해야함
     */

@@ -9,6 +9,9 @@ UClothComponent::UClothComponent()
 	bCanEverTick = true;
 	bClothEnabled = true;
 	bClothInitialized = false;
+	cloth = nullptr;
+	fabric = nullptr;
+	phases = nullptr;
 	
 	bHasSavedOriginalState = false;
 }
@@ -24,21 +27,30 @@ void UClothComponent::InitializeComponent()
 	Super::InitializeComponent();
 
 	// VetexBuffer 생성
-	ID3D11Buffer* VertexBuffer = GetCPUSkinnedVertexBuffer();
-	if (SkeletalMesh && !VertexBuffer)
+	if (SkeletalMesh && !CPUSkinnedVertexBuffer)
 	{
-		SkeletalMesh->CreateCPUSkinnedVertexBuffer(&VertexBuffer);
+		SkeletalMesh->CreateCPUSkinnedVertexBuffer(&CPUSkinnedVertexBuffer);
 	}
 
-	// 
 	if (bClothEnabled && !bClothInitialized)
 	{
 		SetupClothFromMesh();
 	}
+
+	// Cloth는 CPU에서 스키닝된 버퍼를 직접 업데이트하므로 기본 스키닝 업데이트를 막아둔다
+	bSkinningMatricesDirty = false;
 }
 
 void UClothComponent::BeginPlay()
 {
+	Super::BeginPlay();
+
+	// TODO: 이게 왜 필요함?   
+	// 초기화가 되었고, Vertex가 존재한다면 Cloth의 위치에 맞게 vertex 업데이트
+	if (bClothInitialized && CPUSkinnedVertexBuffer && SkeletalMesh)
+	{
+		UpdateVerticesFromCloth();
+	}
 }
 
 void UClothComponent::TickComponent(float DeltaTime)
@@ -134,14 +146,142 @@ void UClothComponent::RetrievingSimulateResult()
 
 void UClothComponent::ApplyClothProperties()
 {
+	if (!cloth)
+		return;
+
+	// 중력 설정 반영
+	if (ClothSettings.bUseGravity)
+	{
+		cloth->setGravity(physx::PxVec3(
+			ClothSettings.GravityOverride.X,
+			ClothSettings.GravityOverride.Y,
+			ClothSettings.GravityOverride.Z
+		));
+	}
+
+	// 감쇠 설정 반영
+	cloth->setDamping(physx::PxVec3(
+		ClothSettings.Damping,
+		ClothSettings.Damping,
+		ClothSettings.Damping
+	));
+
+	cloth->setFriction(0.5f);
+
+	// 선형/각속도 저항
+	cloth->setLinearDrag(physx::PxVec3(
+		ClothSettings.LinearDrag,
+		ClothSettings.LinearDrag,
+		ClothSettings.LinearDrag
+	));
+
+	cloth->setAngularDrag(physx::PxVec3(
+		ClothSettings.AngularDrag,
+		ClothSettings.AngularDrag,
+		ClothSettings.AngularDrag
+	));
+
+	// Solver 주파수 설정 반영
+	//cloth->setSolverFrequency(120.0f);
+	cloth->setSolverFrequency(60.0f); //default is 300  게임 fps 보다 낮게 설정하면 시각적으로 어색함
+
+
+	// 바람 설정 반영
+	cloth->setWindVelocity(physx::PxVec3(
+		ClothSettings.WindVelocity.X,
+		ClothSettings.WindVelocity.Y,
+		ClothSettings.WindVelocity.Z
+	));
+
+	cloth->setDragCoefficient(ClothSettings.WindDrag); 
+	cloth->setLiftCoefficient(ClothSettings.WindLift);
 }
 
 void UClothComponent::ApplyTetherConstraint()
 {
+	if (!cloth || !ClothSettings.bUseTethers)
+		return;
+
+	cloth->setTetherConstraintScale(ClothSettings.TetherScale);
+	cloth->setTetherConstraintStiffness(ClothSettings.TetherStiffness);
+	//cloth->setTetherConstraintStiffness(0.0f); // 비활성화
+	//cloth->setTetherConstraintStiffness(1.0f); // 완전 고정
 }
 
 void UClothComponent::UpdateVerticesFromCloth()
 {
+	if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData() || PreviousParticles.Num() == 0)
+	{
+		return;
+	}
+
+	const auto& meshData = SkeletalMesh->GetSkeletalMeshData();
+	const auto& groupInfos = SkeletalMesh->GetMeshGroupInfo();
+
+	int32 ParticleIndex = 0;
+
+	for (const auto& group : groupInfos)
+	{
+		UpdateSectionVertices(group, ParticleIndex);
+	}
+
+	// 노멀 재계산
+	RecalculateNormals();
+
+	// VertexBuffer 갱신
+	if (CPUSkinnedVertexBuffer)
+	{
+		SkeletalMesh->UpdateVertexBuffer(SkinnedVertices, CPUSkinnedVertexBuffer);
+	}
+}
+
+void UClothComponent::RecalculateNormals()
+{
+	if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData())
+		return;
+
+	const auto& indices = SkeletalMesh->GetSkeletalMeshData()->Indices;
+	if (indices.Num() == 0 || indices.Num() % 3 != 0)
+		return;
+
+	// 모든 노멀을 0으로 초기화
+	for (auto& vertex : SkinnedVertices)
+	{
+		vertex.normal = FVector::Zero();
+	}
+
+	// 각각의 면위치 노멀을 계산해서 정점에 누적
+	for (int32 i = 0; i < indices.Num(); i += 3)
+	{
+		uint32 idx0 = indices[i];
+		uint32 idx1 = indices[i + 1];
+		uint32 idx2 = indices[i + 2];
+
+		if (idx0 >= SkinnedVertices.Num() || idx1 >= SkinnedVertices.Num() || idx2 >= SkinnedVertices.Num())
+			continue;
+
+		const FVector& v0 = SkinnedVertices[idx0].pos;
+		const FVector& v1 = SkinnedVertices[idx1].pos;
+		const FVector& v2 = SkinnedVertices[idx2].pos;
+
+		// 면위치의 벡터
+		FVector edge1 = v1 - v0;
+		FVector edge2 = v2 - v0;
+
+		// 외적으로 노멀 계산 (시계방향 전제)
+		FVector faceNormal = FVector::Cross(edge1, edge2);
+
+		// 각 정점에 노멀 누적
+		SkinnedVertices[idx0].normal += faceNormal;
+		SkinnedVertices[idx1].normal += faceNormal;
+		SkinnedVertices[idx2].normal += faceNormal;
+	}
+
+	// 누적된 노멀을 정규화
+	for (auto& vertex : SkinnedVertices)
+	{
+		vertex.normal.Normalize();
+	}
 }
 
 FVector UClothComponent::GetAttachmentPosition(int AttachmentIndex)
@@ -188,8 +328,54 @@ bool UClothComponent::ShouldFixVertex(const FSkinnedVertex& Vertex)
 	return false;
 }
 
+void UClothComponent::UpdateSectionVertices(const FGroupInfo& Group, int32& ParticleIdx)
+{
+	// Section의 인덱스로부터 정점 추출
+	const auto& AllIndices = SkeletalMesh->GetSkeletalMeshData()->Indices;
+	const auto& AllVertices = SkeletalMesh->GetSkeletalMeshData()->Vertices;
+	const auto& OriginalVertices = SkeletalMesh->GetSkeletalMeshData()->Vertices;
+
+	TSet<uint32> UsedVertices;
+	SkinnedVertices.resize(AllVertices.size());
+	for (uint32 i = 0; i < Group.IndexCount; ++i)
+	{
+		uint32 GlobalVertexIdx = AllIndices[Group.StartIndex + i];
+
+		if (!UsedVertices.Contains(GlobalVertexIdx))
+		{
+			UsedVertices.Add(GlobalVertexIdx);
+
+			// Cloth 시뮬레이션 결과를 SkinnedVertices에 반영
+			// 글로벌 정점 인덱스로 직접 매핑
+			if (GlobalVertexIdx >= (uint32)PreviousParticles.Num()) { continue; }
+			const physx::PxVec4& Particle = PreviousParticles[GlobalVertexIdx];
+			const auto& OriginalVertex = OriginalVertices[GlobalVertexIdx];
+
+			SkinnedVertices[GlobalVertexIdx].pos = FVector(Particle.x, Particle.y, Particle.z);
+			SkinnedVertices[GlobalVertexIdx].tex = OriginalVertex.UV;
+			SkinnedVertices[GlobalVertexIdx].Tangent = FVector4(OriginalVertex.Tangent.X, OriginalVertex.Tangent.Y, OriginalVertex.Tangent.Z, OriginalVertex.Tangent.W);
+			SkinnedVertices[GlobalVertexIdx].color = FVector4(1, 1, 1, 1);
+			SkinnedVertices[GlobalVertexIdx].normal = FVector(0, 0, 1);  // RecalculateNormals에서 재계산됨
+
+			// 순차 ParticleIdx에 의존하지 않음
+		}
+	}
+}
+
 void UClothComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
+	if (!bClothEnabled || !SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData())
+	{
+		return;
+	}
+
+	if (!bClothInitialized)
+	{
+		InitializeComponent();
+	}
+
+	// 부모(USkinnedMeshComponent)의 배치 생성 로직을 그대로 활용
+	Super::CollectMeshBatches(OutMeshBatchElements, View);
 }
 
 void UClothComponent::SetupClothFromMesh()
@@ -211,10 +397,24 @@ void UClothComponent::SetupClothFromMesh()
 	CreatePhaseConfig();
 	
 	// 생성한 Cloth를 solver에 전달
-	FClothManager::GetInstance().AddClothToSolver(cloth);
-
-	ApplyClothProperties();
-	ApplyTetherConstraint();
+	// 성공적으로 생성된 경우에만 솔버에 추가 및 초기화
+	{
+		const bool bFabricValid = (fabric != nullptr);
+		const bool bClothValid = (cloth != nullptr);
+		const bool bHasTriangles = (ClothIndices.Num() >= 3) && (ClothIndices.Num() % 3 == 0);
+		if (bFabricValid && bClothValid && bHasTriangles)
+		{
+			FClothManager::GetInstance().AddClothToSolver(cloth);
+			ApplyClothProperties();
+			ApplyTetherConstraint();
+			bClothInitialized = true;
+		}
+		else
+		{
+			bClothInitialized = false;
+			UE_LOG("[ClothComponent] Setup failed: fabric=%d cloth=%d indices=%d", bFabricValid, bClothValid, ClothIndices.Num());
+		}
+	}
 	
 	// PIE모드에서 시뮬레이션 시작 전 원본 상태 저장
 	if (GetWorld() && GetWorld()->bPie && !bHasSavedOriginalState)
@@ -253,6 +453,9 @@ void UClothComponent::ReleaseCloth()
 		fabric->decRefCount();
 		fabric = nullptr;
 	}
+
+	// 초기화 상태 리셋
+	bClothInitialized = false;
 }
 
 int32 UClothComponent::GetBoneIndex(const FName& BoneName) const
@@ -301,60 +504,38 @@ FVector UClothComponent::GetBoneLocation(const FName& BoneName)
 
 void UClothComponent::OnCreatePhysicsState()
 {
+	
 }
 
 void UClothComponent::BuildClothMesh()
 {
 	if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData())
 		return;
-	
-
+	 
 	ClothParticles.Empty();
 	ClothIndices.Empty();
+	  
+	const auto& meshData = SkeletalMesh->GetSkeletalMeshData();
+	const auto& vertices = meshData->Vertices;
+	const auto& indices = meshData->Indices; 
 
-	// // 1) Collect section indices (keep original order)
-	//TArray<uint32> SectionIndices;
-	//SectionIndices.Reserve(Group.IndexCount);
-	//for (uint32 i = 0; i < Group.IndexCount; ++i)
-	//{
-	//	const uint32 GlobalIndex = AllIndices[Group.StartIndex + i];
-	//	SectionIndices.Add(GlobalIndex);
-	//}
+	for (const auto& vertex : vertices)
+	{
+		const float invMass = 1.0f; //ShouldFixVertex(Vertex) ? 0.0f : 1.0f;
 
-	//// 2) Build ordered-unique vertex list by first appearance and a Global->Local map
-	//TArray<uint32> OrderedUniqueGlobals;
-	//OrderedUniqueGlobals.Reserve(SectionIndices.Num());
-	//TMap<uint32, uint32> GlobalToLocal;
+		ClothParticles.Add(physx::PxVec4(
+			vertex.Position.X,
+			vertex.Position.Y,
+			vertex.Position.Z,
+			invMass
+		));
+	}
 
-	//for (uint32 GlobalIdx : SectionIndices)
-	//{
-	//	if (!GlobalToLocal.Contains(GlobalIdx))
-	//	{
-	//		const uint32 NewLocal = (uint32)OrderedUniqueGlobals.Num();
-	//		GlobalToLocal.Add(GlobalIdx, NewLocal);
-	//		OrderedUniqueGlobals.Add(GlobalIdx);
-	//	}
-	//}
-
-	//// 3) Append particles in the same ordered-unique order for stable indexing
-	//for (uint32 GlobalIdx : OrderedUniqueGlobals)
-	//{
-	//	const auto& Vertex = AllVertices[GlobalIdx];
-	//	const float invMass = 1.0f; //ShouldFixVertex(Vertex) ? 0.0f : 1.0f;
-	//	ClothParticles.Add(physx::PxVec4(
-	//		Vertex.Position.X,
-	//		Vertex.Position.Y,
-	//		Vertex.Position.Z,
-	//		invMass
-	//	));
-	//}
-
-	//// 4) Remap section indices to local (preserve triangle winding)
-	//for (uint32 GlobalIdx : SectionIndices)
-	//{
-	//	const uint32 LocalIdx = GlobalToLocal[GlobalIdx];
-	//	ClothIndices.Add(LocalIdx);
-	//} 
+	// 삼각형 인덱스 복사 (Fabric 요건 충족)
+	if (!indices.IsEmpty())
+	{
+		ClothIndices = indices;
+	}
 
 	PreviousParticles = ClothParticles;
 }

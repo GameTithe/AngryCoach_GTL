@@ -131,6 +131,7 @@ protected:
 	void ApplyTetherConstraint();
 
 	void UpdateVerticesFromCloth();
+	void RecalculateNormals();
 	FVector GetAttachmentPosition(int AttachmentIndex);
 
 	// PIE State Management 
