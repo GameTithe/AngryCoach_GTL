@@ -299,6 +299,7 @@
     <ClCompile Include="Source\Game\AngryCoachPlayerController.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\MyCar.cpp" />
     <ClCompile Include="Source\Editor\FBX\BlendSpace\BlendSpace2D.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\AnimNotify_CallFunction.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\AccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\AccessoryHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\AccessoryLightAttackSkill.cpp" />
@@ -955,6 +956,7 @@
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotify.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotifyState.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotifyState_Trail.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotify_CallFunction.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotify_PlaySound.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimMontage.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimSequence.h" />

@@ -3,6 +3,7 @@
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
 #include "AccessoryActor.h"
+#include "CapsuleComponent.h"
 #include "World.h"
 #include "Source/Runtime/Engine/Animation/AnimInstance.h"
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
@@ -162,7 +163,6 @@ void AAngryCoachCharacter::UnequipAccessory()
 }
 
 // ===== 스킬 =====
-
 void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 {
 	if (!SkillComponent)
@@ -203,5 +203,24 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 	{
 		SkillComponent->HandleInput(Slot);
 	}
-	Super::Attack();
+}
+
+REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackBegin)
+void AAngryCoachCharacter::AttackBegin()
+{
+	/*
+	 * TODO
+	 * 공격을 발생시키는 ShapeComp의 콜리전 활성화
+	 */
+	// GetCapsuleComponent()->SetBlockComponent(true);
+}
+
+REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackEnd)
+void AAngryCoachCharacter::AttackEnd()
+{
+	/*
+	 * TODO
+	 * 공격을 발생시키는 ShapeComp의 콜리전 비활성화
+	 */
+	// GetCapsuleComponent()->SetBlockComponent(false);
 }

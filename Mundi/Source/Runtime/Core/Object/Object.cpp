@@ -1,5 +1,47 @@
 ﻿#include "pch.h"
 
+VoidFuncPtr UClass::FindFunction(const FName& InName) const
+{
+	// 1. 내 맵에서 검색
+	auto It = FunctionMap.find(InName);
+	if (It != FunctionMap.end())
+	{
+		return It->second;
+	}
+        
+	// 2. 없으면 부모에게 위임 (상속 구조 지원)
+	if (Super)
+	{
+		return Super->FindFunction(InName);
+	}
+
+	return nullptr;
+}
+
+void UClass::RegisterFunction(UClass* Class, const FName& Name, VoidFuncPtr Func)
+{
+	Class->FunctionMap[Name] = Func;
+}
+
+void UObject::ProcessEvent(FName FuncName)
+{
+	// 1. 내 설계도(UClass)를 가져옴
+	UClass* MyClass = GetClass(); 
+        
+	// 2. 설계도에서 함수 위치를 찾음
+	VoidFuncPtr Func = MyClass->FindFunction(FuncName);
+
+	// 3. 실행 (인스턴스는 '나' 자신)
+	if (Func)
+	{
+		(this->*Func)(); 
+	}
+	else
+	{
+		UE_LOG("함수를 찾을 수 없습니다.");
+	}
+}
+
 FString UObject::GetName()
 {
     return ObjectName.ToString();

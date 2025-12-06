@@ -245,6 +245,16 @@ void ACharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherCo
 	UE_LOG("OnHit");
 }
 
+void ACharacter::AttackBegin()
+{
+	Super::AttackBegin();
+}
+
+void ACharacter::AttackEnd()
+{
+	Super::AttackEnd();
+}
+
 void ACharacter::Attack()
 {
 	if (FistComponent)

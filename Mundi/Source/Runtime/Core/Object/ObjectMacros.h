@@ -398,3 +398,16 @@ struct TPropertyTypeTraits
 	InVariableName->SetEditability(false);\
 	InVariableName->SetHiddenInGame(true);
 
+#define REGISTER_FUNCTION_NOTIFY(CLASS, FUNC) \
+	static struct FAutoRegister_##CLASS_##FUNC \
+	{ \
+		FAutoRegister_##CLASS_##FUNC() \
+		{ \
+			/* 안전하게 StaticClass에 접근하여 등록 */ \
+			UClass::RegisterFunction( \
+			CLASS::StaticClass(), \
+			#FUNC, \
+			static_cast<VoidFuncPtr>(&CLASS::FUNC) \
+		); \
+		} \
+	} GAutoRegister_##CLASS_##FUNC;
