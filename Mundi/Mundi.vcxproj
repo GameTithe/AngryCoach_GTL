@@ -294,6 +294,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_StandAlone|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\Game\AngryCoachCharacter.cpp" />
     <ClCompile Include="Source\Game\AngryCoachGameMode.cpp" />
     <ClCompile Include="Source\Game\AngryCoachPlayerController.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\MyCar.cpp" />
@@ -738,7 +739,7 @@
     <ClCompile Include="Generated\UAccessoryLightAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UDefaultHeavyAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UDefaultLightAttackSkill.generated.cpp" />
-  </ItemGroup>
+  <ClCompile Include="Generated\AAngryCoachCharacter.generated.cpp" /></ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -927,6 +928,7 @@
     <ClInclude Include="Source\Editor\FBX\FBXSceneUtilities.h" />
     <ClInclude Include="Source\Editor\FBX\FBXSkeletonLoader.h" />
     <ClInclude Include="Source\Editor\PlatformProcess.h" />
+    <ClInclude Include="Source\Game\AngryCoachCharacter.h" />
     <ClInclude Include="Source\Game\AngryCoachGameMode.h" />
     <ClInclude Include="Source\Game\AngryCoachPlayerController.h" />
     <ClInclude Include="Source\Runtime\AssetManagement\SkeletalMesh.h" />
@@ -1264,7 +1266,7 @@
     <ClInclude Include="Generated\UAccessoryLightAttackSkill.generated.h" />
     <ClInclude Include="Generated\UDefaultHeavyAttackSkill.generated.h" />
     <ClInclude Include="Generated\UDefaultLightAttackSkill.generated.h" />
-  </ItemGroup>
+  <ClInclude Include="Generated\AAngryCoachCharacter.generated.h" /></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />

@@ -375,7 +375,7 @@
     <ClCompile Include="Generated\UAccessoryLightAttackSkill.generated.cpp"><Filter>Generated</Filter></ClCompile>
     <ClCompile Include="Generated\UDefaultHeavyAttackSkill.generated.cpp"><Filter>Generated</Filter></ClCompile>
     <ClCompile Include="Generated\UDefaultLightAttackSkill.generated.cpp"><Filter>Generated</Filter></ClCompile>
-  </ItemGroup>
+  <ClCompile Include="Generated\AAngryCoachCharacter.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
   <ItemGroup>
     <ClInclude Include="Generated\AActor.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Generated\AAmbientLightActor.generated.h"><Filter>Generated</Filter></ClInclude>
@@ -773,7 +773,7 @@
   <ClInclude Include="Generated\UAccessoryLightAttackSkill.generated.h"><Filter>Generated</Filter></ClInclude>
   <ClInclude Include="Generated\UDefaultHeavyAttackSkill.generated.h"><Filter>Generated</Filter></ClInclude>
   <ClInclude Include="Generated\UDefaultLightAttackSkill.generated.h"><Filter>Generated</Filter></ClInclude>
-  </ItemGroup>
+  <ClInclude Include="Generated\AAngryCoachCharacter.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />

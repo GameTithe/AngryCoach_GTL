@@ -2,7 +2,7 @@
 #include "GameModeBase.h"
 #include "AAngryCoachGameMode.generated.h"
 
-class ACharacter;
+class AAngryCoachCharacter;
 class AAngryCoachPlayerController;
 class ACameraActor;
 
@@ -22,7 +22,7 @@ protected:
 
 private:
 	AAngryCoachPlayerController* AngryCoachController = nullptr;
-	ACharacter* Player1 = nullptr;
-	ACharacter* Player2 = nullptr;
+	AAngryCoachCharacter* Player1 = nullptr;
+	AAngryCoachCharacter* Player2 = nullptr;
 	ACameraActor* GameCamera = nullptr;
 };

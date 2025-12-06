@@ -5,7 +5,7 @@
 
 class UStaticMeshComponent;
 class USkillBase;
-class ACharacter;
+class AAngryCoachCharacter;
 class UParticleSystemComponent;
  
 
@@ -43,16 +43,16 @@ public:
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 protected:
-	ACharacter* OwningCharacter = nullptr;
+	AAngryCoachCharacter* OwningCharacter = nullptr;
 
 public:
 	UFUNCTION()
-	void Equip(ACharacter* OwnerCharacter);
+	void Equip(AAngryCoachCharacter* OwnerCharacter);
 
 	UFUNCTION()
 	void Unequip();
 
 	// 스킬 getter
 	const TMap<ESkillSlot, USkillBase*>& GetGrantedSkills() const { return GrantedSkills; }
-	ACharacter* GetOwningCharacter() const { return OwningCharacter; }
+	AAngryCoachCharacter* GetOwningCharacter() const { return OwningCharacter; }
 };

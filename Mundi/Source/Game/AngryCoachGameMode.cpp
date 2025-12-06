@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "AngryCoachGameMode.h"
 #include "AngryCoachPlayerController.h"
-#include "Character.h"
+#include "AngryCoachCharacter.h"
 #include "World.h"
 #include "CameraComponent.h"
 #include "CameraActor.h"
@@ -38,7 +38,7 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 	FWideString P1PrefabPath = UTF8ToWide(GDataDir) + L"/Prefabs/ICGPlayer.prefab";
 	if (AActor* P1Actor = GWorld->SpawnPrefabActor(P1PrefabPath))
 	{
-		Player1 = Cast<ACharacter>(P1Actor);
+		Player1 = Cast<AAngryCoachCharacter>(P1Actor);
 		if (Player1)
 		{
 			Player1->SetActorLocation(FVector(0, -5, 2));
@@ -50,7 +50,7 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 	FWideString P2PrefabPath = UTF8ToWide(GDataDir) + L"/Prefabs/BSHPlayer.prefab";
 	if (AActor* P2Actor = GWorld->SpawnPrefabActor(P2PrefabPath))
 	{
-		Player2 = Cast<ACharacter>(P2Actor);
+		Player2 = Cast<AAngryCoachCharacter>(P2Actor);
 		if (Player2)
 		{
 			Player2->SetActorLocation(FVector(0, 5, 2));
@@ -67,7 +67,7 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 		// 두 캐릭터 중심을 바라보도록 초기 설정
 		GameCamera->SetCameraPitch(-30.0f);
 		GameCamera->SetCameraYaw(0.0f);
-
+ 
 		// PlayerCameraManager에 등록
 		if (auto* PCM = GWorld->GetPlayerCameraManager())
 		{
