@@ -1023,10 +1023,10 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
             if (ImGui::Combo("Easing##Enter", &widget->EnterAnim.Easing, easingNames, IM_ARRAYSIZE(easingNames))) bModified = true;
             if (ImGui::DragFloat("Delay##Enter", &widget->EnterAnim.Delay, 0.01f, 0.0f, 5.0f, "%.2f s")) bModified = true;
             // Slide 타입일 경우에만 Offset 표시
-            if (widget->EnterAnim.Type >= 2 && widget->EnterAnim.Type <= 4 ||
+            if (widget->EnterAnim.Type >= 2 && widget->EnterAnim.Type <= 5 ||
                 widget->EnterAnim.Type >= 7 && widget->EnterAnim.Type <= 10)
             {
-                if (ImGui::DragFloat("Offset##Enter", &widget->EnterAnim.Offset, 1.0f, 0.0f, 500.0f, "%.0f px")) bModified = true;
+                if (ImGui::DragFloat("Offset##Enter", &widget->EnterAnim.Offset, 10.0f, 0.0f, 3000.0f, "%.0f px")) bModified = true;
             }
         }
         ImGui::PopID();
@@ -1043,10 +1043,10 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
             if (ImGui::Combo("Easing##Exit", &widget->ExitAnim.Easing, easingNames, IM_ARRAYSIZE(easingNames))) bModified = true;
             if (ImGui::DragFloat("Delay##Exit", &widget->ExitAnim.Delay, 0.01f, 0.0f, 5.0f, "%.2f s")) bModified = true;
             // Slide 타입일 경우에만 Offset 표시
-            if (widget->ExitAnim.Type >= 2 && widget->ExitAnim.Type <= 4 ||
+            if (widget->ExitAnim.Type >= 2 && widget->ExitAnim.Type <= 5 ||
                 widget->ExitAnim.Type >= 7 && widget->ExitAnim.Type <= 10)
             {
-                if (ImGui::DragFloat("Offset##Exit", &widget->ExitAnim.Offset, 1.0f, 0.0f, 500.0f, "%.0f px")) bModified = true;
+                if (ImGui::DragFloat("Offset##Exit", &widget->ExitAnim.Offset, 10.0f, 0.0f, 3000.0f, "%.0f px")) bModified = true;
             }
         }
         ImGui::PopID();
