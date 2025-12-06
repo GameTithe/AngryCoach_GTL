@@ -130,6 +130,13 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
             widgetObj["disabledTint"] = disabledTint;
 
             widgetObj["interactable"] = widget.bInteractable;
+
+            // Hover Scale 효과
+            if (widget.HoverScale > 1.0f)
+            {
+                widgetObj["hoverScale"] = widget.HoverScale;
+                widgetObj["hoverScaleDuration"] = widget.HoverScaleDuration;
+            }
         }
 
         // Binding
@@ -317,6 +324,10 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
                 widget.DisabledTint[3] = tempColor.A;
             }
             FJsonSerializer::ReadBool(widgetObj, "interactable", widget.bInteractable, true, false);
+
+            // Hover Scale 효과
+            FJsonSerializer::ReadFloat(widgetObj, "hoverScale", widget.HoverScale, 1.0f, false);
+            FJsonSerializer::ReadFloat(widgetObj, "hoverScaleDuration", widget.HoverScaleDuration, 0.1f, false);
 
             // Binding
             if (FJsonSerializer::ReadString(widgetObj, "bind", tempStr, "", false))
@@ -1057,6 +1068,22 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
 
         ImGui::Separator();
 
+        // 호버 스케일 효과
+        ImGui::Text("Hover Effect");
+        if (ImGui::DragFloat("Hover Scale", &widget->HoverScale, 0.01f, 1.0f, 2.0f, "%.2f"))
+            bModified = true;
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("1.0 = no effect, 1.1 = 10%% scale up");
+        if (widget->HoverScale > 1.0f)
+        {
+            if (ImGui::DragFloat("Scale Duration", &widget->HoverScaleDuration, 0.01f, 0.0f, 1.0f, "%.2f s"))
+                bModified = true;
+        }
+
+        ImGui::Separator();
+
         if (ImGui::Checkbox("Interactable", &widget->bInteractable)) bModified = true;
     }
 
@@ -1338,6 +1365,76 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
             (int)(Widget.ForegroundColor[3] * 255)
         );
         DrawList->AddRectFilled(min, max, color);
+    }
+    else if (Widget.Type == "Button")
+    {
+        // 버튼 미리보기: 4개 텍스처를 2x2로 배치
+        float halfW = (max.x - min.x) * 0.5f;
+        float halfH = (max.y - min.y) * 0.5f;
+
+        // 4개 영역 정의: Normal(좌상), Hovered(우상), Pressed(좌하), Disabled(우하)
+        ImVec2 cells[4][2] = {
+            { min, ImVec2(min.x + halfW, min.y + halfH) },                                    // Normal
+            { ImVec2(min.x + halfW, min.y), ImVec2(max.x, min.y + halfH) },                   // Hovered
+            { ImVec2(min.x, min.y + halfH), ImVec2(min.x + halfW, max.y) },                   // Pressed
+            { ImVec2(min.x + halfW, min.y + halfH), max }                                      // Disabled
+        };
+
+        const char* labels[4] = { "N", "H", "P", "D" };
+        std::string texPaths[4] = {
+            Widget.TexturePath,
+            Widget.HoveredTexturePath.empty() ? Widget.TexturePath : Widget.HoveredTexturePath,
+            Widget.PressedTexturePath.empty() ? Widget.TexturePath : Widget.PressedTexturePath,
+            Widget.DisabledTexturePath.empty() ? Widget.TexturePath : Widget.DisabledTexturePath
+        };
+        float* tints[4] = {
+            (float*)Widget.NormalTint,
+            (float*)Widget.HoveredTint,
+            (float*)Widget.PressedTint,
+            (float*)Widget.DisabledTint
+        };
+
+        for (int i = 0; i < 4; i++)
+        {
+            ImVec2 cellMin = cells[i][0];
+            ImVec2 cellMax = cells[i][1];
+
+            // 틴트 색상 적용
+            ImU32 tintColor = IM_COL32(
+                (int)(tints[i][0] * 255),
+                (int)(tints[i][1] * 255),
+                (int)(tints[i][2] * 255),
+                (int)(tints[i][3] * 255)
+            );
+
+            if (!texPaths[i].empty())
+            {
+                UTexture* tex = ResMgr.Load<UTexture>(FString(texPaths[i].c_str()));
+                if (tex && tex->GetShaderResourceView())
+                {
+                    DrawList->AddImage((ImTextureID)tex->GetShaderResourceView(), cellMin, cellMax,
+                                       ImVec2(0, 0), ImVec2(1, 1), tintColor);
+                }
+                else
+                {
+                    DrawList->AddRectFilled(cellMin, cellMax, IM_COL32(80, 80, 120, 200));
+                }
+            }
+            else
+            {
+                DrawList->AddRectFilled(cellMin, cellMax, IM_COL32(80, 80, 120, 200));
+            }
+
+            // 상태 라벨 표시
+            DrawList->AddText(ImVec2(cellMin.x + 2, cellMin.y + 2), IM_COL32(255, 255, 0, 200), labels[i]);
+        }
+
+        // 구분선
+        DrawList->AddLine(ImVec2(min.x + halfW, min.y), ImVec2(min.x + halfW, max.y), IM_COL32(255, 255, 255, 100));
+        DrawList->AddLine(ImVec2(min.x, min.y + halfH), ImVec2(max.x, min.y + halfH), IM_COL32(255, 255, 255, 100));
+
+        // 외곽선
+        DrawList->AddRect(min, max, IM_COL32(100, 200, 100, 255));
     }
 
     // 위젯 이름 표시

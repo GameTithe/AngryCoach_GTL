@@ -588,6 +588,12 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
                 bool bInteractable = true;
                 FJsonSerializer::ReadBool(widgetObj, "interactable", bInteractable, true, false);
                 canvas->SetButtonInteractable(widgetName.c_str(), bInteractable);
+
+                // 호버 스케일 효과
+                float hoverScale = 1.0f, hoverScaleDuration = 0.1f;
+                FJsonSerializer::ReadFloat(widgetObj, "hoverScale", hoverScale, 1.0f, false);
+                FJsonSerializer::ReadFloat(widgetObj, "hoverScaleDuration", hoverScaleDuration, 0.1f, false);
+                canvas->SetButtonHoverScale(widgetName.c_str(), hoverScale, hoverScaleDuration);
             }
         }
 

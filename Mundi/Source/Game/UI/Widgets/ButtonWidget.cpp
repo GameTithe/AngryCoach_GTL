@@ -151,6 +151,25 @@ void UButtonWidget::OnMouseEnter()
         State = EButtonState::Hovered;
     }
 
+    // 호버 스케일 효과 (HoverScale > 1.0일 때만)
+    if (HoverScale > 1.0f)
+    {
+        // 원본 캡처 (처음 한 번만)
+        if (!bOriginalCaptured)
+        {
+            CaptureOriginalValues();
+        }
+
+        // 중심 기준 스케일 확대
+        float newW = OriginalWidth * HoverScale;
+        float newH = OriginalHeight * HoverScale;
+        float newX = OriginalX - (newW - OriginalWidth) * 0.5f;
+        float newY = OriginalY - (newH - OriginalHeight) * 0.5f;
+
+        MoveTo(newX, newY, HoverScaleDuration, EEasingType::EaseOut);
+        SizeTo(newW, newH, HoverScaleDuration, EEasingType::EaseOut);
+    }
+
     // 콜백 호출
     if (OnHoverStart)
     {
@@ -167,6 +186,13 @@ void UButtonWidget::OnMouseLeave()
     bMouseDown = false;  // 버튼 밖으로 나가면 눌림 취소
 
     State = EButtonState::Normal;
+
+    // 호버 스케일 효과 복원 (HoverScale > 1.0일 때만)
+    if (HoverScale > 1.0f && bOriginalCaptured)
+    {
+        MoveTo(OriginalX, OriginalY, HoverScaleDuration, EEasingType::EaseOut);
+        SizeTo(OriginalWidth, OriginalHeight, HoverScaleDuration, EEasingType::EaseOut);
+    }
 
     // 콜백 호출
     if (OnHoverEnd)

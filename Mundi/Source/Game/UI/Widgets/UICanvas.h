@@ -210,6 +210,11 @@ public:
     void SetButtonInteractable(const std::string& Name, bool bInteractable);
 
     /**
+     * @brief 버튼 호버 스케일 효과 설정
+     */
+    void SetButtonHoverScale(const std::string& Name, float Scale, float Duration = 0.1f);
+
+    /**
      * @brief 버튼 상태별 텍스처 설정
      */
     bool SetButtonHoveredTexture(const std::string& Name, const std::string& Path, ID2D1DeviceContext* Context);

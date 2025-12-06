@@ -438,6 +438,15 @@ void UUICanvas::SetButtonInteractable(const std::string& WidgetName, bool bInter
     }
 }
 
+void UUICanvas::SetButtonHoverScale(const std::string& WidgetName, float Scale, float Duration)
+{
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
+    {
+        Button->HoverScale = Scale;
+        Button->HoverScaleDuration = Duration;
+    }
+}
+
 bool UUICanvas::SetButtonHoveredTexture(const std::string& WidgetName, const std::string& Path, ID2D1DeviceContext* Context)
 {
     if (!Context)
