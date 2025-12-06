@@ -6,6 +6,7 @@
 #include "Source/Game/UI/GameUIManager.h"
 #include "Source/Runtime/AssetManagement/ResourceManager.h"
 #include "Source/Runtime/AssetManagement/Texture.h"
+#include <algorithm>  // std::transform
 
 // ============================================
 // FUIAsset 직렬화
@@ -821,46 +822,11 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
         }
         else
         {
-            // Foreground 텍스처 콤보박스
-            int fgIndex = 0;
-            for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+            // 검색 가능한 Foreground 텍스처 콤보박스
+            if (TextureComboWithSearch("FG Texture", widget->ForegroundTexturePath, TexturePaths,
+                                        FGTextureSearchFilter, sizeof(FGTextureSearchFilter)))
             {
-                if (TexturePaths[idx] == widget->ForegroundTexturePath.c_str())
-                {
-                    fgIndex = idx + 1;
-                    break;
-                }
-            }
-            FString fgPreview = "None";
-            if (fgIndex > 0)
-            {
-                std::filesystem::path p(TexturePaths[fgIndex - 1]);
-                fgPreview = p.filename().string();
-            }
-            if (ImGui::BeginCombo("FG Texture", fgPreview.c_str()))
-            {
-                bool selNone = (fgIndex == 0);
-                if (ImGui::Selectable("None", selNone))
-                {
-                    widget->ForegroundTexturePath = "";
-                    bModified = true;
-                }
-                if (selNone) ImGui::SetItemDefaultFocus();
-                for (int i = 0; i < TexturePaths.Num(); ++i)
-                {
-                    bool selected = (fgIndex == i + 1);
-                    std::filesystem::path p(TexturePaths[i]);
-                    FString displayName = p.filename().string();
-                    if (ImGui::Selectable(displayName.c_str(), selected))
-                    {
-                        widget->ForegroundTexturePath = TexturePaths[i].c_str();
-                        bModified = true;
-                    }
-                    if (selected) ImGui::SetItemDefaultFocus();
-                    if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("%s", TexturePaths[i].c_str());
-                }
-                ImGui::EndCombo();
+                bModified = true;
             }
         }
 
@@ -881,46 +847,11 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
         }
         else
         {
-            // Background 텍스처 콤보박스
-            int bgIndex = 0;
-            for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+            // 검색 가능한 Background 텍스처 콤보박스
+            if (TextureComboWithSearch("BG Texture", widget->BackgroundTexturePath, TexturePaths,
+                                        BGTextureSearchFilter, sizeof(BGTextureSearchFilter)))
             {
-                if (TexturePaths[idx] == widget->BackgroundTexturePath.c_str())
-                {
-                    bgIndex = idx + 1;
-                    break;
-                }
-            }
-            FString bgPreview = "None";
-            if (bgIndex > 0)
-            {
-                std::filesystem::path p(TexturePaths[bgIndex - 1]);
-                bgPreview = p.filename().string();
-            }
-            if (ImGui::BeginCombo("BG Texture", bgPreview.c_str()))
-            {
-                bool selNone = (bgIndex == 0);
-                if (ImGui::Selectable("None", selNone))
-                {
-                    widget->BackgroundTexturePath = "";
-                    bModified = true;
-                }
-                if (selNone) ImGui::SetItemDefaultFocus();
-                for (int i = 0; i < TexturePaths.Num(); ++i)
-                {
-                    bool selected = (bgIndex == i + 1);
-                    std::filesystem::path p(TexturePaths[i]);
-                    FString displayName = p.filename().string();
-                    if (ImGui::Selectable(displayName.c_str(), selected))
-                    {
-                        widget->BackgroundTexturePath = TexturePaths[i].c_str();
-                        bModified = true;
-                    }
-                    if (selected) ImGui::SetItemDefaultFocus();
-                    if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("%s", TexturePaths[i].c_str());
-                }
-                ImGui::EndCombo();
+                bModified = true;
             }
         }
 
@@ -933,61 +864,14 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     {
         ImGui::Text("Texture");
 
-        // 텍스처 콤보박스
+        // 검색 가능한 텍스처 콤보박스
         UResourceManager& ResMgr = UResourceManager::GetInstance();
         TArray<FString> TexturePaths = ResMgr.GetAllFilePaths<UTexture>();
 
-        // 현재 선택된 인덱스 찾기
-        int CurrentIndex = 0; // 0 = None
-        for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+        if (TextureComboWithSearch("Texture", widget->TexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
         {
-            if (TexturePaths[idx] == widget->TexturePath.c_str())
-            {
-                CurrentIndex = idx + 1;
-                break;
-            }
-        }
-
-        // 프리뷰 텍스트 (파일명만 표시)
-        FString Preview = "None";
-        if (CurrentIndex > 0)
-        {
-            std::filesystem::path p(TexturePaths[CurrentIndex - 1]);
-            Preview = p.filename().string();
-        }
-
-        if (ImGui::BeginCombo("Texture", Preview.c_str()))
-        {
-            // None 옵션
-            bool selNone = (CurrentIndex == 0);
-            if (ImGui::Selectable("None", selNone))
-            {
-                widget->TexturePath = "";
-                bModified = true;
-            }
-            if (selNone) ImGui::SetItemDefaultFocus();
-
-            // 텍스처 목록
-            for (int i = 0; i < TexturePaths.Num(); ++i)
-            {
-                bool selected = (CurrentIndex == i + 1);
-                std::filesystem::path p(TexturePaths[i]);
-                FString DisplayName = p.filename().string();
-
-                if (ImGui::Selectable(DisplayName.c_str(), selected))
-                {
-                    widget->TexturePath = TexturePaths[i].c_str();
-                    bModified = true;
-                }
-                if (selected) ImGui::SetItemDefaultFocus();
-
-                // 툴팁으로 전체 경로 표시
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::SetTooltip("%s", TexturePaths[i].c_str());
-                }
-            }
-            ImGui::EndCombo();
+            bModified = true;
         }
 
         ImGui::Text("SubUV");
@@ -1576,4 +1460,100 @@ void SUIEditorWindow::SaveAssetAs()
             bModified = false;
         }
     }
+}
+
+// ============================================
+// 검색 가능한 텍스처 콤보박스
+// ============================================
+
+bool SUIEditorWindow::TextureComboWithSearch(const char* label, std::string& outPath,
+                                              const TArray<FString>& texturePaths,
+                                              char* searchBuffer, size_t bufferSize)
+{
+    bool modified = false;
+
+    // 현재 선택된 인덱스 찾기
+    int currentIndex = 0; // 0 = None
+    for (int idx = 0; idx < texturePaths.Num(); ++idx)
+    {
+        if (texturePaths[idx] == outPath.c_str())
+        {
+            currentIndex = idx + 1;
+            break;
+        }
+    }
+
+    // 프리뷰 텍스트 (파일명만 표시)
+    FString preview = "None";
+    if (currentIndex > 0)
+    {
+        std::filesystem::path p(texturePaths[currentIndex - 1]);
+        preview = p.filename().string();
+    }
+
+    if (ImGui::BeginCombo(label, preview.c_str()))
+    {
+        // 검색 입력 필드
+        ImGui::SetNextItemWidth(-1);
+        if (ImGui::IsWindowAppearing())
+        {
+            ImGui::SetKeyboardFocusHere();
+            searchBuffer[0] = '\0';  // 콤보박스 열릴 때 검색어 초기화
+        }
+        ImGui::InputTextWithHint("##search", "Search...", searchBuffer, bufferSize);
+
+        ImGui::Separator();
+
+        // 검색어를 소문자로 변환
+        std::string searchLower = searchBuffer;
+        std::transform(searchLower.begin(), searchLower.end(), searchLower.begin(), ::tolower);
+
+        // None 옵션 (검색어가 없거나 "none"과 매칭될 때만)
+        if (searchLower.empty() || std::string("none").find(searchLower) != std::string::npos)
+        {
+            bool selNone = (currentIndex == 0);
+            if (ImGui::Selectable("None", selNone))
+            {
+                outPath = "";
+                modified = true;
+            }
+            if (selNone) ImGui::SetItemDefaultFocus();
+        }
+
+        // 텍스처 목록 (필터링 적용)
+        for (int i = 0; i < texturePaths.Num(); ++i)
+        {
+            std::filesystem::path p(texturePaths[i]);
+            FString displayName = p.filename().string();
+
+            // 검색 필터링 (대소문자 무시)
+            if (!searchLower.empty())
+            {
+                std::string nameLower = displayName.c_str();
+                std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
+                if (nameLower.find(searchLower) == std::string::npos)
+                {
+                    continue;  // 매칭되지 않으면 스킵
+                }
+            }
+
+            bool selected = (currentIndex == i + 1);
+            if (ImGui::Selectable(displayName.c_str(), selected))
+            {
+                outPath = texturePaths[i].c_str();
+                modified = true;
+            }
+            if (selected) ImGui::SetItemDefaultFocus();
+
+            // 툴팁으로 전체 경로 표시
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("%s", texturePaths[i].c_str());
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+    return modified;
 }

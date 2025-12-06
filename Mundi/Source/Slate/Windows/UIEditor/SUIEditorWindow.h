@@ -201,4 +201,14 @@ private:
 
     // 에셋 경로
     std::filesystem::path UIAssetPath;
+
+    // 텍스처 검색 필터 (콤보박스별로 분리)
+    char TextureSearchFilter[256] = "";
+    char FGTextureSearchFilter[256] = "";
+    char BGTextureSearchFilter[256] = "";
+
+    // 검색 가능한 텍스처 콤보박스 헬퍼
+    bool TextureComboWithSearch(const char* label, std::string& outPath,
+                                 const TArray<FString>& texturePaths,
+                                 char* searchBuffer, size_t bufferSize);
 };
