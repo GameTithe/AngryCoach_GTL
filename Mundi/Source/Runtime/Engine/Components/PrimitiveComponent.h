@@ -104,12 +104,12 @@ public:
 
     virtual void OnCreatePhysicsState();
 
-    DECLARE_DELEGATE(OnComponentBeginOverlap, UPrimitiveComponent*);    
-    DECLARE_DELEGATE(OnComponentEndOverlap, UPrimitiveComponent*);    
-    DECLARE_DELEGATE(OnComponentHit, UPrimitiveComponent*);    
-    void beginoverlap(UPrimitiveComponent* A);
-    void endoverlap(UPrimitiveComponent* A);
-    void hit(UPrimitiveComponent* A);
+    DECLARE_DELEGATE(OnComponentBeginOverlap, UPrimitiveComponent*, UPrimitiveComponent*, const FHitResult&);    
+    DECLARE_DELEGATE(OnComponentEndOverlap, UPrimitiveComponent*, UPrimitiveComponent*, const FHitResult&);    
+    DECLARE_DELEGATE(OnComponentHit, UPrimitiveComponent*, UPrimitiveComponent*, const FHitResult&);    
+    void OnBeginOverlap(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult);
+    void OnEndOverlap(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult);
+    void OnHit(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult);
 
 protected:
     bool bIsCulled = false;
@@ -140,7 +140,7 @@ protected:
     FBodyInstance* BodyInstance;
 
     // 현재 프레임 감지된 충돌 후보 큐
-    TArray<FOverlapInfo> PendingOverlaps;
+    TArray<FHitResult> PendingOverlaps;
     TArray<FHitResult> PendingHits;
     
     // 겹쳐있는 상태의 컴포넌트 목록(EndOverlap, 중복 진입 방지)

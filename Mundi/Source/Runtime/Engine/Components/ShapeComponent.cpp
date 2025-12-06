@@ -88,6 +88,9 @@ void UShapeComponent::TickComponent(float DeltaSeconds)
                 {
                     HitResult.HitComponent = Other;
                     HitResult.HitActor = Other->GetOwner();
+                    HitResult.bBlockingHit = true;
+                    HitResult.ImpactPoint = this->GetWorldLocation();
+                    HitResult.ImpactNormal = FVector::Zero();
                     
                     // 부모의 Hit 큐에 등록
                     PendingHits.Add(HitResult);
@@ -99,14 +102,17 @@ void UShapeComponent::TickComponent(float DeltaSeconds)
             }
             
             if (this->bGenerateOverlapEvents && Other->bGenerateOverlapEvents)
-            {
+            {                
                 if (Collision::CheckOverlap(this, Other))
                 {
-                    FOverlapInfo Info;
-                    Info.OtherComp = Other;
-                    Info.OtherActor = Other->GetOwner();
+                    FHitResult HitResult;
+                    HitResult.HitComponent = Other;
+                    HitResult.HitActor = Other->GetOwner();
+                    HitResult.bBlockingHit = false;
+                    HitResult.ImpactPoint = this->GetWorldLocation();
+                    HitResult.ImpactNormal = FVector::Zero();
                     
-                    PendingOverlaps.Add(Info);
+                    PendingOverlaps.Add(HitResult);
                 }
             }
         }

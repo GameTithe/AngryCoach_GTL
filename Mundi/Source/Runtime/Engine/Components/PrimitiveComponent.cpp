@@ -26,9 +26,9 @@ void UPrimitiveComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    OnComponentBeginOverlap.AddDynamic(this, &UPrimitiveComponent::beginoverlap);
-    OnComponentEndOverlap.AddDynamic(this, &UPrimitiveComponent::endoverlap);
-    OnComponentHit.AddDynamic(this, &UPrimitiveComponent::hit);
+    OnComponentBeginOverlap.AddDynamic(this, &UPrimitiveComponent::OnBeginOverlap);
+    OnComponentEndOverlap.AddDynamic(this, &UPrimitiveComponent::OnEndOverlap);
+    OnComponentHit.AddDynamic(this, &UPrimitiveComponent::OnHit);
 }
 
 void UPrimitiveComponent::TickComponent(float DeltaTime)
@@ -42,8 +42,11 @@ void UPrimitiveComponent::TickComponent(float DeltaTime)
     }
 
     // begin overlap
-    for (const FOverlapInfo& Info : PendingOverlaps)
+    for (const FHitResult& HitResult : PendingOverlaps)
     {
+        FOverlapInfo Info;
+        Info.OtherComp = HitResult.HitComponent;
+        Info.OtherActor = HitResult.HitActor;
         // 이미 겹쳐있으면 생략
         if (ActiveOverlaps.Contains(Info))
         {
@@ -52,15 +55,16 @@ void UPrimitiveComponent::TickComponent(float DeltaTime)
 
         if (UWorld* World = GetWorld())
         {
-            if (!World->TryMarkOverlapPair(GetOwner(), Info.OtherActor))
+            if (!World->TryMarkOverlapPair(GetOwner(), HitResult.HitActor))
             {
+                
                 ActiveOverlaps.Add(Info);
                 continue;
             }
         }
 
         ActiveOverlaps.Add(Info);
-        OnComponentBeginOverlap.Broadcast(this);
+        OnComponentBeginOverlap.Broadcast(this, HitResult.HitComponent, HitResult);
 
         if (AActor* Owner = GetOwner())
         {
@@ -72,23 +76,34 @@ void UPrimitiveComponent::TickComponent(float DeltaTime)
     for (int32 i = ActiveOverlaps.Num() - 1; i >= 0; --i)
     {
         const FOverlapInfo& ActiveInfo = ActiveOverlaps[i];
-        
-        if (!PendingOverlaps.Contains(ActiveInfo))
+
+        bool bStillOverlapping = false;        
+        for (const FHitResult& PendingHit : PendingOverlaps)
         {
-            // EndOverlap도 Begin과 마찬가지로 쌍방향 체크
+            if (PendingHit.HitComponent == ActiveInfo.OtherComp)
+            {
+                bStillOverlapping = true;                
+                break;
+            }
+            
+        }
+        if (!bStillOverlapping)
+        {
             if (UWorld* World = GetWorld())
             {
-                // TryMarkOverlapPair는 내부적으로 Begin/End 상태를 토글하거나
-                // 별도의 Set을 써야 하는데, 언리얼은 보통 Begin때 넣고 End때 뺌.
-                // *주의: Begin때 넣은 Pair를 여기서 제거해줘야 다음 충돌이 가능함*
-                // 네 구현에 따라 TryRemoveOverlapPair 같은 함수가 필요할 수 있음.
-                
-                // 여기서는 단순히 호출한다고 가정
+                if (!World->TryMarkOverlapPair(GetOwner(), ActiveInfo.OtherActor))
+                {
+                    ActiveOverlaps.RemoveAt(i);
+                    continue;
+                }
             }
+            
+            FHitResult EndResult = {};
+            EndResult.HitComponent = ActiveInfo.OtherComp;
+            EndResult.HitActor = ActiveInfo.OtherActor;
+            EndResult.bBlockingHit = false;
 
-            // 1) 컴포넌트 End
-            OnComponentEndOverlap.Broadcast(this);
-
+            OnComponentEndOverlap.Broadcast(this, EndResult.HitComponent, EndResult);
             // 2) 액터 End - [복구된 부분]            
             if (AActor* Owner = GetOwner())
             {
@@ -97,7 +112,7 @@ void UPrimitiveComponent::TickComponent(float DeltaTime)
             }
 
             ActiveOverlaps.RemoveAt(i);
-        }
+        }        
     }
 
     CurrentFrameHits.Empty();
@@ -118,7 +133,7 @@ void UPrimitiveComponent::TickComponent(float DeltaTime)
             }
         }
         
-        OnComponentHit.Broadcast(this);
+        OnComponentHit.Broadcast(this, Hit.HitComponent, Hit);
         
         if (AActor* Owner = GetOwner())
         {
@@ -193,20 +208,21 @@ void UPrimitiveComponent::OnCreatePhysicsState()
 
 }
 
-void UPrimitiveComponent::beginoverlap(UPrimitiveComponent* A)
+void UPrimitiveComponent::OnBeginOverlap(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult)
 {
-    UE_LOG("beginoverlap : %p", A);
+    UE_LOG("OnBeginOverlap");
 }
 
-void UPrimitiveComponent::endoverlap(UPrimitiveComponent* A)
+void UPrimitiveComponent::OnEndOverlap(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult)
 {
-    UE_LOG("endoverlap : %p", A);
+    UE_LOG("OnEndOverlap");
 }
 
-void UPrimitiveComponent::hit(UPrimitiveComponent* A)
+void UPrimitiveComponent::OnHit(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult)
 {
-    UE_LOG("hit : %p", A);
+    UE_LOG("OnHit");
 }
+
 
 bool UPrimitiveComponent::IsOverlappingActor(const AActor* Other) const
 {
