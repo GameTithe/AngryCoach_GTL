@@ -71,7 +71,7 @@ void AGameStateBase::AdvanceToNextRound()
 {
 	CurrentRound++;
 	RoundTimeRemaining = RoundDuration;
-	SetRoundState(ERoundState::WaitingToStart);
+	SetRoundState(ERoundState::None);  // GameModeBase에서 CharacterSelect로 설정
 	OnRoundStarted.Broadcast(CurrentRound);
 }
 

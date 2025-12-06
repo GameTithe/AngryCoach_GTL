@@ -40,11 +40,15 @@ public:
 	virtual void StartMatch();
 	virtual void EndMatch();
 
+	// 캐릭터 선택 시작/종료
+	virtual void StartCharacterSelect();
+	virtual void EndCharacterSelect();  // Lua에서 선택 완료 시 호출
+
 	// 라운드 시작/종료
 	virtual void StartRound();
 	virtual void EndRound(int32 WinnerIndex);  // -1이면 무승부
 
-	// 카운트다운 시작
+	// 카운트다운 시작 (Ready/Go 시퀀스)
 	virtual void StartCountDown(float CountDownTime = 3.0f);
 
 	// ============================================

@@ -370,7 +370,7 @@ FLuaManager::FLuaManager()
 
     SharedLib.new_enum("ERoundState",
         "None", ERoundState::None,
-        "WaitingToStart", ERoundState::WaitingToStart,
+        "CharacterSelect", ERoundState::CharacterSelect,
         "CountDown", ERoundState::CountDown,
         "InProgress", ERoundState::InProgress,
         "RoundEnd", ERoundState::RoundEnd
@@ -493,6 +493,28 @@ FLuaManager::FLuaManager()
             if (auto* GameMode = GWorld->GetGameMode())
             {
                 GameMode->EndMatch();
+            }
+        }
+    );
+
+    SharedLib.set_function("StartCharacterSelect",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->StartCharacterSelect();
+            }
+        }
+    );
+
+    SharedLib.set_function("EndCharacterSelect",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->EndCharacterSelect();
             }
         }
     );

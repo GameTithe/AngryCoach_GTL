@@ -88,9 +88,9 @@ void AGameModeBase::StartMatch()
 	// Lua 콜백: OnMatchStart
 	CallLuaCallback("OnMatchStart");
 
-	// 첫 번째 라운드 시작
+	// 첫 번째 라운드 - 캐릭터 선택으로 시작
 	GameState->AdvanceToNextRound();
-	StartCountDown();
+	StartCharacterSelect();
 }
 
 void AGameModeBase::EndMatch()
@@ -104,6 +104,33 @@ void AGameModeBase::EndMatch()
 
 	// Lua 콜백: OnMatchEnd
 	CallLuaCallback("OnMatchEnd");
+}
+
+void AGameModeBase::StartCharacterSelect()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	GameState->SetRoundState(ERoundState::CharacterSelect);
+
+	// Lua 콜백: OnCharacterSelectStart
+	CallLuaCallback("OnCharacterSelectStart");
+}
+
+void AGameModeBase::EndCharacterSelect()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	// Lua 콜백: OnCharacterSelectEnd
+	CallLuaCallback("OnCharacterSelectEnd");
+
+	// 캐릭터 선택 완료 → 카운트다운(Ready/Go) 시작
+	StartCountDown();
 }
 
 void AGameModeBase::StartRound()
@@ -156,9 +183,9 @@ void AGameModeBase::EndRound(int32 WinnerIndex)
 	}
 	else
 	{
-		// 다음 라운드로 진행
+		// 다음 라운드로 진행 - 캐릭터 선택부터 다시
 		GameState->AdvanceToNextRound();
-		StartCountDown();
+		StartCharacterSelect();
 	}
 }
 

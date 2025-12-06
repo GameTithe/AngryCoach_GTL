@@ -314,10 +314,10 @@ enum class EGameState : uint8
 enum class ERoundState : uint8
 {
     None,
-    WaitingToStart,    // 라운드 시작 대기
-    CountDown,         // 카운트다운 중
-    InProgress,        // 라운드 진행 중
-    RoundEnd,          // 라운드 종료
+    CharacterSelect,   // 캐릭터/악세사리 선택
+    CountDown,         // 카운트다운 중 (Ready/Go)
+    InProgress,        // 라운드 진행 중 (전투)
+    RoundEnd,          // 라운드 종료 (결과 표시)
 };
 
 // 게임 결과
