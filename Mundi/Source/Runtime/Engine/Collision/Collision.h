@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "PrimitiveComponent.h"
 struct FAABB;
 struct FOBB;
 struct FBoundingSphere;
@@ -75,11 +76,19 @@ namespace Collision
     
     
     bool CheckOverlap(const UShapeComponent* A, const UShapeComponent* B);
+
+    bool ComputePenetration(const UShapeComponent* A, const UShapeComponent* B, FHitResult& OutHit);
     
     // ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡParticle Collision Helper 함수ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
     bool ComputeSphereToShapePenetration(const FVector& SpherePos, float SphereR, const FColliderProxy& Proxy, FHitResult& OutHit);
     bool ComputeSphereToBoxPenetration(const FVector& SpherePos, float SphereR, const FOBB& Box, FHitResult& OutHit);
     bool ComputeSphereToCapsulePenetration(const FVector& SpherePos, float SphereR, const FVector& PosA, const FVector& PosB, float CapsuleR, FHitResult& OutHit);
     bool ComputeSphereToSpherePenetration(const FVector& SpherePos, float SphereR, const FVector& TargetCenter, float TargetR, FHitResult& OutHit);
+
+    bool ComputeBoxToBoxPenetration(const FOBB& A, const FOBB& B, FHitResult& OutHit);
+    bool ComputeCapsuleToCapsulePenetration(const FVector& PA_0, const FVector& PA_1, float RadiusA, 
+                                            const FVector& PB_0, const FVector& PB_1, float RadiusB, FHitResult& OutHit);
+    bool ComputeBoxToCapsulePenetration(const FOBB& Box, const FVector& CapP0, const FVector& CapP1, float CapRadius, FHitResult& OutHit);
+    
     
 }

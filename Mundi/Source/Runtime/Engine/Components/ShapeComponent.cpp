@@ -1,7 +1,6 @@
 ﻿#include "pch.h"
 #include "ShapeComponent.h"
 #include "OBB.h"
-#include "Collision.h"
 #include "World.h"
 #include "WorldPartitionManager.h"
 #include "BVHierarchy.h"
@@ -44,132 +43,77 @@ void UShapeComponent::OnTransformUpdated()
 
 void UShapeComponent::TickComponent(float DeltaSeconds)
 {
-    if (GetClass() == UShapeComponent::StaticClass())
+    if (!bGenerateOverlapEvents || !bBlockComponent)
     {
-        bGenerateOverlapEvents = false;
-    }
-
-    if (!bGenerateOverlapEvents)
-    {
-        OverlapInfos.clear();
+        // Super::TickComponent(DeltaSeconds);
+        return;
     }
 
     UWorld* World = GetWorld();
-    if (!World) return;
-
-    //Test용 O(N^2) 
-    OverlapNow.clear();
-
+    if (!World)
+    {
+        return;
+    }
+    
     for (AActor* Actor : World->GetActors())
     {
         if (!Actor || !Actor->IsActorActive())
+        {
             continue;
+        }
 
         for (USceneComponent* Comp : Actor->GetSceneComponents())
         {
             UShapeComponent* Other = Cast<UShapeComponent>(Comp);
-            if (!Other || Other == this) continue;
-            if (Other->GetOwner() == this->GetOwner()) continue;
-            if (!Other->bGenerateOverlapEvents) continue;
 
-            AActor* Owner = this->GetOwner();
-            AActor* OtherOwner = Other->GetOwner();
-
-            // Collision 모듈
-            if (!Collision::CheckOverlap(this, Other)) continue;
-
-            OverlapNow.Add(Other);
-            //UE_LOG("Collision!!");
-        }
-    }
-
-    // Publish current overlaps
-    OverlapInfos.clear();
-    for (UShapeComponent* Other : OverlapNow)
-    {
-        FOverlapInfo Info;
-        Info.OtherActor = Other->GetOwner();
-        Info.Other = Other;
-        OverlapInfos.Add(Info);
-    }
-
-    //Begin
-    for (UShapeComponent* Comp : OverlapNow)
-    {
-        if (!Comp || Comp->IsPendingDestroy())
-        {
-            continue;
-        }
-
-        if (!OverlapPrev.Contains(Comp))
-        {
-            AActor* Owner = this->GetOwner();
-            AActor* OtherOwner = Comp ? Comp->GetOwner() : nullptr;
-
-            // 이전에 호출된 적이 있는 이벤트 인지 확인
-            if (!(Owner && OtherOwner && World->TryMarkOverlapPair(Owner, OtherOwner)))
+            if (!Other || Other == this)
             {
                 continue;
             }
 
-            // 양방향 호출 
-            const AActor::FTriggerHit Trigger = AActor::FTriggerHit();
-            Owner->OnComponentBeginOverlap.Broadcast(this, Comp, &Trigger);
-            if (AActor* OtherOwner = Comp->GetOwner())
+            if (Other->GetOwner() == this->GetOwner())
             {
-                OtherOwner->OnComponentBeginOverlap.Broadcast(Comp, this, &Trigger);
+                continue;
             }
 
-            // Hit호출 
-            const AActor::FContactHit Contact = AActor::FContactHit();
-            Owner->OnComponentHit.Broadcast(this, Comp, &Contact);
-            if (bBlockComponent)
+            if (!Other->bGenerateOverlapEvents && !Other->bBlockComponent)
             {
-                if (AActor* OtherOwner = Comp->GetOwner())
+                continue;
+            }
+
+            if (this->bBlockComponent && Other->bBlockComponent)
+            {
+                FHitResult HitResult;
+                if (Collision::ComputePenetration(this, Other, HitResult))
                 {
-                    OtherOwner->OnComponentHit.Broadcast(Comp, this, &Contact);
+                    HitResult.HitComponent = Other;
+                    HitResult.HitActor = Other->GetOwner();
+                    
+                    // 부모의 Hit 큐에 등록
+                    PendingHits.Add(HitResult);
+                
+                    // *물리 반작용(Resolve)*: 
+                    // 만약 네가 여기서 바로 밀어내기(Position correction)를 하고 싶다면:
+                    // AddWorldOffset(HitResult.ImpactNormal * HitResult.PenetrationDepth);
+                }
+            }
+            
+            if (this->bGenerateOverlapEvents && Other->bGenerateOverlapEvents)
+            {
+                if (Collision::CheckOverlap(this, Other))
+                {
+                    FOverlapInfo Info;
+                    Info.OtherComp = Other;
+                    Info.OtherActor = Other->GetOwner();
+                    
+                    PendingOverlaps.Add(Info);
                 }
             }
         }
     }
 
-    //End
-    for (UShapeComponent* Comp : OverlapPrev)
-    {
-        if (!Comp || Comp->IsPendingDestroy())
-        {
-            continue;
-        }
-
-        if (!OverlapNow.Contains(Comp))
-        {
-            AActor* Owner = this->GetOwner();
-            AActor* OtherOwner = Comp ? Comp->GetOwner() : nullptr;
-
-            // 이전에 호출된 적이 있는 이벤트 인지 확인
-            if (!(Owner && OtherOwner && World->TryMarkOverlapPair(Owner, OtherOwner)))
-            {
-                continue;
-            }
-
-            // 양방향 호출
-            const AActor::FTriggerHit Trigger = AActor::FTriggerHit();
-            Owner->OnComponentEndOverlap.Broadcast(this, Comp, &Trigger);
-            if (AActor* OtherOwner = Comp->GetOwner())
-            {
-                OtherOwner->OnComponentEndOverlap.Broadcast(Comp, this, &Trigger);
-            }
-        }
-    }
-
-    OverlapPrev.clear();
-    for (UShapeComponent* Comp : OverlapNow)
-    {
-            if (Comp && !Comp->IsPendingDestroy())
-            {
-                OverlapPrev.Add(Comp);
-            }
-    }
+    // 충돌 감지 후 부모 Tick 호출해야지 감지된 충돌 이벤트가 현재 프레임에 발생된다
+    Super::TickComponent(DeltaSeconds);    
 }
 
 FAABB UShapeComponent::GetWorldAABB() const
