@@ -47,6 +47,7 @@ public:
 
     // Position the anchor
     void RepositionAnchorToBone(int32 BoneIndex);
+    void RepositionAnchorToSocket(int32 SocketIndex);
 
     // Bone picking with ray
     // Returns bone index if hit, -1 otherwise

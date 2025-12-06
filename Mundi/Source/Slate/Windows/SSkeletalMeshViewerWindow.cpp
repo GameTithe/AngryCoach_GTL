@@ -1035,6 +1035,17 @@ void SSkeletalMeshViewerWindow::OnRender()
                                         ActiveState->EditSocketLocation = Socket.RelativeLocation;
                                         ActiveState->EditSocketRotation = Socket.RelativeRotation.ToEulerZYXDeg();
                                         ActiveState->EditSocketScale = Socket.RelativeScale;
+
+                                        // 기즈모를 소켓 위치로 이동
+                                        if (ActiveState->PreviewActor)
+                                        {
+                                            ActiveState->PreviewActor->RepositionAnchorToSocket(si);
+                                            if (USceneComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                                            {
+                                                ActiveState->World->GetSelectionManager()->SelectActor(ActiveState->PreviewActor);
+                                                ActiveState->World->GetSelectionManager()->SelectComponent(Anchor);
+                                            }
+                                        }
                                     }
                                     ImGui::PopStyleColor();
 

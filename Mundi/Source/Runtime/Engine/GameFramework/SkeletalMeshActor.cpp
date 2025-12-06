@@ -227,6 +227,35 @@ void ASkeletalMeshActor::RepositionAnchorToBone(int32 BoneIndex)
     BoneAnchor->SetVisibility(true);
 }
 
+void ASkeletalMeshActor::RepositionAnchorToSocket(int32 SocketIndex)
+{
+    // Ensure viewer components exist before using them
+    EnsureViewerComponents();
+
+    if (!SkeletalMeshComponent || !BoneAnchor)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+    if (!SkeletalMesh)
+    {
+        return;
+    }
+
+    const FSkeleton* Skeleton = SkeletalMesh->GetSkeleton();
+    if (!Skeleton || SocketIndex < 0 || SocketIndex >= static_cast<int32>(Skeleton->Sockets.size()))
+    {
+        return;
+    }
+
+    // Wire target/index for socket mode
+    BoneAnchor->SetSocketTarget(SkeletalMeshComponent, SocketIndex);
+
+    BoneAnchor->SetEditability(true);
+    BoneAnchor->SetVisibility(true);
+}
+
 void ASkeletalMeshActor::DuplicateSubObjects()
 {
     Super::DuplicateSubObjects();
