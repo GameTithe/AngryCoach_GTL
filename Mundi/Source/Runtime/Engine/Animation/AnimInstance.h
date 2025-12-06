@@ -108,8 +108,15 @@ class UAnimInstance : public UObject
     DECLARE_CLASS(UAnimInstance, UObject)
 
 public:
-    UAnimInstance() = default;
-    virtual ~UAnimInstance() = default;
+    UAnimInstance()
+    {
+        MontageState = new FMontagePlayState();
+    }
+    virtual ~UAnimInstance()
+    {
+        delete MontageState;
+        MontageState = nullptr;
+    }
 
     // ============================================================
     // Initialization & Setup
