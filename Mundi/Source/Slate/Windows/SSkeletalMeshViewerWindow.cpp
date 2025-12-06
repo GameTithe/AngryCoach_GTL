@@ -33,6 +33,7 @@
 #include <cstring>
 #include "RenderManager.h"
 #include "WindowsBinWriter.h"
+#include "Source/Runtime/Engine/Animation/AnimNotify_CallFunction.h"
 
 namespace
 {
@@ -3320,6 +3321,14 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                             }
                         }
                     }
+
+                    // 함수 호출 노티파이
+                    if (ImGui::MenuItem("Call Func Notify"))
+                    {
+                        bOpenNamePopup = true;
+                        memset(FunctionNameBuffer, 0, sizeof(FunctionNameBuffer));
+                    }
+                    
                     ImGui::EndMenu();
                 }
 
@@ -3372,6 +3381,53 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                         }
                     }
                 }
+                ImGui::EndPopup();
+            }
+
+            // 함수 호출 노티파이에 함수명 저장
+            if (bOpenNamePopup)
+            {
+                ImGui::OpenPopup("Enter Function Name");
+                bOpenNamePopup = false;
+            }
+
+            // 모달 팝업 (배경 클릭 막음)
+            if (ImGui::BeginPopupModal("Enter Function Name", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::Text("Enter the name of the function to call:");
+    
+                // 텍스트 입력창 (Enter 치면 true 반환)
+                bool bEnterPressed = ImGui::InputText("Function Name", FunctionNameBuffer, IM_ARRAYSIZE(FunctionNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+    
+                // 'Add' 버튼을 누르거나 텍스트창에서 엔터를 쳤을 때
+                if (ImGui::Button("Add") || bEnterPressed)
+                {
+                    if (bHasAnimation && NotifySource)
+                    {
+                        float ClickFrame = RightClickFrame; // 우클릭했던 위치 기억 필요
+                        float TimeSec = ImClamp(ClickFrame * FrameDuration, 0.0f, PlayLength);
+
+                        // 1. 객체 생성
+                        UAnimNotify_CallFunction* NewNotify = NewObject<UAnimNotify_CallFunction>();
+                        if (NewNotify)
+                        {
+                            // 2. [중요] 입력받은 이름 저장!
+                            NewNotify->FunctionName = FName(FString(FunctionNameBuffer));
+                
+                            // 3. 트랙에 추가
+                            NotifySource->AddCallFuncNotify(TimeSec, NewNotify);
+                        }
+                    }
+                    ImGui::CloseCurrentPopup(); // 팝업 닫기
+                }
+
+                ImGui::SameLine();
+
+                if (ImGui::Button("Cancel"))
+                {
+                    ImGui::CloseCurrentPopup();
+                }
+
                 ImGui::EndPopup();
             }
 

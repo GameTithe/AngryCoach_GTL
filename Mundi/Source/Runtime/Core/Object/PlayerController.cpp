@@ -21,9 +21,9 @@ void APlayerController::Tick(float DeltaSeconds)
 
     if (Pawn == nullptr) return;
 
+	UInputManager& InputManager = UInputManager::GetInstance();
 	// F11을 통해서, Detail Panel 클릭이 가능해짐
     {
-        UInputManager& InputManager = UInputManager::GetInstance();
         if (InputManager.IsKeyPressed(VK_F11))
         {
             bMouseLookEnabled = !bMouseLookEnabled;
@@ -41,11 +41,21 @@ void APlayerController::Tick(float DeltaSeconds)
         }
     }
 
+	{
+		if (InputManager.IsMouseButtonPressed(EMouseButton::LeftButton))
+		{
+			if (ACharacter* Character = Cast<ACharacter>(GetPawn()))
+			{
+				Character->Attack();
+			}
+		}
+	}
+
 	// 입력 처리 (Move)
 	ProcessMovementInput(DeltaSeconds);
 	  
 	// 입력 처리 (Look/Turn)
-	ProcessRotationInput(DeltaSeconds);
+	ProcessRotationInput(DeltaSeconds);	
 }
 
 void APlayerController::SetupInput()

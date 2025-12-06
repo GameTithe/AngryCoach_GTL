@@ -41,6 +41,10 @@ public:
 	void OnAttackInput(EAttackInput Input);
 	USkillComponent* GetSkillComponent() const { return SkillComponent; }
 
+	// 노티파이용 함수
+	void AttackBegin() override;
+	void AttackEnd() override;
+
 protected:
 	// 스킬/악세서리
 	USkillComponent* SkillComponent = nullptr;

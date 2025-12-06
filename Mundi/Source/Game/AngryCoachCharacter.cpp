@@ -21,6 +21,10 @@ AAngryCoachCharacter::~AAngryCoachCharacter()
 
 void AAngryCoachCharacter::BeginPlay()
 {
+	/*
+	 * 부모 클래스(ACharacter)에서 Delegate 바인딩 중
+	 * 구현에 따라서 AAngryCoachCharacter에서 바인딩할 지 결정
+	 */
 	Super::BeginPlay();
 
 	// 기본 펀치 악세서리 장착 (이미 장착된 게 없을 때만)
@@ -179,7 +183,6 @@ void AAngryCoachCharacter::UnequipAccessory()
 }
 
 // ===== 스킬 =====
-
 void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 {
 	if (!SkillComponent)
@@ -189,21 +192,55 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 	// 지금은 단순 매핑
 	ESkillSlot Slot = ESkillSlot::None;
 
+	// BaseDage 테스트용 하드 코딩
 	switch (Input)
 	{
 	case EAttackInput::Light:
-		Slot = ESkillSlot::LightAttack;
-		break;
+		{
+			Slot = ESkillSlot::LightAttack;			
+			BaseDamage = 5.0f;
+			break;
+		}
 	case EAttackInput::Heavy:
-		Slot = ESkillSlot::HeavyAttack;
-		break;
+		{
+			Slot = ESkillSlot::HeavyAttack;
+			BaseDamage = 10.0f;
+			break;
+		}
 	case EAttackInput::Skill:
-		Slot = ESkillSlot::Speical;
-		break;
+		{
+			Slot = ESkillSlot::Speical;
+			/*
+			 * TODO
+			 * Skil별 데미지 적용
+			 */
+			BaseDamage = 15.0f;
+			break;
+		}
 	}
 
 	if (Slot != ESkillSlot::None)
 	{
 		SkillComponent->HandleInput(Slot);
 	}
+}
+
+REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackBegin)
+void AAngryCoachCharacter::AttackBegin()
+{
+	/*
+	 * TODO
+	 * 공격을 발생시키는 ShapeComp의 콜리전 활성화
+	 */
+	// GetCapsuleComponent()->SetBlockComponent(true);
+}
+
+REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackEnd)
+void AAngryCoachCharacter::AttackEnd()
+{
+	/*
+	 * TODO
+	 * 공격을 발생시키는 ShapeComp의 콜리전 비활성화
+	 */
+	// GetCapsuleComponent()->SetBlockComponent(false);
 }

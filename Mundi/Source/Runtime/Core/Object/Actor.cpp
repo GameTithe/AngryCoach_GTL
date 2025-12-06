@@ -584,7 +584,7 @@ void AActor::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* Othe
 void AActor::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FContactHit* Trigger)
 {
 	UE_LOG("On Hit");
-} 
+}
 
 void AActor::DuplicateSubObjects()
 {
@@ -778,6 +778,23 @@ void AActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		}
 		InOutHandle["OwnedComponents"] = Components;
 	}
+}
+
+void AActor::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+}
+
+void AActor::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+}
+
+void AActor::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+}
+
+float AActor::TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator)
+{
+	return 0.0f;
 }
 
 void AActor::RegisterComponentTree(USceneComponent* SceneComp, UWorld* InWorld)

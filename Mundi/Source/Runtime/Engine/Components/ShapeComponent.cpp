@@ -5,6 +5,8 @@
 #include "WorldPartitionManager.h"
 #include "BVHierarchy.h"
 #include "GameObject.h"
+#include "Collision.h"
+
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 UShapeComponent::UShapeComponent() : bShapeIsVisible(true), bShapeHiddenInGame(true)
 {
@@ -80,8 +82,8 @@ void UShapeComponent::TickComponent(float DeltaSeconds)
             {
                 continue;
             }
-
-            if (this->bBlockComponent && Other->bBlockComponent)
+            
+            if (this->bBlockComponent/* && Other->bBlockComponent*/)
             {
                 FHitResult HitResult;
                 if (Collision::ComputePenetration(this, Other, HitResult))
