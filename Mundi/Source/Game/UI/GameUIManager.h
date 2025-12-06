@@ -106,6 +106,12 @@ public:
      */
     UUICanvas* LoadUIAsset(const std::string& FilePath);
 
+    /**
+     * @brief UI가 마우스 입력을 소비했는지 확인
+     * @return UI(버튼 등)가 입력을 처리했으면 true
+     */
+    bool IsUIConsumedInput() const { return bUIConsumedInput; }
+
 private:
     UGameUIManager() = default;
     ~UGameUIManager() = default;
@@ -179,4 +185,8 @@ private:
 
     // 정렬 갱신
     void UpdateCanvasSortOrder();
+
+    // 마우스 입력 처리
+    void ProcessMouseInput();
+    bool bUIConsumedInput = false;
 };

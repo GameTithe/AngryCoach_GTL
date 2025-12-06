@@ -8,6 +8,7 @@
 
 class UProgressBarWidget;
 class UTextureWidget;
+class UButtonWidget;
 
 /**
  * @brief UI 캔버스 클래스
@@ -65,6 +66,19 @@ public:
      * @brief 사각형 위젯 생성
      */
     bool CreateRect(const std::string& Name, float X, float Y, float W, float H);
+
+    /**
+     * @brief 버튼 위젯 생성
+     * @param Name 위젯 이름
+     * @param TexturePath 기본 텍스처 경로
+     * @param X, Y 캔버스 내 상대 좌표
+     * @param W, H 크기
+     * @param D2DContext D2D 디바이스 컨텍스트
+     * @return 성공 여부
+     */
+    bool CreateButton(const std::string& Name, const std::string& TexturePath,
+                      float X, float Y, float W, float H,
+                      ID2D1DeviceContext* D2DContext);
 
     // ============================================
     // 위젯 관리
@@ -187,6 +201,50 @@ public:
     void PlayAllExitAnimations();
 
     // ============================================
+    // 버튼 설정 함수
+    // ============================================
+
+    /**
+     * @brief 버튼 활성화/비활성화
+     */
+    void SetButtonInteractable(const std::string& Name, bool bInteractable);
+
+    /**
+     * @brief 버튼 상태별 텍스처 설정
+     */
+    bool SetButtonHoveredTexture(const std::string& Name, const std::string& Path, ID2D1DeviceContext* Context);
+    bool SetButtonPressedTexture(const std::string& Name, const std::string& Path, ID2D1DeviceContext* Context);
+    bool SetButtonDisabledTexture(const std::string& Name, const std::string& Path, ID2D1DeviceContext* Context);
+
+    /**
+     * @brief 버튼 상태별 틴트 색상 설정
+     */
+    void SetButtonNormalTint(const std::string& Name, float R, float G, float B, float A);
+    void SetButtonHoveredTint(const std::string& Name, float R, float G, float B, float A);
+    void SetButtonPressedTint(const std::string& Name, float R, float G, float B, float A);
+    void SetButtonDisabledTint(const std::string& Name, float R, float G, float B, float A);
+
+    // ============================================
+    // 마우스 입력 처리
+    // ============================================
+
+    /**
+     * @brief 마우스 입력 처리
+     * @param MouseX 마우스 X 좌표 (뷰포트 기준)
+     * @param MouseY 마우스 Y 좌표 (뷰포트 기준)
+     * @param bLeftDown 왼쪽 마우스 버튼 눌림 여부
+     * @param bLeftPressed 이번 프레임에 눌렸는지 (down edge)
+     * @param bLeftReleased 이번 프레임에 뗐는지 (up edge)
+     * @return 입력이 소비되었으면 true (버튼 위에서 처리됨)
+     */
+    bool ProcessMouseInput(float MouseX, float MouseY, bool bLeftDown, bool bLeftPressed, bool bLeftReleased);
+
+    /**
+     * @brief 마우스가 캔버스 영역 안에 있는지 확인
+     */
+    bool ContainsPoint(float PosX, float PosY) const;
+
+    // ============================================
     // 캔버스 속성 설정
     // ============================================
 
@@ -226,6 +284,15 @@ private:
     std::vector<UUIWidget*> SortedWidgets;
     bool bWidgetsSortDirty = false;
 
+    // 마우스 입력 상태
+    UButtonWidget* HoveredButton = nullptr;   // 현재 호버중인 버튼
+    UButtonWidget* PressedButton = nullptr;   // 현재 눌린 버튼
+
     // 정렬 갱신
     void UpdateWidgetSortOrder();
+
+    /**
+     * @brief 좌표에서 가장 위에 있는 버튼 찾기 (Z-order 고려)
+     */
+    UButtonWidget* FindButtonAtPosition(float LocalX, float LocalY);
 };

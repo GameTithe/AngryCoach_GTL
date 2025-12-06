@@ -13,6 +13,7 @@
 
 #include "Source/Game/UI/GameUIManager.h"
 #include "Source/Game/UI/Widgets/UICanvas.h"
+#include "Source/Game/UI/Widgets/ButtonWidget.h"
 
 sol::object MakeCompProxy(sol::state_view SolState, void* Instance, UClass* Class) {
     BuildBoundClass(Class);
@@ -612,7 +613,11 @@ FLuaManager::FLuaManager()
 FLuaManager::~FLuaManager()
 {
     ShutdownBeforeLuaClose();
-    
+
+    // Lua 상태 삭제 전에 UI 캔버스들의 Lua 콜백 정리
+    // (버튼 콜백들이 sol::protected_function을 shared_ptr로 가지고 있음)
+    UGameUIManager::Get().RemoveAllCanvases();
+
     if (Lua)
     {
         delete Lua;
@@ -1199,6 +1204,160 @@ void FLuaManager::ExposeUIFunctions()
         "PlayAllExitAnimations", [](UUICanvas* Self)
         {
             if (Self) Self->PlayAllExitAnimations();
+        },
+
+        // ======== 버튼 위젯 ========
+
+        // 버튼 생성
+        "CreateButton", [](UUICanvas* Self, const std::string& Name, const std::string& TexturePath,
+                          float X, float Y, float W, float H) -> bool
+        {
+            if (!Self) return false;
+            return Self->CreateButton(Name, TexturePath, X, Y, W, H,
+                                      UGameUIManager::Get().GetD2DContext());
+        },
+
+        // 버튼 활성화/비활성화
+        "SetButtonInteractable", [](UUICanvas* Self, const std::string& Name, bool bInteractable)
+        {
+            if (Self) Self->SetButtonInteractable(Name, bInteractable);
+        },
+
+        // 버튼 상태별 텍스처 설정
+        "SetButtonHoveredTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
+        {
+            if (!Self) return false;
+            return Self->SetButtonHoveredTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
+        },
+        "SetButtonPressedTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
+        {
+            if (!Self) return false;
+            return Self->SetButtonPressedTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
+        },
+        "SetButtonDisabledTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
+        {
+            if (!Self) return false;
+            return Self->SetButtonDisabledTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
+        },
+
+        // 버튼 상태별 틴트 설정
+        "SetButtonNormalTint", [](UUICanvas* Self, const std::string& Name, float R, float G, float B, float A)
+        {
+            if (Self) Self->SetButtonNormalTint(Name, R, G, B, A);
+        },
+        "SetButtonHoveredTint", [](UUICanvas* Self, const std::string& Name, float R, float G, float B, float A)
+        {
+            if (Self) Self->SetButtonHoveredTint(Name, R, G, B, A);
+        },
+        "SetButtonPressedTint", [](UUICanvas* Self, const std::string& Name, float R, float G, float B, float A)
+        {
+            if (Self) Self->SetButtonPressedTint(Name, R, G, B, A);
+        },
+        "SetButtonDisabledTint", [](UUICanvas* Self, const std::string& Name, float R, float G, float B, float A)
+        {
+            if (Self) Self->SetButtonDisabledTint(Name, R, G, B, A);
+        },
+
+        // 버튼 클릭 콜백 설정
+        // NOTE: sol::protected_function을 shared_ptr로 래핑하여 람다 캡처 시 수명 문제 해결
+        "SetOnClick", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
+        {
+            if (!Self)
+            {
+                UE_LOG("[UI] SetOnClick: Self is null\n");
+                return;
+            }
+
+            UUIWidget* Widget = Self->FindWidget(Name);
+            if (!Widget)
+            {
+                UE_LOG("[UI] SetOnClick: Widget '%s' not found\n", Name.c_str());
+                return;
+            }
+
+            auto* Button = dynamic_cast<UButtonWidget*>(Widget);
+            if (!Button)
+            {
+                UE_LOG("[UI] SetOnClick: Widget '%s' is not a Button (type=%d)\n",
+                       Name.c_str(), static_cast<int>(Widget->Type));
+                return;
+            }
+
+            if (!Callback.valid())
+            {
+                UE_LOG("[UI] SetOnClick: Callback is not valid\n");
+                return;
+            }
+
+            // protected_function을 shared_ptr로 래핑
+            auto CallbackPtr = std::make_shared<sol::protected_function>(Callback);
+            UE_LOG("[UI] SetOnClick: Setting callback for button '%s' (ptr=%p)\n", Name.c_str(), CallbackPtr.get());
+
+            Button->OnClick = [CallbackPtr, Name]()
+            {
+                UE_LOG("[UI] Button '%s' OnClick invoked (ptr=%p)\n", Name.c_str(), CallbackPtr.get());
+                if (CallbackPtr && CallbackPtr->valid())
+                {
+                    UE_LOG("[UI] Button '%s' callback is valid, calling...\n", Name.c_str());
+                    sol::protected_function_result result = (*CallbackPtr)();
+                    if (!result.valid())
+                    {
+                        sol::error err = result;
+                        UE_LOG("[UI] Button OnClick error: %s\n", err.what());
+                    }
+                    UE_LOG("[UI] Button '%s' callback completed\n", Name.c_str());
+                }
+                else
+                {
+                    UE_LOG("[UI] Button '%s' callback is invalid!\n", Name.c_str());
+                }
+            };
+
+            UE_LOG("[UI] SetOnClick: Callback set successfully for '%s'\n", Name.c_str());
+        },
+
+        // 버튼 호버 시작 콜백 설정
+        "SetOnHoverStart", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
+        {
+            if (!Self) return;
+            if (auto* Button = dynamic_cast<UButtonWidget*>(Self->FindWidget(Name)))
+            {
+                auto CallbackPtr = std::make_shared<sol::protected_function>(Callback);
+                Button->OnHoverStart = [CallbackPtr]()
+                {
+                    if (CallbackPtr && CallbackPtr->valid())
+                    {
+                        sol::protected_function_result result = (*CallbackPtr)();
+                        if (!result.valid())
+                        {
+                            sol::error err = result;
+                            UE_LOG("[UI] Button OnHoverStart error: %s\n", err.what());
+                        }
+                    }
+                };
+            }
+        },
+
+        // 버튼 호버 종료 콜백 설정
+        "SetOnHoverEnd", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
+        {
+            if (!Self) return;
+            if (auto* Button = dynamic_cast<UButtonWidget*>(Self->FindWidget(Name)))
+            {
+                auto CallbackPtr = std::make_shared<sol::protected_function>(Callback);
+                Button->OnHoverEnd = [CallbackPtr]()
+                {
+                    if (CallbackPtr && CallbackPtr->valid())
+                    {
+                        sol::protected_function_result result = (*CallbackPtr)();
+                        if (!result.valid())
+                        {
+                            sol::error err = result;
+                            UE_LOG("[UI] Button OnHoverEnd error: %s\n", err.what());
+                        }
+                    }
+                };
+            }
         }
     );
 

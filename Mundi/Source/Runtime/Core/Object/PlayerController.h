@@ -19,7 +19,7 @@ protected:
     void ProcessRotationInput(float DeltaTime);
 
 protected:
-    bool bMouseLookEnabled = true;
+    bool bMouseLookEnabled = false;
 
 private:
 	float Sensitivity = 0.1;

@@ -76,6 +76,49 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
             widgetObj["additive"] = widget.bAdditive;
         }
 
+        // Button specific
+        if (widget.Type == "Button")
+        {
+            widgetObj["texturePath"] = widget.TexturePath;
+            if (!widget.HoveredTexturePath.empty())
+                widgetObj["hoveredTexturePath"] = widget.HoveredTexturePath;
+            if (!widget.PressedTexturePath.empty())
+                widgetObj["pressedTexturePath"] = widget.PressedTexturePath;
+            if (!widget.DisabledTexturePath.empty())
+                widgetObj["disabledTexturePath"] = widget.DisabledTexturePath;
+
+            // Tint colors
+            JSON normalTint = JSON::Make(JSON::Class::Object);
+            normalTint["r"] = widget.NormalTint[0];
+            normalTint["g"] = widget.NormalTint[1];
+            normalTint["b"] = widget.NormalTint[2];
+            normalTint["a"] = widget.NormalTint[3];
+            widgetObj["normalTint"] = normalTint;
+
+            JSON hoveredTint = JSON::Make(JSON::Class::Object);
+            hoveredTint["r"] = widget.HoveredTint[0];
+            hoveredTint["g"] = widget.HoveredTint[1];
+            hoveredTint["b"] = widget.HoveredTint[2];
+            hoveredTint["a"] = widget.HoveredTint[3];
+            widgetObj["hoveredTint"] = hoveredTint;
+
+            JSON pressedTint = JSON::Make(JSON::Class::Object);
+            pressedTint["r"] = widget.PressedTint[0];
+            pressedTint["g"] = widget.PressedTint[1];
+            pressedTint["b"] = widget.PressedTint[2];
+            pressedTint["a"] = widget.PressedTint[3];
+            widgetObj["pressedTint"] = pressedTint;
+
+            JSON disabledTint = JSON::Make(JSON::Class::Object);
+            disabledTint["r"] = widget.DisabledTint[0];
+            disabledTint["g"] = widget.DisabledTint[1];
+            disabledTint["b"] = widget.DisabledTint[2];
+            disabledTint["a"] = widget.DisabledTint[3];
+            widgetObj["disabledTint"] = disabledTint;
+
+            widgetObj["interactable"] = widget.bInteractable;
+        }
+
         // Binding
         if (!widget.BindingKey.empty())
         {
@@ -210,6 +253,44 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
                 widget.SubUV_Frame = tempInt;
 
             FJsonSerializer::ReadBool(widgetObj, "additive", widget.bAdditive, false, false);
+
+            // Button
+            if (FJsonSerializer::ReadString(widgetObj, "hoveredTexturePath", tempStr, "", false))
+                widget.HoveredTexturePath = tempStr;
+            if (FJsonSerializer::ReadString(widgetObj, "pressedTexturePath", tempStr, "", false))
+                widget.PressedTexturePath = tempStr;
+            if (FJsonSerializer::ReadString(widgetObj, "disabledTexturePath", tempStr, "", false))
+                widget.DisabledTexturePath = tempStr;
+
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "normalTint", tempColor, FLinearColor(1, 1, 1, 1), false))
+            {
+                widget.NormalTint[0] = tempColor.R;
+                widget.NormalTint[1] = tempColor.G;
+                widget.NormalTint[2] = tempColor.B;
+                widget.NormalTint[3] = tempColor.A;
+            }
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "hoveredTint", tempColor, FLinearColor(1.2f, 1.2f, 1.2f, 1), false))
+            {
+                widget.HoveredTint[0] = tempColor.R;
+                widget.HoveredTint[1] = tempColor.G;
+                widget.HoveredTint[2] = tempColor.B;
+                widget.HoveredTint[3] = tempColor.A;
+            }
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "pressedTint", tempColor, FLinearColor(0.8f, 0.8f, 0.8f, 1), false))
+            {
+                widget.PressedTint[0] = tempColor.R;
+                widget.PressedTint[1] = tempColor.G;
+                widget.PressedTint[2] = tempColor.B;
+                widget.PressedTint[3] = tempColor.A;
+            }
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "disabledTint", tempColor, FLinearColor(0.5f, 0.5f, 0.5f, 0.5f), false))
+            {
+                widget.DisabledTint[0] = tempColor.R;
+                widget.DisabledTint[1] = tempColor.G;
+                widget.DisabledTint[2] = tempColor.B;
+                widget.DisabledTint[3] = tempColor.A;
+            }
+            FJsonSerializer::ReadBool(widgetObj, "interactable", widget.bInteractable, true, false);
 
             // Binding
             if (FJsonSerializer::ReadString(widgetObj, "bind", tempStr, "", false))
@@ -509,7 +590,7 @@ void SUIEditorWindow::RenderWidgetPalette(float Width, float Height)
     ImGui::Separator();
 
     // 위젯 타입 버튼들
-    const char* widgetTypes[] = { "ProgressBar", "Texture", "Rect" };
+    const char* widgetTypes[] = { "ProgressBar", "Texture", "Rect", "Button" };
 
     for (const char* type : widgetTypes)
     {
@@ -885,6 +966,50 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     {
         ImGui::Text("Rect");
         if (ImGui::ColorEdit4("Color", widget->ForegroundColor)) bModified = true;
+    }
+    else if (widget->Type == "Button")
+    {
+        ImGui::Text("Button");
+
+        // 기본 텍스처
+        UResourceManager& ResMgr = UResourceManager::GetInstance();
+        TArray<FString> TexturePaths = ResMgr.GetAllFilePaths<UTexture>();
+
+        if (TextureComboWithSearch("Normal Texture", widget->TexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
+        {
+            bModified = true;
+        }
+
+        // 상태별 텍스처
+        if (TextureComboWithSearch("Hovered Texture", widget->HoveredTexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
+        {
+            bModified = true;
+        }
+        if (TextureComboWithSearch("Pressed Texture", widget->PressedTexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
+        {
+            bModified = true;
+        }
+        if (TextureComboWithSearch("Disabled Texture", widget->DisabledTexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
+        {
+            bModified = true;
+        }
+
+        ImGui::Separator();
+
+        // 상태별 틴트 색상
+        ImGui::Text("Tint Colors");
+        if (ImGui::ColorEdit4("Normal Tint", widget->NormalTint)) bModified = true;
+        if (ImGui::ColorEdit4("Hovered Tint", widget->HoveredTint)) bModified = true;
+        if (ImGui::ColorEdit4("Pressed Tint", widget->PressedTint)) bModified = true;
+        if (ImGui::ColorEdit4("Disabled Tint", widget->DisabledTint)) bModified = true;
+
+        ImGui::Separator();
+
+        if (ImGui::Checkbox("Interactable", &widget->bInteractable)) bModified = true;
     }
 
     // === Animation 설정 ===

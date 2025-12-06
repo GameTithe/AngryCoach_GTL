@@ -2,6 +2,7 @@
 #include "UICanvas.h"
 #include "ProgressBarWidget.h"
 #include "TextureWidget.h"
+#include "ButtonWidget.h"
 #include <algorithm>
 
 UUICanvas::UUICanvas()
@@ -77,6 +78,37 @@ bool UUICanvas::CreateRect(const std::string& WidgetName, float PosX, float PosY
     Widget->Progress = 1.0f;
     Widget->BorderWidth = 0.0f;  // Rect는 테두리 없음
     Widget->bUseLowWarning = false;
+
+    Widgets[WidgetName] = std::move(Widget);
+    bWidgetsSortDirty = true;
+
+    return true;
+}
+
+bool UUICanvas::CreateButton(const std::string& WidgetName, const std::string& TexturePath,
+                             float PosX, float PosY, float W, float H,
+                             ID2D1DeviceContext* D2DContext)
+{
+    if (!D2DContext)
+        return false;
+
+    // 이미 존재하면 실패
+    if (Widgets.find(WidgetName) != Widgets.end())
+        return false;
+
+    auto Widget = std::make_unique<UButtonWidget>();
+    Widget->Name = WidgetName;
+    Widget->X = PosX;
+    Widget->Y = PosY;
+    Widget->Width = W;
+    Widget->Height = H;
+
+    // 텍스처 로드
+    std::wstring WidePath(TexturePath.begin(), TexturePath.end());
+    if (!Widget->LoadFromFile(WidePath.c_str(), D2DContext))
+    {
+        return false;
+    }
 
     Widgets[WidgetName] = std::move(Widget);
     bWidgetsSortDirty = true;
@@ -391,6 +423,181 @@ void UUICanvas::PlayAllExitAnimations()
             Pair.second->PlayExitAnimation();
         }
     }
+}
+
+// ============================================
+// 버튼 설정
+// ============================================
+
+void UUICanvas::SetButtonInteractable(const std::string& WidgetName, bool bInteractable)
+{
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
+    {
+        Button->SetInteractable(bInteractable);
+    }
+}
+
+bool UUICanvas::SetButtonHoveredTexture(const std::string& WidgetName, const std::string& Path, ID2D1DeviceContext* Context)
+{
+    if (!Context)
+        return false;
+
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
+    {
+        std::wstring WidePath(Path.begin(), Path.end());
+        return Button->LoadHoveredTexture(WidePath.c_str(), Context);
+    }
+    return false;
+}
+
+bool UUICanvas::SetButtonPressedTexture(const std::string& WidgetName, const std::string& Path, ID2D1DeviceContext* Context)
+{
+    if (!Context)
+        return false;
+
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
+    {
+        std::wstring WidePath(Path.begin(), Path.end());
+        return Button->LoadPressedTexture(WidePath.c_str(), Context);
+    }
+    return false;
+}
+
+bool UUICanvas::SetButtonDisabledTexture(const std::string& WidgetName, const std::string& Path, ID2D1DeviceContext* Context)
+{
+    if (!Context)
+        return false;
+
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
+    {
+        std::wstring WidePath(Path.begin(), Path.end());
+        return Button->LoadDisabledTexture(WidePath.c_str(), Context);
+    }
+    return false;
+}
+
+void UUICanvas::SetButtonNormalTint(const std::string& WidgetName, float R, float G, float B, float A)
+{
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
+    {
+        Button->SetNormalTint(R, G, B, A);
+    }
+}
+
+void UUICanvas::SetButtonHoveredTint(const std::string& WidgetName, float R, float G, float B, float A)
+{
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
+    {
+        Button->SetHoveredTint(R, G, B, A);
+    }
+}
+
+void UUICanvas::SetButtonPressedTint(const std::string& WidgetName, float R, float G, float B, float A)
+{
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
+    {
+        Button->SetPressedTint(R, G, B, A);
+    }
+}
+
+void UUICanvas::SetButtonDisabledTint(const std::string& WidgetName, float R, float G, float B, float A)
+{
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
+    {
+        Button->SetDisabledTint(R, G, B, A);
+    }
+}
+
+// ============================================
+// 마우스 입력 처리
+// ============================================
+
+bool UUICanvas::ContainsPoint(float PosX, float PosY) const
+{
+    // Width/Height가 0이면 전체 화면 취급
+    if (Width <= 0.0f || Height <= 0.0f)
+        return true;
+
+    return PosX >= X && PosX <= X + Width &&
+           PosY >= Y && PosY <= Y + Height;
+}
+
+UButtonWidget* UUICanvas::FindButtonAtPosition(float LocalX, float LocalY)
+{
+    // 정렬이 필요하면 갱신
+    if (bWidgetsSortDirty)
+    {
+        UpdateWidgetSortOrder();
+    }
+
+    // Z-order 역순으로 검색 (가장 위에 있는 것부터)
+    for (auto it = SortedWidgets.rbegin(); it != SortedWidgets.rend(); ++it)
+    {
+        UUIWidget* Widget = *it;
+        if (!Widget || !Widget->bVisible)
+            continue;
+
+        // 버튼 위젯인지 확인
+        if (auto* Button = dynamic_cast<UButtonWidget*>(Widget))
+        {
+            if (Button->IsInteractable() && Button->Contains(LocalX, LocalY))
+            {
+                return Button;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+bool UUICanvas::ProcessMouseInput(float MouseX, float MouseY, bool bLeftDown, bool bLeftPressed, bool bLeftReleased)
+{
+    if (!bVisible)
+        return false;
+
+    // 캔버스 로컬 좌표로 변환
+    float LocalX = MouseX - X;
+    float LocalY = MouseY - Y;
+
+    // 현재 마우스 위치에서 버튼 찾기
+    UButtonWidget* CurrentHovered = FindButtonAtPosition(LocalX, LocalY);
+
+    // 호버 상태 변경 처리
+    if (CurrentHovered != HoveredButton)
+    {
+        // 이전 호버 버튼에서 나감
+        if (HoveredButton)
+        {
+            HoveredButton->OnMouseLeave();
+        }
+
+        // 새 호버 버튼에 진입
+        if (CurrentHovered)
+        {
+            CurrentHovered->OnMouseEnter();
+        }
+
+        HoveredButton = CurrentHovered;
+    }
+
+    // 마우스 버튼 눌림 처리
+    if (bLeftPressed && CurrentHovered)
+    {
+        CurrentHovered->OnMouseDown();
+        PressedButton = CurrentHovered;
+        return true;  // 입력 소비
+    }
+
+    // 마우스 버튼 뗌 처리
+    if (bLeftReleased && PressedButton)
+    {
+        bool bClicked = PressedButton->OnMouseUp();
+        PressedButton = nullptr;
+        return bClicked;  // 클릭 성공하면 입력 소비
+    }
+
+    // 버튼 위에 있으면 입력 소비 (다른 UI가 처리하지 않도록)
+    return CurrentHovered != nullptr;
 }
 
 // ============================================

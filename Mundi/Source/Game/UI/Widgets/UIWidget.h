@@ -13,7 +13,8 @@ enum class EUIWidgetType : uint8_t
     Rect,
     ProgressBar,
     Texture,
-    Text
+    Text,
+    Button
 };
 
 /**

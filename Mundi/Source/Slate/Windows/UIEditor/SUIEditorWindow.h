@@ -67,6 +67,16 @@ struct FUIEditorWidget
     int32_t SubUV_Frame = 0;
     bool bAdditive = false;
 
+    // Button
+    std::string HoveredTexturePath;
+    std::string PressedTexturePath;
+    std::string DisabledTexturePath;
+    float NormalTint[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    float HoveredTint[4] = { 1.2f, 1.2f, 1.2f, 1.0f };
+    float PressedTint[4] = { 0.8f, 0.8f, 0.8f, 1.0f };
+    float DisabledTint[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
+    bool bInteractable = true;
+
     // Animation
     FEditorAnimConfig EnterAnim;
     FEditorAnimConfig ExitAnim;
