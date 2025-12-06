@@ -3,6 +3,7 @@
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
 #include "AccessoryActor.h"
+#include "KnifeAccessoryActor.h"
 #include "PunchAccessoryActor.h"
 #include "World.h"
 #include "Source/Runtime/Engine/Animation/AnimInstance.h"
@@ -30,14 +31,25 @@ void AAngryCoachCharacter::BeginPlay()
 	// 기본 펀치 악세서리 장착 (이미 장착된 게 없을 때만)
 	if (GWorld && !CurrentAccessory)
 	{
-		APunchAccessoryActor* PunchAccessory = GWorld->SpawnActor<APunchAccessoryActor>();
-		if (PunchAccessory)
-		{
-			EquipAccessory(PunchAccessory);
+		// APunchAccessoryActor* PunchAccessory = GWorld->SpawnActor<APunchAccessoryActor>();
+		// if (PunchAccessory)
+		// {
+		// 	EquipAccessory(PunchAccessory);
+		//
+		// 	if (SkillComponent)
+		// 	{
+		// 		SkillComponent->OverrideSkills(PunchAccessory->GetGrantedSkills(), PunchAccessory);
+		// 	}
+		// }
 
+		AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
+		if (KnifeAccessory)
+		{
+			EquipAccessory(KnifeAccessory);
+		
 			if (SkillComponent)
 			{
-				SkillComponent->OverrideSkills(PunchAccessory->GetGrantedSkills(), PunchAccessory);
+				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
 			}
 		}
 	}

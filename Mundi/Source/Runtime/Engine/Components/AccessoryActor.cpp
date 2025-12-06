@@ -150,26 +150,32 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	OwningCharacter = OwnerCharacter;
 
 	// 1. 캐릭터의 Mesh 소켓에 부착
-	// USkeletalMeshComponent* CharacterMesh = OwnerCharacter->GetMesh();
-	// if (CharacterMesh && RootComponent)
-	// {
-	// 	// AttachSocketName이 설정되어 있으면 소켓에, 아니면 컴포넌트 자체에 부착
-	// 	if (AttachSocketName.IsValid())
-	// 	{
-	// 		//RootComponent->SetupAttachment(CharacterMesh);
-	// 		// TODO: Socket attach 구현 필요 
-	// 	}
-	// 	else
-	// 	{
-	// 		//RootComponent->SetupAttachment(CharacterMesh); 
-	// 	}
-	// }
+	USkeletalMeshComponent* CharacterMesh = OwnerCharacter->GetMesh();
+	if (CharacterMesh && AccessoryMesh && AttachSocketName.IsValid())
+	{
+		AccessoryMesh->SetupAttachment(CharacterMesh, AttachSocketName);
+		AccessoryMesh->RegisterComponent(OwnerCharacter->GetWorld());
+
+		// 월드 스케일 1이 되도록 상대 스케일 계산 (부모 스케일 상쇄)
+		FTransform SocketWorld = CharacterMesh->GetSocketTransform(AttachSocketName);
+		FVector SocketWorldScale = SocketWorld.Scale3D;
+		FVector RelativeScaleForWorldOne = FVector(
+			SocketWorldScale.X != 0.0f ? 1.0f / SocketWorldScale.X : 1.0f,
+			SocketWorldScale.Y != 0.0f ? 1.0f / SocketWorldScale.Y : 1.0f,
+			SocketWorldScale.Z != 0.0f ? 1.0f / SocketWorldScale.Z : 1.0f
+		);
+		AccessoryMesh->SetRelativeScale(RelativeScaleForWorldOne);
+
+		UE_LOG("[AccessoryActor] Attached mesh to socket: %s (scale: %.2f, %.2f, %.2f)",
+			AttachSocketName.ToString().c_str(),
+			RelativeScaleForWorldOne.X, RelativeScaleForWorldOne.Y, RelativeScaleForWorldOne.Z);
+	}
 
 	// 2. 캐릭터의 스킬 컴포넌트 찾기 및 스킬 등록
 	USkillComponent* SkillComp = OwnerCharacter->GetSkillComponent();
 	if (SkillComp && !GrantedSkills.empty())
 	{
-		SkillComp->OverrideSkills(GrantedSkills, this); 
+		SkillComp->OverrideSkills(GrantedSkills, this);
 	}
 }
 

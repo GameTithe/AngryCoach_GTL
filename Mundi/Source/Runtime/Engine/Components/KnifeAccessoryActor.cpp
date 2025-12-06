@@ -2,13 +2,21 @@
 #include "KnifeAccessoryActor.h"
 #include "KnifeLightAttackSkill.h"
 #include "KnifeHeavyAttackSkill.h"
+#include "StaticMeshComponent.h"
+#include "Source/Runtime/AssetManagement/ResourceManager.h"
 
 AKnifeAccessoryActor::AKnifeAccessoryActor()
 {
 	ObjectName = "KnifeAccessory";
 	AccessoryName = "Knife";
 	Description = "Fast knife attacks";
-	AttachSocketName = FName("hand_r");
+	AttachSocketName = FName("LEFT_KNIFE");
+
+	// 나이프 메시 로드 및 설정
+	if (AccessoryMesh)
+	{
+		AccessoryMesh->SetStaticMesh("Data/Model/FlowerKnife.obj");
+	}
 
 	GrantedSkills.clear();
 

@@ -1822,7 +1822,9 @@ void SSkeletalMeshViewerWindow::OnRender()
                         char SocketNameBuf[128];
                         strncpy_s(SocketNameBuf, SelectedSocket.SocketName.c_str(), sizeof(SocketNameBuf) - 1);
                         ImGui::PushItemWidth(-1);
-                        if (ImGui::InputText("##SocketName", SocketNameBuf, sizeof(SocketNameBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+                        ImGui::InputText("##SocketName", SocketNameBuf, sizeof(SocketNameBuf));
+                        // Enter 또는 포커스 벗어날 때 적용
+                        if (ImGui::IsItemDeactivatedAfterEdit())
                         {
                             // 중복 이름 체크
                             FString NewName = SocketNameBuf;
