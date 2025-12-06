@@ -14,7 +14,6 @@
 
 class UClothWeightAsset;
 
-
 /**
  * @brief Cloth 시뮬레이션 설정
  */
@@ -46,7 +45,6 @@ struct FClothSimulationSettings
 	bool bEnableContinuousCollision = true;     // 연속 충돌 검사
 	float CollisionFriction = 0.0f;             // 충돌 마찰
 
-
 	// Self collision
 	bool bEnableSelfCollision = false;          // 자체 충돌 활성화
 	float SelfCollisionDistance = 0.0f;         // 자체 충돌 거리
@@ -77,7 +75,6 @@ struct FClothSimulationSettings
 	float LinearInertiaScale = 1.0f;            // 선형 관성 스케일
 	float AngularInertiaScale = 1.0f;           // 각 관성 스케일
 	float CentrifugalInertiaScale = 1.0f;       // 원심력 관성 스케일
-
 
 };
 class UClothComponent : public USkinnedMeshComponent

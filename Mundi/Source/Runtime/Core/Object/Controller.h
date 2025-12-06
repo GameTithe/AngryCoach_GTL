@@ -12,7 +12,6 @@ public:
 	AController();
 	virtual ~AController() override;
 
-
 	virtual void Tick(float DeltaSeconds) override;
 
 	// 폰에 빙의

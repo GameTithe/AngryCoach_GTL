@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_StandAlone|x64">
@@ -100,7 +100,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor;$(ProjectDir)Source\Runtime\Engine\Audio;ThirdParty\physx\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Game;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor;$(ProjectDir)Source\Runtime\Engine\Audio;ThirdParty\physx\include</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -113,6 +113,7 @@
     <PreBuildEvent>
       <Command>
               call "$(ProjectDir)Tools\CodeGenerator\RunCodeGen.bat" --source-dir "$(ProjectDir)Source\Runtime" --output-dir "$(ProjectDir)Generated" --vcxproj "$(ProjectDir)Mundi.vcxproj"
+              call "$(ProjectDir)Tools\CodeGenerator\RunCodeGen.bat" --source-dir "$(ProjectDir)Source\Game" --output-dir "$(ProjectDir)Generated" --vcxproj "$(ProjectDir)Mundi.vcxproj"
 
               powershell -ExecutionPolicy Bypass -File "$(ProjectDir)Tools\GenSourceLink.ps1" -ProjectDir "$(ProjectDir)." -OutDir "$(IntDir)."
           </Command>
@@ -134,7 +135,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Game;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -147,6 +148,7 @@
     <PreBuildEvent>
       <Command>
               call "$(ProjectDir)Tools\CodeGenerator\RunCodeGen.bat" --source-dir "$(ProjectDir)Source\Runtime" --output-dir "$(ProjectDir)Generated" --vcxproj "$(ProjectDir)Mundi.vcxproj"
+              call "$(ProjectDir)Tools\CodeGenerator\RunCodeGen.bat" --source-dir "$(ProjectDir)Source\Game" --output-dir "$(ProjectDir)Generated" --vcxproj "$(ProjectDir)Mundi.vcxproj"
 
               powershell -ExecutionPolicy Bypass -File "$(ProjectDir)Tools\GenSourceLink.ps1" -ProjectDir "$(ProjectDir)." -OutDir "$(IntDir)."
           </Command>
@@ -170,7 +172,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor;$(ProjectDir)Source\Runtime\Engine\Audio;ThirdParty\physx\include;ThirdParty\NvCloth\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Game;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor;$(ProjectDir)Source\Runtime\Engine\Audio;ThirdParty\physx\include;ThirdParty\NvCloth\include</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -185,6 +187,7 @@
     <PreBuildEvent>
       <Command>
               call "$(ProjectDir)Tools\CodeGenerator\RunCodeGen.bat" --source-dir "$(ProjectDir)Source\Runtime" --output-dir "$(ProjectDir)Generated" --vcxproj "$(ProjectDir)Mundi.vcxproj"
+              call "$(ProjectDir)Tools\CodeGenerator\RunCodeGen.bat" --source-dir "$(ProjectDir)Source\Game" --output-dir "$(ProjectDir)Generated" --vcxproj "$(ProjectDir)Mundi.vcxproj"
 
               powershell -ExecutionPolicy Bypass -File "$(ProjectDir)Tools\GenSourceLink.ps1" -ProjectDir "$(ProjectDir)." -OutDir "$(IntDir)."
           </Command>
@@ -208,7 +211,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Game;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -223,6 +226,7 @@
     <PreBuildEvent>
       <Command>
           call "$(ProjectDir)Tools\CodeGenerator\RunCodeGen.bat" --source-dir "$(ProjectDir)Source\Runtime" --output-dir "$(ProjectDir)Generated" --vcxproj "$(ProjectDir)Mundi.vcxproj"
+          call "$(ProjectDir)Tools\CodeGenerator\RunCodeGen.bat" --source-dir "$(ProjectDir)Source\Game" --output-dir "$(ProjectDir)Generated" --vcxproj "$(ProjectDir)Mundi.vcxproj"
 
           powershell -ExecutionPolicy Bypass -File "$(ProjectDir)Tools\GenSourceLink.ps1" -ProjectDir "$(ProjectDir)." -OutDir "$(IntDir)."
       </Command>
@@ -290,6 +294,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_StandAlone|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\Game\AngryCoachGameMode.cpp" />
+    <ClCompile Include="Source\Game\AngryCoachPlayerController.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\MyCar.cpp" />
     <ClCompile Include="Source\Editor\FBX\BlendSpace\BlendSpace2D.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\AccessoryComponent.cpp" />
@@ -717,7 +723,7 @@
     <ClCompile Include="Generated\AMyCar.generated.cpp" />
     <ClCompile Include="Generated\USpringArmComponent.generated.cpp" />
     <ClCompile Include="Generated\UClothComponent.generated.cpp" />
-  </ItemGroup>
+  <ClCompile Include="Generated\AAngryCoachGameMode.generated.cpp" /><ClCompile Include="Generated\AAngryCoachPlayerController.generated.cpp" /></ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -906,6 +912,8 @@
     <ClInclude Include="Source\Editor\FBX\FBXSceneUtilities.h" />
     <ClInclude Include="Source\Editor\FBX\FBXSkeletonLoader.h" />
     <ClInclude Include="Source\Editor\PlatformProcess.h" />
+    <ClInclude Include="Source\Game\AngryCoachGameMode.h" />
+    <ClInclude Include="Source\Game\AngryCoachPlayerController.h" />
     <ClInclude Include="Source\Runtime\AssetManagement\SkeletalMesh.h" />
     <ClInclude Include="Source\Runtime\Core\Memory\GPUProfile.h" />
     <ClInclude Include="Source\Runtime\Core\Misc\Delegates.h" />
@@ -953,6 +961,7 @@
     <ClInclude Include="Source\Runtime\Engine\Components\SkinnedMeshComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\SphereComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\SpringArmComponent.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\TestAutoBindComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\AmbientLightActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_DOF.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Gamma.h" />
@@ -1224,7 +1233,7 @@
     <ClInclude Include="Generated\AMyCar.generated.h" />
     <ClInclude Include="Generated\USpringArmComponent.generated.h" />
     <ClInclude Include="Generated\UClothComponent.generated.h" />
-  </ItemGroup>
+  <ClInclude Include="Generated\AAngryCoachGameMode.generated.h" /><ClInclude Include="Generated\AAngryCoachPlayerController.generated.h" /></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />

@@ -4,6 +4,7 @@
 #include "FAudioDevice.h"
 #include "Source/Editor/FBX/FbxLoader.h"
 #include "GameModeBase.h"
+#include "Source/Game/AngryCoachGameMode.h"
 #include "InputManager.h"
 #include "Pawn.h"
 #include "SelectionManager.h"
@@ -413,7 +414,7 @@ void UEditorEngine::StartPIE()
     AGameModeBase* GameMode = nullptr;
     if (GWorld->GetGameMode() == nullptr)
     {
-        AGameModeBase* GM = GWorld->SpawnActor<AGameModeBase>(FTransform());
+        AGameModeBase* GM = GWorld->SpawnActor<AAngryCoachGameMode>(FTransform());
         GWorld->SetGameMode(GM);
     }
      

@@ -360,7 +360,7 @@
     <ClCompile Include="Generated\USpringArmComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Components\ClothComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Physics\Cloth\ClothManager.cpp" />
-  <ClCompile Include="Generated\UClothComponent.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
+  <ClCompile Include="Generated\UClothComponent.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\AAngryCoachGameMode.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\AAngryCoachPlayerController.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
   <ItemGroup>
     <ClInclude Include="Generated\AActor.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Generated\AAmbientLightActor.generated.h"><Filter>Generated</Filter></ClInclude>
@@ -743,7 +743,7 @@
     <ClInclude Include="Generated\USpringArmComponent.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Components\ClothComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Physics\Cloth\ClothManager.h" />
-  <ClInclude Include="Generated\UClothComponent.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
+  <ClInclude Include="Generated\UClothComponent.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\AAngryCoachGameMode.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\AAngryCoachPlayerController.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />

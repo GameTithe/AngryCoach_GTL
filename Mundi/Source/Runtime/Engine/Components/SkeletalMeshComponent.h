@@ -1,8 +1,10 @@
 ﻿#pragma once
 #include "SkinnedMeshComponent.h"
-#include "USkeletalMeshComponent.generated.h"
+
 // Include for FPendingAnimNotify and FAnimNotifyEvent types
 #include "Source/Runtime/Engine/Animation/AnimTypes.h"
+#include "USkeletalMeshComponent.generated.h"
+
 class UAnimationGraph;
 class UAnimationAsset;
 class UAnimSequence;

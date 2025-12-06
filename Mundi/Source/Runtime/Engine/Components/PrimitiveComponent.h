@@ -2,8 +2,9 @@
 
 #include "SceneComponent.h"
 #include "Material.h"
-#include "UPrimitiveComponent.generated.h"
+
 #include "Collision.h"
+#include "UPrimitiveComponent.generated.h"
 
 struct FBodyInstance;
 struct FSceneCompData;
@@ -100,7 +101,6 @@ public:
 
     // ───── 직렬화 ────────────────────────────
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
-
 
     virtual void OnCreatePhysicsState();
 
