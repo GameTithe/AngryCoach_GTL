@@ -281,6 +281,16 @@ void UAnimSequenceBase::AddPlaySoundNotify(float Time, UAnimNotify* Notify, floa
     Notifies.Add(NewEvent); 
 }
 
+void UAnimSequenceBase::AddCallFuncNotify(float Time, UAnimNotify* Notify)
+{
+    FAnimNotifyEvent NewEvent;
+    NewEvent.TriggerTime = Time;
+    NewEvent.Notify = Notify;
+    NewEvent.NotifyState = nullptr;
+
+    Notifies.Add(NewEvent);
+}
+
 bool UAnimSequenceBase::SaveMeta(const FString& MetaPathUTF8) const
 {
     if (MetaPathUTF8.empty())

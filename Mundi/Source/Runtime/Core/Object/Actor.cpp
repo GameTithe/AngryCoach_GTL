@@ -584,7 +584,7 @@ void AActor::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* Othe
 void AActor::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FContactHit* Trigger)
 {
 	UE_LOG("On Hit");
-} 
+}
 
 void AActor::DuplicateSubObjects()
 {

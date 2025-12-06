@@ -339,6 +339,24 @@ void USkeletalMeshComponent::EndPlay()
             DestroyPhysicsAssetBodies(*PhysScene);
         }
     }
+
+    // BeginPlay에서 생성한 객체들 정리
+    if (AnimInstance)
+    {
+        // AnimInstance가 소유한 StateMachine도 정리
+        if (UAnimationStateMachine* StateMachine = AnimInstance->GetStateMachine())
+        {
+            DeleteObject(StateMachine);
+        }
+        DeleteObject(AnimInstance);
+        AnimInstance = nullptr;
+    }
+
+    if (AnimGraph)
+    {
+        DeleteObject(AnimGraph);
+        AnimGraph = nullptr;
+    }
 }
 
 void USkeletalMeshComponent::SetSkeletalMesh(const FString& PathFileName)
@@ -1369,7 +1387,7 @@ void USkeletalMeshComponent::SetAnimationPose(const TArray<FTransform>& InPose)
     // 포즈가 스켈레톤과 일치하는지 확인
     if (InPose.Num() != NumBones)
     {
-        UE_LOG("SetAnimationPose: Pose size mismatch (%d != %d)", InPose.Num(), NumBones);
+        //UE_LOG("SetAnimationPose: Pose size mismatch (%d != %d)", InPose.Num(), NumBones);
         return;
     }
 
@@ -1413,10 +1431,10 @@ void USkeletalMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandl
         }
 
         // Base (USkinnedMeshComponent) already restores SkeletalMesh; ensure internal state is initialized
-        if (SkeletalMesh)
-        {
-            SetSkeletalMesh(SkeletalMesh->GetPathFileName());
-        }
+        // if (SkeletalMesh)
+        // {
+        //     SetSkeletalMesh(SkeletalMesh->GetPathFileName());
+        // }
 
         // Load animation graph from saved path if available
         if (!AnimGraphPath.empty())

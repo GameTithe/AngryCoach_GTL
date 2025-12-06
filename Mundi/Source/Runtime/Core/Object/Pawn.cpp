@@ -69,6 +69,14 @@ FVector APawn::ConsumeMovementInputVector()
 	return Ret;
 }
 
+void APawn::AttackBegin()
+{
+}
+
+void APawn::AttackEnd()
+{
+}
+
 void APawn::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
 }

@@ -2,9 +2,10 @@
 #include "Actor.h"
 #include "Source/Runtime/Engine/Skill/SkillTypes.h" 
 #include "AAccessoryActor.generated.h"
+
 class UStaticMeshComponent;
 class USkillBase;
-class ACharacter;
+class AAngryCoachCharacter;
 class UParticleSystemComponent;
  
 
@@ -38,21 +39,20 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Accessory", Tooltip = "악세서리 설명")
 	FString Description;
 
-
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 protected:
-	ACharacter* OwningCharacter = nullptr;
+	AAngryCoachCharacter* OwningCharacter = nullptr;
 
 public:
 	UFUNCTION()
-	void Equip(ACharacter* OwnerCharacter);
+	void Equip(AAngryCoachCharacter* OwnerCharacter);
 
 	UFUNCTION()
 	void Unequip();
 
 	// 스킬 getter
 	const TMap<ESkillSlot, USkillBase*>& GetGrantedSkills() const { return GrantedSkills; }
-	ACharacter* GetOwningCharacter() const { return OwningCharacter; }
+	AAngryCoachCharacter* GetOwningCharacter() const { return OwningCharacter; }
 };

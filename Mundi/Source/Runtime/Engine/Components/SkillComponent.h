@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include "ActorComponent.h"
-#include "USkillComponent.generated.h"
+
 #include "Source/Runtime/Engine/Skill/SkillTypes.h"
+#include "USkillComponent.generated.h"
 
 class USkillBase;
 class AAccessoryActor;

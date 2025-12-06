@@ -17,17 +17,14 @@ ACharacter::ACharacter()
 {
 	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>("CapsuleComponent");
 	CapsuleComponent->SetTag("CharacterCollider");
-	//CapsuleComponent->SetSize();
 
 	SetRootComponent(CapsuleComponent);
 	CapsuleComponent->SetBlockComponent(false);
 
 	if (SkeletalMeshComp)
 	{
-		SkeletalMeshComp->SetupAttachment(CapsuleComponent);		
-
-		//SkeletalMeshComp->SetRelativeLocation(FVector());
-		//SkeletalMeshComp->SetRelativeScale(FVector());
+		SkeletalMeshComp->SetupAttachment(CapsuleComponent);
+		SkeletalMeshComp->SetupAttachment(CapsuleComponent);
 	}
 	
 	FistComponent = CreateDefaultSubobject<UCapsuleComponent>("FistComponent");
@@ -51,27 +48,20 @@ ACharacter::ACharacter()
 	{
 		CharacterMovement->SetUpdatedComponent(CapsuleComponent);
 	}
-
-	// SkillComponent 생성
-	//SkillComponent = CreateDefaultSubobject<USkillComponent>("SkillComponent");
 }
 
 ACharacter::~ACharacter()
 {
-
 }
 
 void ACharacter::Tick(float DeltaSecond)
 {
 	Super::Tick(DeltaSecond);
-
-	// 스킬 입력 처리
-	HandleSkillInput();
 }
 
 void ACharacter::BeginPlay()
 {
-    Super::BeginPlay();
+	Super::BeginPlay();
 
 	if (FistComponent)
 	{
@@ -87,30 +77,20 @@ void ACharacter::BeginPlay()
 		KickComponent->OnComponentEndOverlap.AddDynamic(this, &ACharacter::OnEndOverlap);
 	}
 
-    // Hardcode: equip FlowKnife prefab on PIE start (moved from Lua to C++)
-    if (GWorld && GWorld->bPie)
-    {
-        FWideString KnifePath = UTF8ToWide("Data/Prefabs/FlowKnife.prefab");
-        AActor* Spawned = GWorld->SpawnPrefabActor(KnifePath);
-        if (!Spawned)
-        {
-             return;
-        }
-
-        if (AAccessoryActor* Accessory = Cast<AAccessoryActor>(Spawned))
-        {
-            EquipAccessory(Accessory);
- 
-             if (SkillComponent)
-             {
-                SkillComponent->OverrideSkills(Accessory->GetGrantedSkills(), Accessory);
-             }
-        }
-    }
+	// Hardcode: equip FlowKnife prefab on PIE start (moved from Lua to C++)
+	if (GWorld && GWorld->bPie)
+	{
+		FWideString KnifePath = UTF8ToWide("Data/Prefabs/FlowKnife.prefab");
+		AActor* Spawned = GWorld->SpawnPrefabActor(KnifePath);
+		if (!Spawned)
+		{
+			return;
+		}
+	}
 }
 void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-    Super::Serialize(bInIsLoading, InOutHandle);
+	Super::Serialize(bInIsLoading, InOutHandle);
 
     if (bInIsLoading)
     {
@@ -121,6 +101,7 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
     	KickComponent = nullptr;
         SkillComponent = nullptr;
         CurrentAccessory = nullptr;
+        SkeletalMeshComp = nullptr;  // APawn 멤버 - 재바인딩 필요
 
         for (UActorComponent* Comp : GetOwnedComponents())
         {
@@ -130,7 +111,7 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         	}
 
         	FString CompTag = Comp->GetTag();
-        	
+
             if (auto* Cap = Cast<UCapsuleComponent>(Comp))
             {
             	if (CompTag == FString("CharacterCollider"))
@@ -138,17 +119,22 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
             		CapsuleComponent = Cap;
             	}
             }
-        	
+
             if (auto* Move = Cast<UCharacterMovementComponent>(Comp))
             {
                 CharacterMovement = Move;
             }
-        	
+
             if (auto* Skill = Cast<USkillComponent>(Comp))
             {
                 SkillComponent = Skill;
             }
-        	
+
+            if (auto* SkelMesh = Cast<USkeletalMeshComponent>(Comp))
+            {
+                SkeletalMeshComp = SkelMesh;  // APawn 멤버 재바인딩
+            }
+
         	if (auto* Shape = Cast<UShapeComponent>(Comp))
         	{
         		if (CompTag == FString("Fist"))
@@ -163,18 +149,18 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         	}
         }
 
-        if (CharacterMovement)
-        {
-            USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
-                                                        : GetRootComponent();
-            CharacterMovement->SetUpdatedComponent(Updated);
-        }
-    }
+		if (CharacterMovement)
+		{
+			USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
+			                                            : GetRootComponent();
+			CharacterMovement->SetUpdatedComponent(Updated);
+		}
+	}
 }
 
 void ACharacter::DuplicateSubObjects()
 {
-    Super::DuplicateSubObjects();
+	Super::DuplicateSubObjects();
 
     CapsuleComponent = nullptr;
     CharacterMovement = nullptr;
@@ -182,6 +168,7 @@ void ACharacter::DuplicateSubObjects()
     CurrentAccessory = nullptr;
 	FistComponent = nullptr;
 	KickComponent = nullptr;
+	SkeletalMeshComp = nullptr;  // APawn 멤버 - 재바인딩 필요
 
     for (UActorComponent* Comp : GetOwnedComponents())
     {
@@ -191,7 +178,7 @@ void ACharacter::DuplicateSubObjects()
     	}
 
     	FName CompName = Comp->GetName();
-    	
+
         if (auto* Cap = Cast<UCapsuleComponent>(Comp))
         {
             CapsuleComponent = Cap;
@@ -203,6 +190,10 @@ void ACharacter::DuplicateSubObjects()
         else if (auto* Skill = Cast<USkillComponent>(Comp))
         {
             SkillComponent = Skill;
+        }
+        else if (auto* SkelMesh = Cast<USkeletalMeshComponent>(Comp))
+        {
+            SkeletalMeshComp = SkelMesh;  // APawn 멤버 재바인딩
         }
         else if (auto* Shape = Cast<UShapeComponent>(Comp))
         {
@@ -218,13 +209,12 @@ void ACharacter::DuplicateSubObjects()
         }
     }
 
-    // Ensure movement component tracks the correct updated component
-    if (CharacterMovement)
-    {
-        USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
-                                                    : GetRootComponent();
-        CharacterMovement->SetUpdatedComponent(Updated);
-    }
+	if (CharacterMovement)
+	{
+		USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
+		                                            : GetRootComponent();
+		CharacterMovement->SetUpdatedComponent(Updated);
+	}
 }
 
 void ACharacter::Jump()
@@ -239,67 +229,8 @@ void ACharacter::StopJumping()
 {
 	if (CharacterMovement)
 	{
-		// 점프 scale을 조절할 때 사용,
-		// 지금은 비어있음
 		CharacterMovement->StopJump();
 	}
-}
-
-void ACharacter::HandleSkillInput()
-{
-	if (!SkillComponent)
-		return;
-
-	UInputManager& InputMgr = UInputManager::GetInstance();
-
-	// F키 - Light Attack
-	if (InputMgr.IsKeyPressed('F'))
-	{
-		SkillComponent->HandleInput(ESkillSlot::LightAttack);
-	}
-
-	// G키 - Heavy Attack
-	if (InputMgr.IsKeyPressed('G'))
-	{
-		SkillComponent->HandleInput(ESkillSlot::HeavyAttack);
-	}
-}
-
-void ACharacter::EquipAccessory(AAccessoryActor* Accessory)
-{
-	if (!Accessory)
-		return;
-
-	// 기존 악세서리가 있으면 먼저 해제
-	if (CurrentAccessory)
-	{
-		UnequipAccessory();
-	}
-
-	// 새 악세서리 등록
-	CurrentAccessory = Accessory;
-
-	// 악세서리의 Equip 로직 실행 (부착 + 스킬 등록)
-	Accessory->Equip(this);
-	 
-}
-
-void ACharacter::UnequipAccessory()
-{
-	if (!CurrentAccessory)
-		return;
-
-	// 악세서리의 Unequip 로직 실행
-	CurrentAccessory->Unequip();
-
-	// 스킬을 기본 스킬로 복원
-	if (SkillComponent)
-	{
-		SkillComponent->SetDefaultSkills();
-	}
-	 
-
-	CurrentAccessory = nullptr;
 }
 
 float ACharacter::TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator)
@@ -323,6 +254,16 @@ void ACharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherCo
 {
 	Super::OnHit(MyComp, OtherComp, HitResult);
 	UE_LOG("OnHit");
+}
+
+void ACharacter::AttackBegin()
+{
+	Super::AttackBegin();
+}
+
+void ACharacter::AttackEnd()
+{
+	Super::AttackEnd();
 }
 
 void ACharacter::Attack()

@@ -3,7 +3,7 @@
 #include "SceneComponent.h"
 #include "StaticMeshComponent.h"
 #include "ParticleSystemComponent.h"
-#include "Character.h"
+#include "AngryCoachCharacter.h"
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
 #include "AccessoryLightAttackSkill.h"
@@ -141,7 +141,7 @@ void AAccessoryActor::DuplicateSubObjects()
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 }
 
-void AAccessoryActor::Equip(ACharacter* OwnerCharacter)
+void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 {
 	if (!OwnerCharacter)
 		return;

@@ -10,6 +10,8 @@
 namespace json { class JSON; }
 using JSON = json::JSON;
 
+using VoidFuncPtr = void(UObject::*)();
+
 // 전방 선언/외부 심볼 (네 프로젝트 환경 유지)
 class UObject;
 class UWorld;
@@ -29,8 +31,14 @@ struct UClass
     mutable TArray<FProperty> CachedAllProperties;  // GetAllProperties() 캐시 (성능 최적화)
     mutable bool bAllPropertiesCached = false;      // 캐시 유효성 플래그
 
+    /* 간단한 UFUNC */
+    TMap<FName, VoidFuncPtr> FunctionMap;
+    VoidFuncPtr FindFunction(const FName& InName) const;    
+    static void RegisterFunction(UClass* Class, const FName& Name, VoidFuncPtr Func);
+    /**************/
+
     constexpr UClass() = default;
-    constexpr UClass(const char* n, const UClass* s, SIZE_T z)
+    UClass(const char* n, const UClass* s, SIZE_T z)
         :Name(n), Super(s), Size(z)
     {
     }
@@ -165,9 +173,12 @@ protected:
     virtual ~UObject() = default;
     // Centralized deletion entry accessible to ObjectFactory only
     void DestroyInternal() { delete this; }
-    friend void ObjectFactory::DeleteObject(UObject* Obj);
+    friend void ObjectFactory::DeleteObject(UObject* Obj);    
 
 public:
+    // UFUNC 실행
+    void ProcessEvent(FName FuncName);
+    
     // UObject-scoped allocation only
     static void* operator new(SIZE_T Size)
     {

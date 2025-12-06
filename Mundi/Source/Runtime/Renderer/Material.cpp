@@ -55,12 +55,49 @@ void UMaterial::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 	if (bInIsLoading)
 	{
-		// UStaticMeshComponent가 이미 UMaterial 객체를 생성한 후
-		// 이 함수를 호출했다고 가정합니다.
+		// AssetPath로 로드 시도
+		FString AssetPath;
+		FJsonSerializer::ReadString(InOutHandle, "AssetPath", AssetPath, "", false);
+
+		// MaterialInfo 텍스처 경로 로드 (프리팹에 저장된 경우)
+		FString DiffusePath, NormalPath;
+		FJsonSerializer::ReadString(InOutHandle, "DiffuseTexture", DiffusePath, "", false);
+		FJsonSerializer::ReadString(InOutHandle, "NormalTexture", NormalPath, "", false);
+
+		// 텍스처 경로 적용 및 직접 로드
+		auto& RM = UResourceManager::GetInstance();
+		if (!DiffusePath.empty())
+		{
+			MaterialInfo.DiffuseTextureFileName = DiffusePath;
+			UTexture* DiffuseTex = RM.Load<UTexture>(DiffusePath, true);
+			if (ResolvedTextures.size() <= static_cast<size_t>(EMaterialTextureSlot::Diffuse))
+				ResolvedTextures.resize(static_cast<size_t>(EMaterialTextureSlot::Max));
+			ResolvedTextures[static_cast<int32>(EMaterialTextureSlot::Diffuse)] = DiffuseTex;
+			UE_LOG("[UMaterial::Serialize] Loaded Diffuse: %s -> %p", DiffusePath.c_str(), DiffuseTex);
+		}
+		if (!NormalPath.empty())
+		{
+			MaterialInfo.NormalTextureFileName = NormalPath;
+			UTexture* NormalTex = RM.Load<UTexture>(NormalPath, false);
+			if (ResolvedTextures.size() <= static_cast<size_t>(EMaterialTextureSlot::Normal))
+				ResolvedTextures.resize(static_cast<size_t>(EMaterialTextureSlot::Max));
+			ResolvedTextures[static_cast<int32>(EMaterialTextureSlot::Normal)] = NormalTex;
+			UE_LOG("[UMaterial::Serialize] Loaded Normal: %s -> %p", NormalPath.c_str(), NormalTex);
+		}
 	}
 	else // 저장
 	{
 		InOutHandle["AssetPath"] = GetFilePath();
+
+		// MaterialInfo 텍스처 경로도 저장 (프리팹용)
+		if (!MaterialInfo.DiffuseTextureFileName.empty())
+		{
+			InOutHandle["DiffuseTexture"] = MaterialInfo.DiffuseTextureFileName;
+		}
+		if (!MaterialInfo.NormalTextureFileName.empty())
+		{
+			InOutHandle["NormalTexture"] = MaterialInfo.NormalTextureFileName;
+		}
 	}
 }
 

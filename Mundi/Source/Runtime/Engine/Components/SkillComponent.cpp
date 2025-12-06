@@ -20,9 +20,11 @@ void USkillComponent::BeginPlay()
 	DefualtSkill.Add(ESkillSlot::LightAttack, DefaultLight);
 	DefualtSkill.Add(ESkillSlot::HeavyAttack, DefaultHeavy);
 
-	// 게임 시작 시 기본 스킬 활성화
-	SetDefaultSkills();
-	  
+	// 악세서리가 없을 때만 기본 스킬 활성화
+	if (!CurrentAccessory)
+	{
+		SetDefaultSkills();
+	}
 }
 
 void USkillComponent::HandleInput(ESkillSlot Slot)

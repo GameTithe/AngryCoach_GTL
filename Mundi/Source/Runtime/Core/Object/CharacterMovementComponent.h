@@ -77,5 +77,4 @@ protected:
 	const float GLOBAL_GRAVITY_Z = -9.8f;
 	const float GravityScale = 1.0f;
 
-
 };

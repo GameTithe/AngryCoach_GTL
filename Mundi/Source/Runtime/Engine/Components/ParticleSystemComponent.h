@@ -4,8 +4,9 @@
 #include "Source/Runtime/Engine/Particle/ParticleSystem.h"
 #include "Source/Runtime/Engine/Particle/ParticleHelper.h"
 #include "Source/Runtime/Engine/Particle/DynamicEmitterDataBase.h"
-#include "UParticleSystemComponent.generated.h"
+
 #include "Source/Runtime/Engine/Particle/Async/ParticleAsyncUpdater.h"
+#include "UParticleSystemComponent.generated.h"
 
 UCLASS(DisplayName = "파티클 컴포넌트", Description = "파티클을 생성하는 컴포넌트")
 class UParticleSystemComponent : public UPrimitiveComponent

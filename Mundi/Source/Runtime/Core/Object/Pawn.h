@@ -37,6 +37,9 @@ public:
     // Movement component access (virtual so derived types can supply their own)
     virtual UPawnMovementComponent* GetMovementComponent() const { return PawnMovementComponent; }
 
+	virtual void AttackBegin();
+	virtual void AttackEnd();
+
 	void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;

@@ -158,6 +158,8 @@ private:
     // Right-click capture for notify insertion
     bool  bHasPendingNotifyAddTime = false;
     float PendingNotifyAddTimeSec = 0.0f;
+    bool bOpenNamePopup = false;
+    char FunctionNameBuffer[64] = "";
 
     // Notify drag state (for moving notifies on timeline)
     int32 DraggingNotifyIndex = -1;

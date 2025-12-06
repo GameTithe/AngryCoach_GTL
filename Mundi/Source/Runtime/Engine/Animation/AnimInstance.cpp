@@ -52,47 +52,43 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
                 TArray<FTransform> FinalPose;
 
                 // 섹션 블렌딩 중이면 이전 섹션과 현재 섹션 블렌딩
-                bool bAlreadyMapped = false;
                 if (MontageState->bBlendingSection && MontageState->PreviousSectionIndex >= 0)
                 {
                     UAnimSequence* PrevSeq = M->GetSectionSequence(MontageState->PreviousSectionIndex);
-                    if (PrevSeq)
+                    if (PrevSeq && CurrentSkeleton)
                     {
-                        TArray<FTransform> PrevPose, CurrPose;
-                        PrevSeq->EvaluatePose(MontageState->PreviousSectionEndTime, DeltaSeconds, PrevPose);
-                        CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, CurrPose);
+                        TArray<FTransform> PrevPoseRaw, CurrPoseRaw;
+                        TArray<FTransform> PrevPoseMapped, CurrPoseMapped;
+                        PrevSeq->EvaluatePose(MontageState->PreviousSectionEndTime, DeltaSeconds, PrevPoseRaw);
+                        CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, CurrPoseRaw);
+
+                        // 스켈레톤 순서로 변환
+                        MapPoseToSkeleton(PrevPoseRaw, PrevSeq, PrevPoseMapped);
+                        MapPoseToSkeleton(CurrPoseRaw, CurrentSeq, CurrPoseMapped);
 
                         float Alpha = MontageState->SectionBlendTime / FMath::Max(MontageState->SectionBlendTotalTime, 0.001f);
                         Alpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
 
-                        // 본 이름 기준으로 블렌딩 (스켈레톤 순서로 출력)
-                        BlendPosesByBoneName(PrevPose, PrevSeq, CurrPose, CurrentSeq, Alpha, FinalPose);
-                        bAlreadyMapped = true;
+                        // 둘 다 스켈레톤 순서이므로 직접 블렌딩
+                        BlendPoseArrays(PrevPoseMapped, CurrPoseMapped, Alpha, FinalPose);
                     }
                     else
                     {
-                        CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, FinalPose);
+                        TArray<FTransform> RawPose;
+                        CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, RawPose);
+                        MapPoseToSkeleton(RawPose, CurrentSeq, FinalPose);
                     }
                 }
                 else
                 {
-                    CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, FinalPose);
+                    TArray<FTransform> RawPose;
+                    CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, RawPose);
+                    MapPoseToSkeleton(RawPose, CurrentSeq, FinalPose);
                 }
 
                 if (OwningComponent && FinalPose.Num() > 0)
                 {
-                    if (bAlreadyMapped)
-                    {
-                        // BlendPosesByBoneName 결과는 이미 스켈레톤 순서
-                        OwningComponent->SetAnimationPose(FinalPose);
-                    }
-                    else
-                    {
-                        // 트랙 순서 → 스켈레톤 본 순서로 매핑
-                        TArray<FTransform> MappedPose;
-                        MapPoseToSkeleton(FinalPose, CurrentSeq, MappedPose);
-                        OwningComponent->SetAnimationPose(MappedPose);
-                    }
+                    OwningComponent->SetAnimationPose(FinalPose);
                 }
             }
         }
@@ -117,12 +113,25 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
         float BlendAlpha = 1.0f - (BlendTimeRemaining / SafeTotalTime);
         BlendAlpha = FMath::Clamp(BlendAlpha, 0.0f, 1.0f);
 
-        TArray<FTransform> FromPose;
-        TArray<FTransform> TargetPose;
+        TArray<FTransform> FromPose, FromPoseMapped;
+        TArray<FTransform> TargetPose, TargetPoseMapped;
         EvaluatePoseForState(CurrentPlayState, FromPose, DeltaSeconds);
         EvaluatePoseForState(BlendTargetState, TargetPose, DeltaSeconds);
 
-        BlendPoseArrays(FromPose, TargetPose, BlendAlpha, BasePose);
+        // 스켈레톤 순서로 변환
+        UAnimSequence* FromSeq = CurrentPlayState.Sequence;
+        if (!FromSeq && CurrentPlayState.PoseProvider)
+            FromSeq = CurrentPlayState.PoseProvider->GetDominantSequence();
+
+        UAnimSequence* ToSeq = BlendTargetState.Sequence;
+        if (!ToSeq && BlendTargetState.PoseProvider)
+            ToSeq = BlendTargetState.PoseProvider->GetDominantSequence();
+
+        MapPoseToSkeleton(FromPose, FromSeq, FromPoseMapped);
+        MapPoseToSkeleton(TargetPose, ToSeq, TargetPoseMapped);
+
+        // 이제 둘 다 스켈레톤 순서이므로 직접 인덱스 블렌딩
+        BlendPoseArrays(FromPoseMapped, TargetPoseMapped, BlendAlpha, BasePose);
 
         BlendTimeRemaining = FMath::Max(BlendTimeRemaining - DeltaSeconds, 0.0f);
         if (BlendTimeRemaining <= 1e-4f)
@@ -137,7 +146,14 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     }
     else
     {
-        EvaluatePoseForState(CurrentPlayState, BasePose, DeltaSeconds);
+        TArray<FTransform> RawPose;
+        EvaluatePoseForState(CurrentPlayState, RawPose, DeltaSeconds);
+
+        UAnimSequence* BaseSeq = CurrentPlayState.Sequence;
+        if (!BaseSeq && CurrentPlayState.PoseProvider)
+            BaseSeq = CurrentPlayState.PoseProvider->GetDominantSequence();
+
+        MapPoseToSkeleton(RawPose, BaseSeq, BasePose);
     }
 
     // 몽타주 업데이트
@@ -158,39 +174,43 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
             if (MontageState->bBlendingSection && MontageState->PreviousSectionIndex >= 0)
             {
                 UAnimSequence* PrevSeq = M->GetSectionSequence(MontageState->PreviousSectionIndex);
-                if (PrevSeq)
+                if (PrevSeq && CurrentSkeleton)
                 {
-                    TArray<FTransform> PrevPose, CurrPose;
-                    PrevSeq->EvaluatePose(MontageState->PreviousSectionEndTime, DeltaSeconds, PrevPose);
-                    CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, CurrPose);
+                    TArray<FTransform> PrevPoseRaw, CurrPoseRaw;
+                    TArray<FTransform> PrevPoseMapped, CurrPoseMapped;
+                    PrevSeq->EvaluatePose(MontageState->PreviousSectionEndTime, DeltaSeconds, PrevPoseRaw);
+                    CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, CurrPoseRaw);
+
+                    // 스켈레톤 순서로 변환
+                    MapPoseToSkeleton(PrevPoseRaw, PrevSeq, PrevPoseMapped);
+                    MapPoseToSkeleton(CurrPoseRaw, CurrentSeq, CurrPoseMapped);
 
                     float Alpha = MontageState->SectionBlendTime / FMath::Max(MontageState->SectionBlendTotalTime, 0.001f);
-                    BlendPoseArrays(PrevPose, CurrPose, FMath::Clamp(Alpha, 0.0f, 1.0f), MontagePose);
+                    Alpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+
+                    // 이제 둘 다 스켈레톤 순서이므로 직접 인덱스 블렌딩
+                    BlendPoseArrays(PrevPoseMapped, CurrPoseMapped, Alpha, MontagePose);
                 }
                 else
                 {
-                    CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+                    TArray<FTransform> RawPose;
+                    CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, RawPose);
+                    MapPoseToSkeleton(RawPose, CurrentSeq, MontagePose);
                 }
             }
             else
             {
-                CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+                TArray<FTransform> RawPose;
+                CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, RawPose);
+                MapPoseToSkeleton(RawPose, CurrentSeq, MontagePose);
             }
 
-            // 몽타주 포즈를 기본 포즈 위에 블렌드
-            const float W = MontageState->Weight;
-            const int32 NumBones = FMath::Min(BasePose.Num(), MontagePose.Num());
-
-            for (int32 i = 0; i < NumBones; ++i)
-            {
-                FinalPose[i].Translation = FMath::Lerp(BasePose[i].Translation, MontagePose[i].Translation, W);
-                FinalPose[i].Rotation = FQuat::Slerp(BasePose[i].Rotation, MontagePose[i].Rotation, W);
-                FinalPose[i].Scale3D = FMath::Lerp(BasePose[i].Scale3D, MontagePose[i].Scale3D, W);
-            }
+            // BasePose와 MontagePose 둘 다 스켈레톤 순서이므로 직접 블렌딩
+            BlendPoseArrays(BasePose, MontagePose, MontageState->Weight, FinalPose);
         }
     }
 
-    // 최종 포즈 적용
+    // 최종 포즈 적용 (모두 스켈레톤 순서)
     if (OwningComponent && FinalPose.Num() > 0)
     {
         OwningComponent->SetAnimationPose(FinalPose);
@@ -665,7 +685,21 @@ void UAnimInstance::GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPos
 
         if (OwningComponent && BlendedPose.Num() > 0)
         {
-            OwningComponent->SetAnimationPose(BlendedPose);
+            // 포즈 크기가 스켈레톤과 다르면 본 이름으로 매핑
+            UAnimSequence* MappingSeq = CurrentPlayState.Sequence;
+            if (!MappingSeq && CurrentPlayState.PoseProvider)
+                MappingSeq = CurrentPlayState.PoseProvider->GetDominantSequence();
+
+            if (CurrentSkeleton && MappingSeq && BlendedPose.Num() != CurrentSkeleton->Bones.Num())
+            {
+                TArray<FTransform> MappedPose;
+                MapPoseToSkeleton(BlendedPose, MappingSeq, MappedPose);
+                OwningComponent->SetAnimationPose(MappedPose);
+            }
+            else
+            {
+                OwningComponent->SetAnimationPose(BlendedPose);
+            }
         }
 
         BlendTimeRemaining = FMath::Max(BlendTimeRemaining - DeltaSeconds, 0.0f);
@@ -686,7 +720,21 @@ void UAnimInstance::GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPos
 
         if (Pose.Num() > 0)
         {
-            OwningComponent->SetAnimationPose(Pose);
+            // 포즈 크기가 스켈레톤과 다르면 본 이름으로 매핑
+            UAnimSequence* MappingSeq = CurrentPlayState.Sequence;
+            if (!MappingSeq && CurrentPlayState.PoseProvider)
+                MappingSeq = CurrentPlayState.PoseProvider->GetDominantSequence();
+
+            if (CurrentSkeleton && MappingSeq && Pose.Num() != CurrentSkeleton->Bones.Num())
+            {
+                TArray<FTransform> MappedPose;
+                MapPoseToSkeleton(Pose, MappingSeq, MappedPose);
+                OwningComponent->SetAnimationPose(MappedPose);
+            }
+            else
+            {
+                OwningComponent->SetAnimationPose(Pose);
+            }
         }
     }
 
@@ -704,12 +752,6 @@ float UAnimInstance::PlayMontage(UAnimMontage* Montage, float PlayRate)
         return 0.0f;
     }
 
-    // 기존 몽타주 정리
-    if (!MontageState)
-    {
-        MontageState = new FMontagePlayState();
-    }
-
     MontageState->Montage = Montage;
     MontageState->Position = 0.0f;
     MontageState->PlayRate = PlayRate;
@@ -718,6 +760,13 @@ float UAnimInstance::PlayMontage(UAnimMontage* Montage, float PlayRate)
     MontageState->bBlendingOut = false;
     MontageState->BlendTime = 0.0f;
     MontageState->CurrentSectionIndex = 0;
+
+    // 섹션 블렌딩 상태 리셋
+    MontageState->bBlendingSection = false;
+    MontageState->SectionBlendTime = 0.0f;
+    MontageState->SectionBlendTotalTime = 0.0f;
+    MontageState->PreviousSectionIndex = -1;
+    MontageState->PreviousSectionEndTime = 0.0f;
 
     // 노티파이 트래킹 초기화
     PreviousMontagePlayTime = 0.0f;

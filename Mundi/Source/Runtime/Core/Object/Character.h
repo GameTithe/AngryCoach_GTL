@@ -7,7 +7,7 @@ class USkeletalMeshComponent;
 class UCharacterMovementComponent;
 class USkillComponent;
 
-UCLASS(DisplayName = "캐릭터", Description = "캐릭터 액터")
+UCLASS(DisplayName = "캐릭터", Description = "캐릭터 액터 (프레임워크)")
 class ACharacter : public APawn
 {
 public:
@@ -17,25 +17,14 @@ public:
 	virtual ~ACharacter() override;
 
 	virtual void Tick(float DeltaSecond) override;
-    virtual void BeginPlay() override;
-    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	virtual void BeginPlay() override;
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 	void DuplicateSubObjects() override;
 
 	// 캐릭터 고유 기능
 	virtual void Jump();
 	virtual void StopJumping();
-
-	// 스킬 관련
-	void HandleSkillInput();
-
-	// 악세서리 관련
-	void EquipAccessory(class AAccessoryActor* Accessory);
-	void UnequipAccessory();
-	class AAccessoryActor* GetCurrentAccessory() const { return CurrentAccessory; }
-
-	// 기본 무기 스폰
-	void SpawnDefaultWeapon();
-
+	
 
 	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
 	 
@@ -52,16 +41,17 @@ public:
 	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 
+	void AttackBegin() override;
+	void AttackEnd() override;
+
 	void Attack();
 
-	USkillComponent* GetSkillComponent() const { return SkillComponent; }
-
 protected:
-    UCapsuleComponent* CapsuleComponent;
+	UCapsuleComponent* CapsuleComponent = nullptr;
+	UCharacterMovementComponent* CharacterMovement = nullptr;
 	// 캐릭터 기본 공격 - 주먹, 발차기
 	UShapeComponent* FistComponent;
 	UShapeComponent* KickComponent;
-    UCharacterMovementComponent* CharacterMovement;
 	USkillComponent* SkillComponent;
 	class AAccessoryActor* CurrentAccessory = nullptr; 
 
