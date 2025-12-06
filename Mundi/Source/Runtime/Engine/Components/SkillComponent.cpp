@@ -1,6 +1,8 @@
 ﻿#include "pch.h"
 #include "SkillComponent.h"
 #include "SkillBase.h"
+#include "DefaultLightAttackSkill.h"
+#include "DefaultHeavyAttackSkill.h"
 
 USkillComponent::USkillComponent()
 {
@@ -11,9 +13,17 @@ void USkillComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 게임 시작 시 기본 스킬 로드
-	SetDefaultSkills(); 
+	// 기본 스킬 생성 및 등록
+	UDefaultLightAttackSkill* DefaultLight = NewObject<UDefaultLightAttackSkill>();
+	UDefaultHeavyAttackSkill* DefaultHeavy = NewObject<UDefaultHeavyAttackSkill>();
 
+	DefualtSkill.Add(ESkillSlot::LightAttack, DefaultLight);
+	DefualtSkill.Add(ESkillSlot::HeavyAttack, DefaultHeavy);
+
+	// 게임 시작 시 기본 스킬 활성화
+	SetDefaultSkills();
+
+	UE_LOG("[SkillComponent] Default skills initialized");
 }
 
 void USkillComponent::HandleInput(ESkillSlot Slot)

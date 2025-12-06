@@ -2,7 +2,10 @@
 #include "Character.h"
 #include "CapsuleComponent.h"
 #include "SkeletalMeshComponent.h"
-#include "CharacterMovementComponent.h" 
+#include "CharacterMovementComponent.h"
+#include "SkillComponent.h"
+#include "AccessoryActor.h"
+#include "InputManager.h"
 #include "ObjectMacros.h" 
 ACharacter::ACharacter()
 {
@@ -18,12 +21,15 @@ ACharacter::ACharacter()
 		//SkeletalMeshComp->SetRelativeLocation(FVector());
 		//SkeletalMeshComp->SetRelativeScale(FVector());
 	}
-	 
+
 	CharacterMovement = CreateDefaultSubobject<UCharacterMovementComponent>("CharacterMovement");
 	if (CharacterMovement)
 	{
 		CharacterMovement->SetUpdatedComponent(CapsuleComponent);
-	} 
+	}
+
+	// SkillComponent 생성
+	SkillComponent = CreateDefaultSubobject<USkillComponent>("SkillComponent");
 }
 
 ACharacter::~ACharacter()
@@ -34,11 +40,34 @@ ACharacter::~ACharacter()
 void ACharacter::Tick(float DeltaSecond)
 {
 	Super::Tick(DeltaSecond);
+
+	// 스킬 입력 처리
+	HandleSkillInput();
 }
 
 void ACharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+	// 자동으로 부착된 AccessoryActor를 Equip 처리
+	//if (SkeletalMeshComp)
+	//{
+	//	TArray<USceneComponent*> AttachedComponents;
+	//	//SkeletalMeshComp->GetChildrenComponents(false, AttachedComponents);
+	//
+	//	for (USceneComponent* Child : AttachedComponents)
+	//	{
+	//		AActor* ChildOwner = Child->GetOwner();
+	//		if (ChildOwner && ChildOwner != this)
+	//		{
+	//			AAccessoryActor* Accessory = Cast<AAccessoryActor>(ChildOwner);
+	//			if (Accessory)
+	//			{
+	//				Accessory->Equip(this);  
+	//			}
+	//		}
+	//	}
+	//}
 }
 
 void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -50,6 +79,7 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         // Rebind important component pointers after load (prefab/scene)
         CapsuleComponent = nullptr;
         CharacterMovement = nullptr;
+        SkillComponent = nullptr;
 
         for (UActorComponent* Comp : GetOwnedComponents())
         {
@@ -60,6 +90,10 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
             else if (auto* Move = Cast<UCharacterMovementComponent>(Comp))
             {
                 CharacterMovement = Move;
+            }
+            else if (auto* Skill = Cast<USkillComponent>(Comp))
+            {
+                SkillComponent = Skill;
             }
         }
 
@@ -73,11 +107,12 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 }
 
 void ACharacter::DuplicateSubObjects()
-{ 
+{
     Super::DuplicateSubObjects();
-     
+
     CapsuleComponent = nullptr;
     CharacterMovement = nullptr;
+    SkillComponent = nullptr;
 
     for (UActorComponent* Comp : GetOwnedComponents())
     {
@@ -88,6 +123,10 @@ void ACharacter::DuplicateSubObjects()
         else if (auto* Move = Cast<UCharacterMovementComponent>(Comp))
         {
             CharacterMovement = Move;
+        }
+        else if (auto* Skill = Cast<USkillComponent>(Comp))
+        {
+            SkillComponent = Skill;
         }
     }
 
@@ -114,6 +153,26 @@ void ACharacter::StopJumping()
 	{
 		// 점프 scale을 조절할 때 사용,
 		// 지금은 비어있음
-		CharacterMovement->StopJump(); 
+		CharacterMovement->StopJump();
+	}
+}
+
+void ACharacter::HandleSkillInput()
+{
+	if (!SkillComponent)
+		return;
+
+	UInputManager& InputMgr = UInputManager::GetInstance();
+
+	// F키 - Light Attack
+	if (InputMgr.IsKeyPressed('F'))
+	{
+		SkillComponent->HandleInput(ESkillSlot::LightAttack);
+	}
+
+	// G키 - Heavy Attack
+	if (InputMgr.IsKeyPressed('G'))
+	{
+		SkillComponent->HandleInput(ESkillSlot::HeavyAttack);
 	}
 }

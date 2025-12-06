@@ -5,10 +5,11 @@
 class UCapsuleComponent;
 class USkeletalMeshComponent;
 class UCharacterMovementComponent;
- 
+class USkillComponent;
+
 UCLASS(DisplayName = "캐릭터", Description = "캐릭터 액터")
 class ACharacter : public APawn
-{ 
+{
 public:
 	GENERATED_REFLECTION_BODY()
 
@@ -23,6 +24,9 @@ public:
 	// 캐릭터 고유 기능
 	virtual void Jump();
 	virtual void StopJumping();
+
+	// 스킬 관련
+	void HandleSkillInput();
 	 
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 	UCharacterMovementComponent* GetCharacterMovement() const { return CharacterMovement; }
@@ -33,10 +37,11 @@ public:
 	//APawn에서 정의 됨
 	USkeletalMeshComponent* GetMesh() const { return SkeletalMeshComp; }
 
-	// TODO: 루아로 옮겨 ?
-	// 
+	USkillComponent* GetSkillComponent() const { return SkillComponent; }
+
 protected:
     UCapsuleComponent* CapsuleComponent;
     UCharacterMovementComponent* CharacterMovement;
+	USkillComponent* SkillComponent;
 
 };

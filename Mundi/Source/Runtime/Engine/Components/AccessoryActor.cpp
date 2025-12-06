@@ -24,6 +24,7 @@ AAccessoryActor::AAccessoryActor()
 
 	HitAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("HitAttackParticle");
 	HitAttackParticle->SetupAttachment(SceneRoot);
+
 }
 
 void AAccessoryActor::Equip(ACharacter* OwnerCharacter)
@@ -44,8 +45,7 @@ void AAccessoryActor::Equip(ACharacter* OwnerCharacter)
 		}
 		else
 		{
-			RootComponent->SetupAttachment(CharacterMesh);
-			UE_LOG("[AccessoryActor] Attached to character mesh");
+			RootComponent->SetupAttachment(CharacterMesh); 
 		}
 	}
 
@@ -54,10 +54,8 @@ void AAccessoryActor::Equip(ACharacter* OwnerCharacter)
 	if (SkillComp && !GrantedSkills.empty())
 	{
 		SkillComp->OverrideSkills(GrantedSkills, this);
-		UE_LOG("[AccessoryActor] Skills granted to character");
 	}
 
-	UE_LOG("[AccessoryActor] %s equipped successfully", AccessoryName.c_str());
 }
 
 void AAccessoryActor::Unequip()
@@ -68,6 +66,5 @@ void AAccessoryActor::Unequip()
 		RootComponent->DetachFromParent();
 	}
 
-	// TODO: 스킬 컴포넌트에서 스킬 제거
-	UE_LOG("[AccessoryActor] %s unequipped", AccessoryName.c_str());
+	// TODO: 스킬 컴포넌트에서 스킬 제거 
 }

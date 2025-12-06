@@ -492,69 +492,82 @@ void FLuaManager::ExposeAllComponentsToLua()
         }
     );
 
-    SharedLib.set_function("EquipAccessory",
-        [this](sol::object AccessoryObj, sol::object CharacterObj)
-        {
-            // AccessoryObj는 GameObject (AccessoryActor)
-            if (!AccessoryObj.is<FGameObject&>()) {
-                UE_LOG("[Lua][error] Error: Expected GameObject for accessory\n");
-                return;
-            }
+    //SharedLib.set_function("EquipAccessory",
+    //    [this](sol::object AccessoryObj, sol::object CharacterObj)
+    //    {
+    //        // AccessoryObj는 GameObject (AccessoryActor)
+    //        if (!AccessoryObj.is<FGameObject&>()) {
+    //            UE_LOG("[Lua][error] Error: Expected GameObject for accessory\n");
+    //            return;
+    //        }
 
-            // CharacterObj는 GameObject (Character)
-            if (!CharacterObj.is<FGameObject&>()) {
-                UE_LOG("[Lua][error] Error: Expected GameObject for character\n");
-                return;
-            }
+    //        // CharacterObj는 GameObject (Character)
+    //        if (!CharacterObj.is<FGameObject&>()) {
+    //            UE_LOG("[Lua][error] Error: Expected GameObject for character\n");
+    //            return;
+    //        }
 
-            FGameObject& AccessoryGameObject = AccessoryObj.as<FGameObject&>();
-            FGameObject& CharacterGameObject = CharacterObj.as<FGameObject&>();
+    //        FGameObject& AccessoryGameObject = AccessoryObj.as<FGameObject&>();
+    //        FGameObject& CharacterGameObject = CharacterObj.as<FGameObject&>();
 
-            AActor* AccessoryActorBase = AccessoryGameObject.GetOwner();
-            AActor* CharacterActorBase = CharacterGameObject.GetOwner();
+    //        AActor* AccessoryActorBase = AccessoryGameObject.GetOwner();
+    //        AActor* CharacterActorBase = CharacterGameObject.GetOwner();
 
-            // Cast to specific types
-            AAccessoryActor* Accessory = Cast<AAccessoryActor>(AccessoryActorBase);
-            ACharacter* Character = Cast<ACharacter>(CharacterActorBase);
+    //        // Null check
+    //        if (!AccessoryActorBase) {
+    //            UE_LOG("[Lua][error] Error: Accessory GameObject has null owner\n");
+    //            return;
+    //        }
 
-            if (!Accessory) {
-                UE_LOG("[Lua][error] Error: Accessory is not an AccessoryActor\n");
-                return;
-            }
+    //        if (!CharacterActorBase) {
+    //            UE_LOG("[Lua][error] Error: Character GameObject has null owner\n");
+    //            return;
+    //        }
 
-            if (!Character) {
-                UE_LOG("[Lua][error] Error: Character is not an ACharacter\n");
-                return;
-            }
+    //        // Validity check (PIE 재시작 시 dangling pointer 방지)
+    //        if (AccessoryActorBase->IsPendingDestroy()) {
+    //            UE_LOG("[Lua][error] Error: Accessory is pending destroy\n");
+    //            return;
+    //        }
 
-            // Call Equip
-            Accessory->Equip(Character);
-            UE_LOG("[Lua] AccessoryActor equipped to Character\n");
-        }
-    );
+    //        if (CharacterActorBase->IsPendingDestroy()) {
+    //            UE_LOG("[Lua][error] Error: Character is pending destroy\n");
+    //            return;
+    //        }
 
-    SharedLib.set_function("UnequipAccessory",
-        [this](sol::object AccessoryObj)
-        {
-            if (!AccessoryObj.is<FGameObject&>()) {
-                UE_LOG("[Lua][error] Error: Expected GameObject for accessory\n");
-                return;
-            }
+    //        // Cast to specific types
+    //        AAccessoryActor* Accessory = Cast<AAccessoryActor>(AccessoryActorBase);
+    //        ACharacter* Character = Cast<ACharacter>(CharacterActorBase);
+ 
 
-            FGameObject& AccessoryGameObject = AccessoryObj.as<FGameObject&>();
-            AActor* AccessoryActorBase = AccessoryGameObject.GetOwner();
+    //        // Call Equip
+    //        Accessory->Equip(Character);
+    //        UE_LOG("[Lua] AccessoryActor equipped to Character\n");
+    //    }
+    //);
 
-            AAccessoryActor* Accessory = Cast<AAccessoryActor>(AccessoryActorBase);
+    //SharedLib.set_function("UnequipAccessory",
+    //    [this](sol::object AccessoryObj)
+    //    {
+    //        if (!AccessoryObj.is<FGameObject&>()) {
+    //            UE_LOG("[Lua][error] Error: Expected GameObject for accessory\n");
+    //            return;
+    //        }
 
-            if (!Accessory) {
-                UE_LOG("[Lua][error] Error: Accessory is not an AccessoryActor\n");
-                return;
-            }
+    //        FGameObject& AccessoryGameObject = AccessoryObj.as<FGameObject&>();
+    //        AActor* AccessoryActorBase = AccessoryGameObject.GetOwner();
 
-            Accessory->Unequip();
-            UE_LOG("[Lua] AccessoryActor unequipped\n");
-        }
-    );
+    //        AAccessoryActor* Accessory = Cast<AAccessoryActor>(AccessoryActorBase);
+
+    //        if (!Accessory) {
+    //            UE_LOG("[Lua][error] Error: Accessory is not an AccessoryActor\n");
+    //            return;
+    //        }
+
+    //        Accessory->Unequip();
+    //        UE_LOG("[Lua] AccessoryActor unequipped\n");
+    //    }
+    //);
 }
 
 void FLuaManager::ExposeGlobalFunctions()
