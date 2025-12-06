@@ -57,6 +57,10 @@ class Property:
         if 'physmaterialpreset' in self.name.lower():
             return 'ADD_PROPERTY_PHYS_MATERIAL_PRESET'
 
+        # ClothWeightAsset 체크 (변수명 기반)
+        if 'clothweightasset' in self.name.lower():
+            return 'ADD_PROPERTY_CLOTHWEIGHTASSET'
+
         # TArray 타입 체크 (포인터 체크보다 먼저)
         if 'tarray' in type_lower:
             # TArray<UMaterialInterface*> 같은 형태에서 내부 타입 추출

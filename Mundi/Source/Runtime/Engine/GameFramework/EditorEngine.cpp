@@ -12,6 +12,7 @@
 #include <roapi.h>
 #include "Source/Runtime/Engine/Physics/Cloth/ClothManager.h"
 #include "Source/Runtime/Debug/CrashHandler.h"
+#include "Source/Game/UI/GameUIManager.h"
 
 float UEditorEngine::ClientWidth = 1024.0f;
 float UEditorEngine::ClientHeight = 1024.0f;
@@ -203,6 +204,7 @@ bool UEditorEngine::Startup(HINSTANCE hInstance)
     FAudioDevice::Preload();
     RESOURCE.PreloadParticles();
 	RESOURCE.PreloadPhysicsAssets();
+    RESOURCE.PreloadMontages();
     
     // 블루프린트 액션 데이터베이스 초기화
     FBlueprintActionDatabase::GetInstance().Initialize();
@@ -326,6 +328,9 @@ void UEditorEngine::MainLoop()
                 ObjectFactory::DeleteObject(GWorld);
             }
 
+            // PIE 종료 시 GameUI 캔버스 모두 정리
+            UGameUIManager::Get().RemoveAllCanvases();
+
             GWorld = WorldContexts[0].World;
             GWorld->GetSelectionManager()->ClearSelection();
             GWorld->GetLightManager()->SetDirtyFlag();
@@ -378,6 +383,7 @@ void UEditorEngine::Shutdown()
     // before the global GEngine variable's destructor runs
     FObjManager::Clear();
 
+    FClothManager::GetInstance().Shutdown();
      
     // IMPORTANT: Explicitly release Renderer before RHIDevice destructor runs
     // Renderer may hold references to D3D resources

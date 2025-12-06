@@ -89,7 +89,7 @@ protected:
     UGizmoRotateComponent* RotateY;
     UGizmoRotateComponent* RotateZ;
     TArray<USceneComponent*> GizmoRotateComponents;
-    bool bRender = false;
+    bool bRender = true;  // 기본값은 렌더링 활성화
     bool bIsHovering = false;
     bool bIsDragging = false;
     EGizmoMode CurrentMode;

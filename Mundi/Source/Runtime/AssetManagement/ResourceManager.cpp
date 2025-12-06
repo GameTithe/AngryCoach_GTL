@@ -772,6 +772,42 @@ void UResourceManager::PreloadPhysicsAssets()
     UE_LOG("UResourceManager::PreloadPhysicsAssets: Loaded %zu .phys files from %s", LoadedCount, PhysicsDir.string().c_str());
 }
 
+void UResourceManager::PreloadMontages()
+{
+    const fs::path MontageDir(GDataDir + "/Montages");
+    if (!fs::exists(MontageDir) || !fs::is_directory(MontageDir))
+    {
+        UE_LOG("UResourceManager::PreloadMontages: Data directory not found: %s", MontageDir.string().c_str());
+        return;
+    }
+
+    size_t LoadedCount = 0;
+    std::unordered_set<FString> ProcessedFiles;
+
+    for (const auto& Entry : fs::recursive_directory_iterator(MontageDir))
+    {
+        if (!Entry.is_regular_file()) { continue; }
+
+        const fs::path& Path = Entry.path();
+        FString FileName = Path.filename().string();
+
+        // .montage.json 확장자 체크
+        if (FileName.size() > 13 && FileName.substr(FileName.size() - 13) == ".montage.json")
+        {
+            FString PathStr = NormalizePath(Path.string());
+
+            if (!ProcessedFiles.contains(PathStr))
+            {
+                ProcessedFiles.insert(PathStr);
+                ++LoadedCount;
+                Load<UAnimMontage>(PathStr);
+            }
+        }
+    }
+
+    UE_LOG("UResourceManager::PreloadMontages: Loaded %zu .montage.json files from %s", LoadedCount, MontageDir.string().c_str());
+}
+
 // 여기서 텍스처 데이터 로드 및 
 FTextureData* UResourceManager::CreateOrGetTextureData(const FWideString& FilePath)
 {

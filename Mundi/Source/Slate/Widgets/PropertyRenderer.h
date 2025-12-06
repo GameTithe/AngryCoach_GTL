@@ -60,6 +60,9 @@ private:
 	static bool RenderCombineModeProperty(const FProperty& Prop, void* Instance);
 	static bool RenderCollisionShapeTypeProperty(const FProperty& Prop, void* Instance);
 
+	// Cloth Weight Asset 프로퍼티 렌더링 함수
+	static bool RenderClothWeightAssetProperty(const FProperty& Prop, void* Instance);
+
 	static void CacheResources();	// 필요할 때 리소스 목록을 멤버 변수에 캐시합니다.
 	static void ClearResourcesCache();	// 렌더링 패스가 끝날 때 캐시를 비웁니다.
 
@@ -79,4 +82,6 @@ private:
 	static TArray<const char*> CachedSoundItems;
 	static TArray<FString> CachedScriptPaths;
 	static TArray<const char*> CachedScriptItems;
+	static TArray<FString> CachedClothWeightAssetPaths;
+	static TArray<FString> CachedClothWeightAssetItems;
 };

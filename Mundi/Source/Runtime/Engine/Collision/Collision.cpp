@@ -399,6 +399,124 @@ namespace Collision
         return OverlapLUT[(int)ShapeA.Kind][(int)ShapeB.Kind](ShapeA, A->GetWorldTransform(), ShapeB, B->GetWorldTransform());
     }
 
+    bool ComputePenetration(const UShapeComponent* A, const UShapeComponent* B, FHitResult& OutHit)
+    {
+        FShape ShapeA, ShapeB;
+        A->GetShape(ShapeA);
+        B->GetShape(ShapeB);
+
+        FTransform TransA = A->GetWorldTransform();
+        FTransform TransB = B->GetWorldTransform();
+
+        // 편의를 위한 람다: A와 B를 뒤집어서 호출한 뒤 결과의 Normal을 반전시킴
+        auto SwapAndCall = [&](auto Func) -> bool
+        {
+            if (Func(B, A, OutHit))
+            {
+                OutHit.ImpactNormal *= -1.0f; // 방향 반전 (B->A를 A->B로)
+                // HitActor/Component는 호출자가 수정하거나, 여기서 스왑해야 함
+                std::swap(OutHit.HitActor, OutHit.HitComponent); // (주의: HitResult 구조에 따라 다름)
+                // 여기서는 OutHit에 A, B 포인터가 명시적으로 들어가지 않고 결과만 나오므로
+                // ImpactNormal만 뒤집으면 됩니다. (HitResult에 Actor/Comp 포인터 채우는건 호출자 책임 권장)
+                OutHit.HitActor = B->GetOwner();
+                OutHit.HitComponent = const_cast<UPrimitiveComponent*>((const UPrimitiveComponent*)B);
+                return true;
+            }
+            return false;
+        };
+
+        // 1. Sphere vs ...
+        if (ShapeA.Kind == EShapeKind::Sphere)
+        {
+            FVector CenterA = TransA.Translation;
+            float RadiusA = ShapeA.Sphere.SphereRadius * UniformScaleMax(AbsVec(TransA.Scale3D));
+            
+            // Sphere vs Sphere
+            if (ShapeB.Kind == EShapeKind::Sphere)
+            {
+                FVector CenterB = TransB.Translation;
+                float RadiusB = ShapeB.Sphere.SphereRadius * UniformScaleMax(AbsVec(TransB.Scale3D));
+                return ComputeSphereToSpherePenetration(CenterA, RadiusA, CenterB, RadiusB, OutHit);
+            }
+            // Sphere vs Box
+            else if (ShapeB.Kind == EShapeKind::Box)
+            {
+                FOBB BoxB; BuildOBB(ShapeB, TransB, BoxB);
+                return ComputeSphereToBoxPenetration(CenterA, RadiusA, BoxB, OutHit);
+            }
+            // Sphere vs Capsule
+            else if (ShapeB.Kind == EShapeKind::Capsule)
+            {
+                FVector CapP0, CapP1; float CapR;
+                BuildCapsule(ShapeB, TransB, CapP0, CapP1, CapR);
+                return ComputeSphereToCapsulePenetration(CenterA, RadiusA, CapP0, CapP1, CapR, OutHit);
+            }
+        }
+        
+        // 2. Box vs ...
+        else if (ShapeA.Kind == EShapeKind::Box)
+        {
+            FOBB BoxA; BuildOBB(ShapeA, TransA, BoxA);
+
+            // Box vs Sphere (Swap)
+            if (ShapeB.Kind == EShapeKind::Sphere)
+            {
+                FVector CenterB = TransB.Translation;
+                float RadiusB = ShapeB.Sphere.SphereRadius * UniformScaleMax(AbsVec(TransB.Scale3D));
+                bool bHit = ComputeSphereToBoxPenetration(CenterB, RadiusB, BoxA, OutHit);
+                if (bHit) OutHit.ImpactNormal *= -1.0f; // Sphere->Box를 Box->Sphere로
+                return bHit;
+            }
+            // Box vs Box (SAT)
+            else if (ShapeB.Kind == EShapeKind::Box)
+            {
+                FOBB BoxB; BuildOBB(ShapeB, TransB, BoxB);
+                return ComputeBoxToBoxPenetration(BoxA, BoxB, OutHit);
+            }
+            // Box vs Capsule
+            else if (ShapeB.Kind == EShapeKind::Capsule)
+            {
+                FVector CapP0, CapP1; float CapR;
+                BuildCapsule(ShapeB, TransB, CapP0, CapP1, CapR);
+                return ComputeBoxToCapsulePenetration(BoxA, CapP0, CapP1, CapR, OutHit);
+            }
+        }
+
+        // 3. Capsule vs ...
+        else if (ShapeA.Kind == EShapeKind::Capsule)
+        {
+            FVector CapA_P0, CapA_P1; float CapA_R;
+            BuildCapsule(ShapeA, TransA, CapA_P0, CapA_P1, CapA_R);
+
+            // Capsule vs Sphere (Swap)
+            if (ShapeB.Kind == EShapeKind::Sphere)
+            {
+                FVector CenterB = TransB.Translation;
+                float RadiusB = ShapeB.Sphere.SphereRadius * UniformScaleMax(AbsVec(TransB.Scale3D));
+                bool bHit = ComputeSphereToCapsulePenetration(CenterB, RadiusB, CapA_P0, CapA_P1, CapA_R, OutHit);
+                if (bHit) OutHit.ImpactNormal *= -1.0f;
+                return bHit;
+            }
+            // Capsule vs Box (Swap)
+            else if (ShapeB.Kind == EShapeKind::Box)
+            {
+                FOBB BoxB; BuildOBB(ShapeB, TransB, BoxB);
+                bool bHit = ComputeBoxToCapsulePenetration(BoxB, CapA_P0, CapA_P1, CapA_R, OutHit);
+                if (bHit) OutHit.ImpactNormal *= -1.0f;
+                return bHit;
+            }
+            // Capsule vs Capsule
+            else if (ShapeB.Kind == EShapeKind::Capsule)
+            {
+                FVector CapB_P0, CapB_P1; float CapB_R;
+                BuildCapsule(ShapeB, TransB, CapB_P0, CapB_P1, CapB_R);
+                return ComputeCapsuleToCapsulePenetration(CapA_P0, CapA_P1, CapA_R, CapB_P0, CapB_P1, CapB_R, OutHit);
+            }
+        }
+
+        return false;
+    }
+
     bool ComputeSphereToShapePenetration(const FVector& SpherePos, float SphereR, const FColliderProxy& Proxy, FHitResult& OutHit)
     {
         switch (Proxy.Type)
@@ -544,6 +662,184 @@ namespace Collision
         }
 
         return true;
+    }
+
+    bool ComputeBoxToBoxPenetration(const FOBB& A, const FOBB& B, FHitResult& OutHit)
+    {
+        float MinPenetration = FLT_MAX;
+        FVector BestAxis = FVector::Zero();
+
+        // 15개의 분리축 테스트 (A의 3축 + B의 3축 + Cross Product 9축)
+        // SAT는 하나라도 겹치지 않는 축이 있으면 충돌 아님.
+        // 모든 축에서 겹친다면, 겹침(Penetration)이 가장 작은 축이 밀어낼 방향임.
+
+        auto TestAxis = [&](const FVector& Axis) -> bool
+        {
+            if (Axis.SizeSquared() < 1e-6f) return true; // 축이 너무 작으면 패스(평행)
+            
+            FVector UnitAxis = Axis.GetSafeNormal();
+
+            // A 투영
+            float RA = A.HalfExtent[0] * FMath::Abs(FVector::Dot(A.Axes[0], UnitAxis)) +
+                       A.HalfExtent[1] * FMath::Abs(FVector::Dot(A.Axes[1], UnitAxis)) +
+                       A.HalfExtent[2] * FMath::Abs(FVector::Dot(A.Axes[2], UnitAxis));
+
+            // B 투영
+            float RB = B.HalfExtent[0] * FMath::Abs(FVector::Dot(B.Axes[0], UnitAxis)) +
+                       B.HalfExtent[1] * FMath::Abs(FVector::Dot(B.Axes[1], UnitAxis)) +
+                       B.HalfExtent[2] * FMath::Abs(FVector::Dot(B.Axes[2], UnitAxis));
+
+            // 중심 거리 투영
+            float Dist = FMath::Abs(FVector::Dot(B.Center - A.Center, UnitAxis));
+
+            // 분리되었는가?
+            float Penetration = (RA + RB) - Dist;
+            if (Penetration <= 0.0f) return false; // 분리됨 -> 충돌 X
+
+            // 최소 침투 깊이 갱신
+            if (Penetration < MinPenetration)
+            {
+                MinPenetration = Penetration;
+                BestAxis = UnitAxis;
+                
+                // Normal 방향 보정 (A -> B 방향이 되도록)
+                if (FVector::Dot(B.Center - A.Center, BestAxis) < 0.0f)
+                {
+                    BestAxis = -BestAxis;
+                }
+            }
+            return true;
+        };
+
+        // A의 3축
+        for (int i = 0; i < 3; ++i) if (!TestAxis(A.Axes[i])) return false;
+        // B의 3축
+        for (int i = 0; i < 3; ++i) if (!TestAxis(B.Axes[i])) return false;
+        // Cross Product 9축 (Edge vs Edge)
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                FVector CrossAxis = FVector::Cross(A.Axes[i], B.Axes[j]);
+                if (!TestAxis(CrossAxis)) return false;
+            }
+        }
+
+        // 여기까지 왔으면 충돌임
+        OutHit.bHit = true;
+        OutHit.ImpactNormal = -BestAxis; // A를 밀어내는 방향이어야 하므로 (B->A) 반전 필요 여부 확인. 
+                                         // 위 로직에서 BestAxis는 A->B임. 따라서 A를 밀어내려면 -BestAxis (B->A)
+        OutHit.PenetrationDepth = MinPenetration;
+        // ImpactPoint는 SAT로 정확히 구하기 어려움(면, 선, 점 가능). 대략적으로 중간 지점 설정
+        OutHit.ImpactPoint = A.Center + (BestAxis * (A.HalfExtent[0])); // 근사치임. 정밀 계산하려면 Clipping 필요.
+        
+        return true;
+    }
+
+    bool ComputeCapsuleToCapsulePenetration(const FVector& PA_0, const FVector& PA_1, float RadiusA,
+                                            const FVector& PB_0, const FVector& PB_1, float RadiusB, FHitResult& OutHit)
+    {
+        // 두 선분 사이의 최단 거리를 구하는 알고리즘
+        FVector u = PA_1 - PA_0;
+        FVector v = PB_1 - PB_0;
+        FVector w = PA_0 - PB_0;
+
+        float a = FVector::Dot(u, u);
+        float b = FVector::Dot(u, v);
+        float c = FVector::Dot(v, v);
+        float d = FVector::Dot(u, w);
+        float e = FVector::Dot(v, w);
+        float D = a * c - b * b;
+
+        float sc, sN, sD = D;
+        float tc, tN, tD = D;
+
+        // 평행 여부 체크
+        if (D < 1e-6f)
+        {
+            sN = 0.0f;
+            sD = 1.0f;
+            tN = e;
+            tD = c;
+        }
+        else
+        {
+            sN = (b * e - c * d);
+            tN = (a * e - b * d);
+            if (sN < 0.0f)
+            {
+                sN = 0.0f;
+                tN = e;
+                tD = c;
+            }
+            else if (sN > sD)
+            {
+                sN = sD;
+                tN = e + b;
+                tD = c;
+            }
+        }
+
+        if (tN < 0.0f)
+        {
+            tN = 0.0f;
+            if (-d < 0.0f) sN = 0.0f;
+            else if (-d > a) sN = sD;
+            else
+            {
+                sN = -d;
+                sD = a;
+            }
+        }
+        else if (tN > tD)
+        {
+            tN = tD;
+            if ((-d + b) < 0.0f) sN = 0.0f;
+            else if ((-d + b) > a) sN = sD;
+            else
+            {
+                sN = (-d + b);
+                sD = a;
+            }
+        }
+
+        sc = (FMath::Abs(sN) < 1e-6f) ? 0.0f : sN / sD;
+        tc = (FMath::Abs(tN) < 1e-6f) ? 0.0f : tN / tD;
+
+        FVector ClosestA = PA_0 + (u * sc);
+        FVector ClosestB = PB_0 + (v * tc);
+
+        // 이제 구 vs 구 문제로 변환
+        return ComputeSphereToSpherePenetration(ClosestA, RadiusA, ClosestB, RadiusB, OutHit);
+    }
+
+    bool ComputeBoxToCapsulePenetration(const FOBB& Box, const FVector& CapP0, const FVector& CapP1, float CapRadius,
+        FHitResult& OutHit)
+    {
+        // 완벽한 Box vs Capsule은 복잡하므로, 캡슐의 선분을 Box에 대해 테스트하는 방식으로 근사
+        // 1. 캡슐의 양 끝점(구) vs Box
+        FHitResult HitA, HitB;
+        bool bHitA = ComputeSphereToBoxPenetration(CapP0, CapRadius, Box, HitA);
+        bool bHitB = ComputeSphereToBoxPenetration(CapP1, CapRadius, Box, HitB);
+
+        // 더 깊게 박힌 쪽 선택
+        if (bHitA && bHitB)
+        {
+            OutHit = (HitA.PenetrationDepth > HitB.PenetrationDepth) ? HitA : HitB;
+            return true;
+        }
+        if (bHitA) { OutHit = HitA; return true; }
+        if (bHitB) { OutHit = HitB; return true; }
+
+        // 2. 캡슐 중간 몸통(선분)이 박스 모서리에 걸친 경우 (Edge Case)
+        // 정밀한 검사를 위해 Box의 8개 코너를 Capsule 선분에 대해 테스트
+        // (이 부분은 성능상 생략하거나, 필요한 경우 추가 구현 가능)
+        
+        // 일단 양 끝점 검사만으로도 대부분의 게임 플레이 충돌은 커버됨.
+        // 만약 캡슐이 매우 길어서 중간만 박스를 통과하는 경우가 잦다면
+        // 세그먼트 vs 박스 최단 거리 알고리즘을 추가해야 함.
+        
+        return false;
     }
 }
 

@@ -42,8 +42,9 @@ public:
     FString GetNotifyPath() const;
     
 protected:
-    
+
     TArray<FAnimNotifyEvent> Notifies;
+    bool bNotifyMetaLoadAttempted = false;  // 메타 로드 시도 여부
 
     //TArray<FAnimNotifyTrack> AnimNotifyTracks;
 

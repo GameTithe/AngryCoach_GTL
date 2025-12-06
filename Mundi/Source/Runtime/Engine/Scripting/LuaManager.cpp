@@ -11,6 +11,9 @@
 #include "Character.h"
 #include <tuple>
 
+#include "Source/Game/UI/GameUIManager.h"
+#include "Source/Game/UI/Widgets/UICanvas.h"
+
 sol::object MakeCompProxy(sol::state_view SolState, void* Instance, UClass* Class) {
     BuildBoundClass(Class);
     LuaComponentProxy Proxy;
@@ -357,6 +360,9 @@ FLuaManager::FLuaManager()
     RegisterComponentProxy(*Lua);
     ExposeGlobalFunctions();
     ExposeAllComponentsToLua();
+
+    // UI 위젯 시스템 바인딩
+    ExposeUIFunctions();
 
     // 위 등록 마친 뒤 fall back 설정 : Shared lib의 fall back은 G
     sol::table MetaTableShared = Lua->create_table();
@@ -769,11 +775,350 @@ sol::protected_function FLuaManager::GetFunc(sol::environment& Env, const char* 
         return {};
 
     sol::object Object = Env[Name];
-    
+
     if (Object == sol::nil || Object.get_type() != sol::type::function)
         return {};
-    
+
     sol::protected_function Func = Object.as<sol::protected_function>();
-    
+
     return Func;
+}
+
+void FLuaManager::ExposeUIFunctions()
+{
+    // UI 테이블 생성 (pch.h의 UI 매크로와 충돌 방지를 위해 GameUI로 명명)
+    sol::table GameUI = Lua->create_named_table("UI");
+
+    // ========================================
+    // Canvas usertype 등록
+    // ========================================
+    Lua->new_usertype<UUICanvas>("UICanvas",
+        sol::no_constructor,
+
+        // 위젯 생성
+        "CreateProgressBar", [](UUICanvas* Self, const std::string& Name,
+                                float X, float Y, float W, float H) -> bool
+        {
+            return Self ? Self->CreateProgressBar(Name, X, Y, W, H) : false;
+        },
+        "CreateRect", [](UUICanvas* Self, const std::string& Name,
+                         float X, float Y, float W, float H) -> bool
+        {
+            return Self ? Self->CreateRect(Name, X, Y, W, H) : false;
+        },
+        "CreateTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path,
+                            float X, float Y, float W, float H) -> bool
+        {
+            if (!Self) return false;
+            return Self->CreateTextureWidget(Name, Path, X, Y, W, H,
+                                             UGameUIManager::Get().GetD2DContext());
+        },
+
+        // 위젯 속성 설정
+        "SetProgress", [](UUICanvas* Self, const std::string& Name, float Value)
+        {
+            if (Self) Self->SetWidgetProgress(Name, Value);
+        },
+        "SetWidgetPosition", [](UUICanvas* Self, const std::string& Name, float X, float Y)
+        {
+            if (Self) Self->SetWidgetPosition(Name, X, Y);
+        },
+        "SetWidgetSize", [](UUICanvas* Self, const std::string& Name, float W, float H)
+        {
+            if (Self) Self->SetWidgetSize(Name, W, H);
+        },
+        "SetWidgetVisible", [](UUICanvas* Self, const std::string& Name, bool bVisible)
+        {
+            if (Self) Self->SetWidgetVisible(Name, bVisible);
+        },
+        "SetWidgetZOrder", [](UUICanvas* Self, const std::string& Name, int32_t Z)
+        {
+            if (Self) Self->SetWidgetZOrder(Name, Z);
+        },
+        "SetForegroundColor", [](UUICanvas* Self, const std::string& Name,
+                                 float R, float G, float B, float A)
+        {
+            if (Self) Self->SetWidgetForegroundColor(Name, R, G, B, A);
+        },
+        "SetBackgroundColor", [](UUICanvas* Self, const std::string& Name,
+                                 float R, float G, float B, float A)
+        {
+            if (Self) Self->SetWidgetBackgroundColor(Name, R, G, B, A);
+        },
+        "SetColor", [](UUICanvas* Self, const std::string& Name,
+                       float R, float G, float B, float A)
+        {
+            if (Self) Self->SetWidgetForegroundColor(Name, R, G, B, A);
+        },
+        "SetRightToLeft", [](UUICanvas* Self, const std::string& Name, bool bRTL)
+        {
+            if (Self) Self->SetWidgetRightToLeft(Name, bRTL);
+        },
+
+        // ProgressBar 텍스처 설정
+        "SetProgressBarForegroundTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
+        {
+            if (!Self) return false;
+            return Self->SetProgressBarForegroundTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
+        },
+        "SetProgressBarBackgroundTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
+        {
+            if (!Self) return false;
+            return Self->SetProgressBarBackgroundTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
+        },
+        "SetProgressBarLowTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
+        {
+            if (!Self) return false;
+            return Self->SetProgressBarLowTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
+        },
+        "SetProgressBarTextureOpacity", [](UUICanvas* Self, const std::string& Name, float Opacity)
+        {
+            if (Self) Self->SetProgressBarTextureOpacity(Name, Opacity);
+        },
+        "ClearProgressBarTextures", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self) Self->ClearProgressBarTextures(Name);
+        },
+
+        // SubUV 설정
+        "SetTextureSubUVGrid", [](UUICanvas* Self, const std::string& Name, int NX, int NY)
+        {
+            if (Self) Self->SetTextureSubUVGrid(Name, NX, NY);
+        },
+        "SetTextureSubUVFrame", [](UUICanvas* Self, const std::string& Name, int FrameIndex)
+        {
+            if (Self) Self->SetTextureSubUVFrame(Name, FrameIndex);
+        },
+        "SetTextureSubUV", [](UUICanvas* Self, const std::string& Name, int FrameIndex, int NX, int NY)
+        {
+            if (Self) Self->SetTextureSubUV(Name, FrameIndex, NX, NY);
+        },
+        "SetProgressBarForegroundSubUV", [](UUICanvas* Self, const std::string& Name, int FrameIndex, int NX, int NY)
+        {
+            if (Self) Self->SetProgressBarForegroundSubUV(Name, FrameIndex, NX, NY);
+        },
+        "SetProgressBarBackgroundSubUV", [](UUICanvas* Self, const std::string& Name, int FrameIndex, int NX, int NY)
+        {
+            if (Self) Self->SetProgressBarBackgroundSubUV(Name, FrameIndex, NX, NY);
+        },
+
+        // 블렌드 모드
+        "SetTextureAdditive", [](UUICanvas* Self, const std::string& Name, bool bAdditive)
+        {
+            if (Self) Self->SetTextureAdditive(Name, bAdditive);
+        },
+
+        // 위젯 삭제
+        "RemoveWidget", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self) Self->RemoveWidget(Name);
+        },
+        "RemoveAllWidgets", [](UUICanvas* Self)
+        {
+            if (Self) Self->RemoveAllWidgets();
+        },
+
+        // 캔버스 속성
+        "SetPosition", [](UUICanvas* Self, float X, float Y)
+        {
+            if (Self) Self->SetPosition(X, Y);
+        },
+        "SetSize", [](UUICanvas* Self, float W, float H)
+        {
+            if (Self) Self->SetSize(W, H);
+        },
+        "SetVisible", [](UUICanvas* Self, bool bVisible)
+        {
+            if (Self) Self->SetVisible(bVisible);
+        },
+        "SetZOrder", [](UUICanvas* Self, int32_t Z)
+        {
+            if (Self) Self->SetZOrder(Z);
+        },
+
+        // 캔버스 정보
+        "GetWidgetCount", [](UUICanvas* Self) -> size_t
+        {
+            return Self ? Self->GetWidgetCount() : 0;
+        },
+
+        // ======== 위젯 애니메이션 ========
+
+        // 이동 애니메이션
+        "MoveWidget", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float X, float Y, float Duration)
+            {
+                if (Self) Self->MoveWidget(Name, X, Y, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float X, float Y, float Duration,
+               const std::string& Easing)
+            {
+                if (!Self) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->MoveWidget(Name, X, Y, Duration, Type);
+            }
+        ),
+
+        // 크기 애니메이션
+        "ResizeWidget", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float W, float H, float Duration)
+            {
+                if (Self) Self->ResizeWidget(Name, W, H, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float W, float H, float Duration,
+               const std::string& Easing)
+            {
+                if (!Self) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->ResizeWidget(Name, W, H, Duration, Type);
+            }
+        ),
+
+        // 회전 애니메이션
+        "RotateWidget", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float Angle, float Duration)
+            {
+                if (Self) Self->RotateWidget(Name, Angle, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float Angle, float Duration,
+               const std::string& Easing)
+            {
+                if (!Self) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->RotateWidget(Name, Angle, Duration, Type);
+            }
+        ),
+
+        // 페이드 애니메이션
+        "FadeWidget", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float Opacity, float Duration)
+            {
+                if (Self) Self->FadeWidget(Name, Opacity, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float Opacity, float Duration,
+               const std::string& Easing)
+            {
+                if (!Self) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->FadeWidget(Name, Opacity, Duration, Type);
+            }
+        ),
+
+        // 애니메이션 중지
+        "StopAnimation", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self) Self->StopWidgetAnimation(Name);
+        },
+
+        // Enter 애니메이션 재생
+        "PlayEnterAnimation", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self)
+            {
+                if (UUIWidget* Widget = Self->FindWidget(Name))
+                {
+                    Widget->PlayEnterAnimation();
+                }
+            }
+        },
+
+        // Exit 애니메이션 재생
+        "PlayExitAnimation", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self)
+            {
+                if (UUIWidget* Widget = Self->FindWidget(Name))
+                {
+                    Widget->PlayExitAnimation();
+                }
+            }
+        },
+
+        // 모든 위젯 Enter 애니메이션 재생
+        "PlayAllEnterAnimations", [](UUICanvas* Self)
+        {
+            if (Self) Self->PlayAllEnterAnimations();
+        },
+
+        // 모든 위젯 Exit 애니메이션 재생
+        "PlayAllExitAnimations", [](UUICanvas* Self)
+        {
+            if (Self) Self->PlayAllExitAnimations();
+        }
+    );
+
+    // ========================================
+    // 캔버스 관리 함수들
+    // ========================================
+
+    // 캔버스 생성
+    GameUI.set_function("CreateCanvas", sol::overload(
+        [](const std::string& Name, int32_t ZOrder) -> UUICanvas*
+        {
+            return UGameUIManager::Get().CreateCanvas(Name, ZOrder);
+        },
+        [](const std::string& Name) -> UUICanvas*
+        {
+            return UGameUIManager::Get().CreateCanvas(Name, 0);
+        }
+    ));
+
+    // 캔버스 찾기
+    GameUI.set_function("FindCanvas", [](const std::string& Name) -> UUICanvas*
+    {
+        return UGameUIManager::Get().FindCanvas(Name);
+    });
+
+    // 캔버스 삭제
+    GameUI.set_function("RemoveCanvas", [](const std::string& Name)
+    {
+        UGameUIManager::Get().RemoveCanvas(Name);
+    });
+
+    // 모든 캔버스 삭제
+    GameUI.set_function("RemoveAllCanvases", []()
+    {
+        UGameUIManager::Get().RemoveAllCanvases();
+    });
+
+    // 캔버스 가시성 설정
+    GameUI.set_function("SetCanvasVisible", [](const std::string& Name, bool bVisible)
+    {
+        UGameUIManager::Get().SetCanvasVisible(Name, bVisible);
+    });
+
+    // 캔버스 Z순서 설정
+    GameUI.set_function("SetCanvasZOrder", [](const std::string& Name, int32_t Z)
+    {
+        UGameUIManager::Get().SetCanvasZOrder(Name, Z);
+    });
+
+    // 뷰포트 정보 가져오기
+    GameUI.set_function("GetViewportWidth", []() -> float
+    {
+        return UGameUIManager::Get().GetViewportWidth();
+    });
+
+    GameUI.set_function("GetViewportHeight", []() -> float
+    {
+        return UGameUIManager::Get().GetViewportHeight();
+    });
+
+    // .uiasset 파일 로드
+    GameUI.set_function("LoadUIAsset", [](const std::string& FilePath) -> UUICanvas*
+    {
+        return UGameUIManager::Get().LoadUIAsset(FilePath);
+    });
 }

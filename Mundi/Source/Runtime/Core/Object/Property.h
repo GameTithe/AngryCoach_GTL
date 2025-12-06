@@ -27,6 +27,7 @@ enum class EPropertyType : uint8
 	CombineMode,         // ECombineMode 열거형 선택 (콤보박스)
 	AggCollisionShapeType, //EAggCollisionShapeType
 	PhysicsAsset,
+	ClothWeightAsset,  // Cloth Weight Asset 선택 (콤보박스)
 	// 추후 추가될 프로퍼티들은 직접 해줘야함.
 	Count			// 요소 개수, 항상 마지막!
 };

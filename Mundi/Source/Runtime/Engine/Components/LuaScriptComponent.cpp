@@ -20,6 +20,7 @@
 ULuaScriptComponent::ULuaScriptComponent()
 {
 	bCanEverTick = true;	// tick 지원 여부
+	bTickEnabled = true;	// tick 활성화
 }
 
 ULuaScriptComponent::~ULuaScriptComponent()
@@ -72,10 +73,11 @@ void ULuaScriptComponent::BeginPlay()
 	}
 
 	// InputManger 주입
-	(*Lua)["InputManager"] = &UInputManager::GetInstance(); 
+	(*Lua)["InputManager"] = &UInputManager::GetInstance();
 	// 함수 캐시
 	FuncBeginPlay = FLuaManager::GetFunc(Env, "BeginPlay");
 	FuncTick      = FLuaManager::GetFunc(Env, "Tick");
+
 	FuncOnBeginOverlap = FLuaManager::GetFunc(Env, "OnBeginOverlap");
 	FuncOnEndOverlap = FLuaManager::GetFunc(Env, "OnEndOverlap");
 	FuncOnHit = FLuaManager::GetFunc(Env, "OnHit");

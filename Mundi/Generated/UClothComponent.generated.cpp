@@ -35,8 +35,8 @@ const bool UClothComponent::bPropertiesRegistered = []() {
 
 BEGIN_PROPERTIES(UClothComponent)
     MARK_AS_COMPONENT("UClothComponent", "Auto-generated UClothComponent")
+    ADD_PROPERTY_CLOTHWEIGHTASSET(FString, ClothWeightAssetPath, "Cloth", true, "Cloth Weight 에셋 파일 경로")
 END_PROPERTIES()
-
 
 // ===== Lua Binding =====
 

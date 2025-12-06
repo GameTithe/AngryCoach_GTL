@@ -143,7 +143,7 @@ void FSceneRenderer::Render()
 	// FXAA 등 화면에서 최종 이미지 품질을 위해 적용되는 효과를 적용
 	ApplyScreenEffectsPass();
 
-    // 최종적으로 Scene에 그려진 텍스쳐를 Back 버퍼에 그힌다
+    // 최종적으로 Scene에 그려진 텍스쳐를 Back 버퍼에 그린다
     CompositeToBackBuffer();
 
     // BackBuffer 위에 라인 오버레이(항상 위)를 그린다
@@ -1612,34 +1612,38 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 		}
 
 		// 3. IA (Input Assembler) 상태 변경
-		if (Batch.VertexBuffer != CurrentVertexBuffer ||
+		// 인스턴스드 드로우는 InstanceVertexBuffer가 배치마다 다를 수 있으므로 항상 바인딩
+		if (Batch.bInstancedDraw)
+		{
+			// 두 개의 VB: 0 = mesh, 1 = instance
+			ID3D11Buffer* vbs[2] = { Batch.VertexBuffer, Batch.InstanceVertexBuffer };
+			UINT strides[2] = { Batch.VertexStride, Batch.InstanceStride };
+			UINT offsets[2] = { 0, 0 };
+
+			RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 2, vbs, strides, offsets);
+
+			DXGI_FORMAT IndexFormat = Batch.IndexBuffer ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_UNKNOWN;
+			RHIDevice->GetDeviceContext()->IASetIndexBuffer(Batch.IndexBuffer, IndexFormat, 0);
+			RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(Batch.PrimitiveTopology);
+
+			// 인스턴스드 드로우 후에는 캐시 무효화 (다음 non-instanced 배치가 제대로 바인딩되도록)
+			CurrentVertexBuffer = nullptr;
+			CurrentIndexBuffer = nullptr;
+			CurrentVertexStride = 0;
+			CurrentTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+		}
+		else if (Batch.VertexBuffer != CurrentVertexBuffer ||
 			Batch.IndexBuffer != CurrentIndexBuffer ||
 			Batch.VertexStride != CurrentVertexStride ||
 			Batch.PrimitiveTopology != CurrentTopology)
 		{
-			if (Batch.bInstancedDraw)
-			{
-				// 두 개의 VB: 0 = mesh, 1 = instance
-				ID3D11Buffer* vbs[2] = { Batch.VertexBuffer, Batch.InstanceVertexBuffer };
-				UINT strides[2] = { Batch.VertexStride, Batch.InstanceStride };
-				UINT offsets[2] = { 0, Batch.InstanceStart * Batch.InstanceStride }; // InstanceStart 오프셋
-
-				RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 2, vbs, strides, offsets);
-
-				DXGI_FORMAT IndexFormat = Batch.IndexBuffer ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_UNKNOWN;
-				RHIDevice->GetDeviceContext()->IASetIndexBuffer(Batch.IndexBuffer, IndexFormat, 0);
-				RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(Batch.PrimitiveTopology);
-			}
-			else
-			{
-				// 기존 non-instanced path
-				UINT stride = Batch.VertexStride;
-				UINT offset = 0;
-				RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 1, &Batch.VertexBuffer, &stride, &offset);
-				DXGI_FORMAT IndexFormat = Batch.IndexBuffer ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_UNKNOWN;
-				RHIDevice->GetDeviceContext()->IASetIndexBuffer(Batch.IndexBuffer, IndexFormat, 0);
-				RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(Batch.PrimitiveTopology);
-			}
+			// 기존 non-instanced path
+			UINT stride = Batch.VertexStride;
+			UINT offset = 0;
+			RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 1, &Batch.VertexBuffer, &stride, &offset);
+			DXGI_FORMAT IndexFormat = Batch.IndexBuffer ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_UNKNOWN;
+			RHIDevice->GetDeviceContext()->IASetIndexBuffer(Batch.IndexBuffer, IndexFormat, 0);
+			RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(Batch.PrimitiveTopology);
 
 			// 현재 IA 상태 캐싱
 			CurrentVertexBuffer = Batch.VertexBuffer;

@@ -57,7 +57,6 @@ protected:
 	TSet<UShapeComponent*> OverlapNow; // 이번 프레임에서 overlap 된 Shap Comps
 	TSet<UShapeComponent*> OverlapPrev; // 지난 프레임에서 overlap 됐으면 Cache
 	 
-
 	FVector4 ShapeColor ;
 	bool bDrawOnlyIfSelected;
 

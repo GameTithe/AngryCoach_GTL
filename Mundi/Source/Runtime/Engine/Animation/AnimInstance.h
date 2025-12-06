@@ -5,7 +5,9 @@
 // Forward declarations
 class UAnimationStateMachine;
 class UAnimSequence;
+class UAnimMontage;
 class USkeletalMeshComponent;
+struct FMontagePlayState;
 
 /**
  * @brief 애니메이션 재생 상태를 관리하는 구조체
@@ -251,6 +253,57 @@ public:
 
 
     // ============================================================
+    // Montage API
+    // ============================================================
+
+    /**
+     * @brief 몽타주 재생
+     * @param Montage 재생할 몽타주
+     * @param PlayRate 재생 속도
+     * @return 재생 길이 (초)
+     */
+    float PlayMontage(UAnimMontage* Montage, float PlayRate = 1.0f);
+
+    /**
+     * @brief 몽타주 정지
+     * @param BlendOutTime 블렌드 아웃 시간 (-1이면 몽타주 기본값 사용)
+     */
+    void StopMontage(float BlendOutTime = -1.0f);
+
+    /**
+     * @brief 현재 재생 중인 몽타주 반환
+     */
+    UAnimMontage* GetCurrentMontage() const;
+
+    /**
+     * @brief 몽타주 재생 중인지 확인
+     */
+    bool IsPlayingMontage() const;
+
+    /**
+     * @brief 특정 섹션으로 점프
+     * @param SectionName 점프할 섹션 이름
+     * @return 성공 여부
+     */
+    bool JumpToSection(const FString& SectionName);
+
+    /**
+     * @brief 다음 섹션으로 이동
+     * @return 성공 여부
+     */
+    bool JumpToNextSection();
+
+    /**
+     * @brief 현재 섹션 인덱스 반환
+     */
+    int32 GetCurrentSectionIndex() const;
+
+    /**
+     * @brief 현재 몽타주 재생 위치 반환
+     */
+    float GetMontagePosition() const;
+
+    // ============================================================
     // Getters
     // ============================================================
 
@@ -262,6 +315,22 @@ protected:
     void AdvancePlayState(FAnimationPlayState& PlayState, float DeltaSeconds);
     void BlendPoseArrays(const TArray<FTransform>& FromPose, const TArray<FTransform>& ToPose, float Alpha, TArray<FTransform>& OutPose) const;
     void GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPose, float DeltaSeconds);
+
+    /**
+     * @brief 애니메이션 트랙 순서의 포즈를 스켈레톤 본 순서로 매핑
+     * @param InPose 애니메이션 트랙 순서 포즈
+     * @param InSequence 포즈를 추출한 애니메이션 시퀀스 (본 이름 정보)
+     * @param OutPose 스켈레톤 본 순서로 매핑된 포즈
+     */
+    void MapPoseToSkeleton(const TArray<FTransform>& InPose, UAnimSequence* InSequence, TArray<FTransform>& OutPose) const;
+
+    /**
+     * @brief 두 애니메이션의 포즈를 본 이름 기준으로 블렌딩
+     */
+    void BlendPosesByBoneName(
+        const TArray<FTransform>& FromPose, UAnimSequence* FromSeq,
+        const TArray<FTransform>& ToPose, UAnimSequence* ToSeq,
+        float Alpha, TArray<FTransform>& OutPose) const;
 
     // 소유 컴포넌트
     USkeletalMeshComponent* OwningComponent = nullptr;
@@ -298,6 +367,22 @@ protected:
 
     //마스킹 데이터
     bool bUseUpperBody = false;
-    TArray<bool> UpperBodyMask; // true면 상체 
+    TArray<bool> UpperBodyMask; // true면 상체
+
+    // ============================================================
+    // Montage State
+    // ============================================================
+
+    /** 몽타주 재생 상태 */
+    FMontagePlayState* MontageState = nullptr;
+
+    /** 이전 프레임 몽타주 재생 시간 (노티파이 검출용) */
+    float PreviousMontagePlayTime = 0.0f;
+
+    /** 몽타주 업데이트 */
+    void UpdateMontage(float DeltaTime);
+
+    /** 몽타주 노티파이 트리거 */
+    void TriggerMontageNotifies(float DeltaSeconds);
 };
 

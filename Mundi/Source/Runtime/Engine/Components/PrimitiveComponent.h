@@ -3,6 +3,7 @@
 #include "SceneComponent.h"
 #include "Material.h"
 #include "UPrimitiveComponent.generated.h"
+#include "Collision.h"
 
 struct FBodyInstance;
 struct FSceneCompData;
@@ -14,7 +15,12 @@ class FSceneView;
 struct FOverlapInfo
 {
     AActor* OtherActor = nullptr;
-    UPrimitiveComponent* Other = nullptr;
+    UPrimitiveComponent* OtherComp = nullptr;
+
+    bool operator==(const FOverlapInfo& Other) const
+    {
+        return OtherComp == Other.OtherComp;
+    }
 };
 
 UCLASS(DisplayName="프리미티브 컴포넌트", Description="렌더링 가능한 기본 컴포넌트입니다")
@@ -26,6 +32,9 @@ public:
 
     UPrimitiveComponent();
     virtual ~UPrimitiveComponent();
+
+    void BeginPlay() override;
+    void TickComponent(float DeltaTime) override;
 
     void OnRegister(UWorld* InWorld) override;
     void OnUnregister() override;
@@ -95,6 +104,13 @@ public:
 
     virtual void OnCreatePhysicsState();
 
+    DECLARE_DELEGATE(OnComponentBeginOverlap, UPrimitiveComponent*, UPrimitiveComponent*, const FHitResult&);    
+    DECLARE_DELEGATE(OnComponentEndOverlap, UPrimitiveComponent*, UPrimitiveComponent*, const FHitResult&);    
+    DECLARE_DELEGATE(OnComponentHit, UPrimitiveComponent*, UPrimitiveComponent*, const FHitResult&);    
+    void OnBeginOverlap(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult);
+    void OnEndOverlap(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult);
+    void OnHit(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult);
+
 protected:
     bool bIsCulled = false;
 
@@ -122,6 +138,16 @@ protected:
     bool bBlockComponent;
 
     FBodyInstance* BodyInstance;
+
+    // 현재 프레임 감지된 충돌 후보 큐
+    TArray<FHitResult> PendingOverlaps;
+    TArray<FHitResult> PendingHits;
+    
+    // 겹쳐있는 상태의 컴포넌트 목록(EndOverlap, 중복 진입 방지)
+    TArray<FOverlapInfo> ActiveOverlaps;
+
+    TSet<uint64> CurrentFrameHits;
+    TSet<uint64> PreviousFrameHits;
 
 private:
     UPROPERTY()

@@ -375,6 +375,21 @@ struct TPropertyTypeTraits
 		Prop.Tooltip = "" __VA_ARGS__; \
 		Class->AddProperty(Prop); \
 	}
+
+// ClothWeightAsset 프로퍼티 추가 (.clothweight 파일 선택 콤보박스)
+#define ADD_PROPERTY_CLOTHWEIGHTASSET(VarType, VarName, CategoryName, bEditAnywhere, ...) \
+	{ \
+		static_assert(std::is_array_v<std::remove_reference_t<decltype(CategoryName)>>, \
+		              "CategoryName must be a string literal!"); \
+		FProperty Prop; \
+		Prop.Name = #VarName; \
+		Prop.Type = EPropertyType::ClothWeightAsset; \
+		Prop.Offset = offsetof(ThisClass_t, VarName); \
+		Prop.Category = CategoryName; \
+		Prop.bIsEditAnywhere = bEditAnywhere; \
+		Prop.Tooltip = "" __VA_ARGS__; \
+		Class->AddProperty(Prop); \
+	}
 #define CREATE_EDITOR_COMPONENT(InVariableName, Type)\
 	InVariableName = NewObject<Type>();\
 	InVariableName->SetOwner(this->GetOwner());\

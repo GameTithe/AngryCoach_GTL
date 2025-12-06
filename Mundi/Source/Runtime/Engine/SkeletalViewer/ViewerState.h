@@ -3,6 +3,7 @@
 enum class EAssetBrowserMode : uint8
 {
     Animation,
+    Montage,
     PhysicsAsset
 };
 
@@ -10,6 +11,7 @@ class ASkeletalMeshActor;
 class FViewport;
 class FViewportClient;
 class UAnimSequence;
+class UAnimMontage;
 class USkeletalMesh;
 class UWorld;
 class UPhysicsAsset;
@@ -88,4 +90,27 @@ public:
 
 	// ======== 래그돌 시뮬레이션 관련 ==========
 	bool bSimulatePhysics = false;  // 물리 시뮬레이션 활성화 여부 (래그돌 토글)
+
+	// ======== 몽타주 편집 관련 ==========
+	UAnimMontage* CurrentMontage = nullptr;          // 현재 편집 중인 몽타주
+	UAnimMontage* EditingMontage = nullptr;          // 새로 생성 중인 몽타주 (저장 전)
+	int32 SelectedMontageSection = -1;               // 현재 선택된 섹션 인덱스
+	char MontageNameBuffer[128] = {0};               // 몽타주 이름 입력 버퍼
+	bool bCreatingNewMontage = false;                // 새 몽타주 생성 모드
+	float MontagePreviewTime = 0.0f;                 // 몽타주 타임라인 시간
+
+	// 섹션 블렌딩
+	int32 CurrentMontageSection = -1;                // 현재 재생 중인 섹션
+	int32 PrevMontageSection = -1;                   // 이전 섹션 (블렌딩용)
+	float SectionBlendTime = 0.0f;                   // 블렌드 진행 시간
+	float SectionBlendDuration = 0.0f;              // 블렌드 총 시간
+	float PrevSectionEndTime = 0.0f;                 // 이전 섹션 끝 시간
+
+	// ======== 소켓 편집 관련 ==========
+	int32 SelectedSocketIndex = -1;                  // 현재 선택된 소켓 인덱스 (FSkeleton::Sockets 배열의 인덱스)
+	FVector EditSocketLocation = FVector::Zero();    // 소켓 위치 편집용
+	FVector EditSocketRotation = FVector::Zero();    // 소켓 회전 편집용 (Euler)
+	FVector EditSocketScale = FVector::One();        // 소켓 스케일 편집용
+	char NewSocketNameBuffer[128] = {0};             // 새 소켓 이름 입력 버퍼
+	bool bSocketTransformChanged = false;            // 소켓 트랜스폼 변경 여부
 };
