@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from header_parser import HeaderParser
 from property_generator import PropertyGenerator
 from lua_generator import LuaBindingGenerator
+from update_headers import update_header_file
 import re
 
 
@@ -302,6 +303,9 @@ def main():
     skipped_count = 0
 
     for class_info in classes:
+        # 원본 헤더 파일에 .generated.h include 추가
+        update_header_file(class_info.header_file)
+
         # .generated.h 파일 생성
         header_output = args.output_dir / f"{class_info.name}.generated.h"
         header_code = generate_header_file(class_info)
