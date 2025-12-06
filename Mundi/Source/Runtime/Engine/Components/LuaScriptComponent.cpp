@@ -244,3 +244,71 @@ void ULuaScriptComponent::CleanupLuaResources()
 
 	bIsLuaCleanedUp = true;
 }
+
+bool ULuaScriptComponent::Call(const char* FuncName)
+{
+	if (!Env.valid()) return false;
+
+	sol::protected_function Func = FLuaManager::GetFunc(Env, FuncName);
+	if (!Func.valid()) return false;
+
+	auto Result = Func();
+	if (!Result.valid())
+	{
+		sol::error Err = Result;
+		UE_LOG("[Lua][error] %s\n", Err.what());
+		return false;
+	}
+	return true;
+}
+
+bool ULuaScriptComponent::CallWithInt(const char* FuncName, int32 Value)
+{
+	if (!Env.valid()) return false;
+
+	sol::protected_function Func = FLuaManager::GetFunc(Env, FuncName);
+	if (!Func.valid()) return false;
+
+	auto Result = Func(Value);
+	if (!Result.valid())
+	{
+		sol::error Err = Result;
+		UE_LOG("[Lua][error] %s\n", Err.what());
+		return false;
+	}
+	return true;
+}
+
+bool ULuaScriptComponent::CallWithTwoInts(const char* FuncName, int32 Value1, int32 Value2)
+{
+	if (!Env.valid()) return false;
+
+	sol::protected_function Func = FLuaManager::GetFunc(Env, FuncName);
+	if (!Func.valid()) return false;
+
+	auto Result = Func(Value1, Value2);
+	if (!Result.valid())
+	{
+		sol::error Err = Result;
+		UE_LOG("[Lua][error] %s\n", Err.what());
+		return false;
+	}
+	return true;
+}
+
+bool ULuaScriptComponent::CallWithFloat(const char* FuncName, float Value)
+{
+	if (!Env.valid()) return false;
+
+	sol::protected_function Func = FLuaManager::GetFunc(Env, FuncName);
+	if (!Func.valid()) return false;
+
+	auto Result = Func(Value);
+	if (!Result.valid())
+	{
+		sol::error Err = Result;
+		UE_LOG("[Lua][error] %s\n", Err.what());
+		return false;
+	}
+	return true;
+}

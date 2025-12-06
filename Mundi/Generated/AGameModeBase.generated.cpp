@@ -44,7 +44,28 @@ extern "C" void LuaBind_Anchor_AGameModeBase() {}
 
 LUA_BIND_BEGIN(AGameModeBase)
 {
-    // No functions to bind
+    // Game Flow Control
+    AddMethod<AGameModeBase>(T, "StartMatch", &AGameModeBase::StartMatch);
+    AddMethod<AGameModeBase>(T, "EndMatch", &AGameModeBase::EndMatch);
+    AddMethod<AGameModeBase>(T, "StartRound", &AGameModeBase::StartRound);
+    AddMethod<AGameModeBase, int32>(T, "EndRound", &AGameModeBase::EndRound);
+    AddMethod<AGameModeBase, float>(T, "StartCountDown", &AGameModeBase::StartCountDown);
+
+    // Win Condition Check
+    AddMethodR<int32, AGameModeBase>(T, "CheckRoundWinCondition", &AGameModeBase::CheckRoundWinCondition);
+    AddMethodR<int32, AGameModeBase>(T, "CheckMatchWinCondition", &AGameModeBase::CheckMatchWinCondition);
+
+    // Game Over
+    AddMethod<AGameModeBase, EGameResult>(T, "HandleGameOver", &AGameModeBase::HandleGameOver);
+
+    // State Getters
+    AddMethodR<EGameState, AGameModeBase>(T, "GetCurrentGameState", &AGameModeBase::GetCurrentGameState);
+    AddMethodR<ERoundState, AGameModeBase>(T, "GetCurrentRoundState", &AGameModeBase::GetCurrentRoundState);
+
+    // Settings
+    AddMethod<AGameModeBase, int32>(T, "SetMaxRounds", &AGameModeBase::SetMaxRounds);
+    AddMethod<AGameModeBase, int32>(T, "SetRoundsToWin", &AGameModeBase::SetRoundsToWin);
+    AddMethod<AGameModeBase, float>(T, "SetRoundDuration", &AGameModeBase::SetRoundDuration);
 }
 LUA_BIND_END()
 

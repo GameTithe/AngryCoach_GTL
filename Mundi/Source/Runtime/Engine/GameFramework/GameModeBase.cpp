@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "GameModeBase.h"
+#include "GameStateBase.h"
 #include "PlayerController.h"
 #include "Pawn.h"
 #include "World.h"
@@ -8,12 +9,15 @@
 #include "PlayerCameraManager.h"
 #include "Character.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "LuaScriptComponent.h"
 
 AGameModeBase::AGameModeBase()
 {
-	//DefaultPawnClass = APawn::StaticClass();
 	DefaultPawnClass = ACharacter::StaticClass();
 	PlayerControllerClass = APlayerController::StaticClass();
+	GameStateClass = AGameStateBase::StaticClass();
+
+	bCanEverTick = true;
 }
 
 AGameModeBase::~AGameModeBase()
@@ -22,10 +26,290 @@ AGameModeBase::~AGameModeBase()
 
 void AGameModeBase::StartPlay()
 {
-	//TODO 
-	//GameState 세팅 
+	// GameState 초기화
+	InitGameState();
+
+	// Lua 스크립트 컴포넌트 찾기
+	FindLuaScriptComponent();
+
+	// 플레이어 로그인 처리
 	Login();
 	PostLogin(PlayerController);
+
+	// 매치 시작
+	StartMatch();
+}
+
+void AGameModeBase::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!GameState)
+	{
+		return;
+	}
+
+	// 카운트다운 처리
+	if (bIsCountingDown)
+	{
+		UpdateCountDown(DeltaTime);
+		return;
+	}
+
+	// 라운드 진행 중일 때
+	if (GameState->GetRoundState() == ERoundState::InProgress)
+	{
+		// 라운드 시간 업데이트
+		UpdateRoundTimer(DeltaTime);
+
+		// 승리 조건 체크
+		int32 RoundWinner = CheckRoundWinCondition();
+		if (RoundWinner >= -1 && RoundWinner != -1)  // -1이 아니면 승자가 결정됨 (-2는 무승부)
+		{
+			EndRound(RoundWinner == -2 ? -1 : RoundWinner);
+		}
+	}
+}
+
+// ============================================
+// 게임 흐름 제어
+// ============================================
+
+void AGameModeBase::StartMatch()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	GameState->ResetGameState();
+	GameState->SetGameState(EGameState::InProgress);
+
+	// Lua 콜백: OnMatchStart
+	CallLuaCallback("OnMatchStart");
+
+	// 첫 번째 라운드 시작
+	GameState->AdvanceToNextRound();
+	StartCountDown();
+}
+
+void AGameModeBase::EndMatch()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	GameState->SetGameState(EGameState::GameOver);
+
+	// Lua 콜백: OnMatchEnd
+	CallLuaCallback("OnMatchEnd");
+}
+
+void AGameModeBase::StartRound()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	GameState->SetRoundState(ERoundState::InProgress);
+	GameState->SetRoundTimeRemaining(GameState->GetRoundDuration());
+
+	// Lua 콜백: OnRoundStart(roundNumber)
+	CallLuaCallbackWithInt("OnRoundStart", GameState->GetCurrentRound());
+}
+
+void AGameModeBase::EndRound(int32 WinnerIndex)
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	GameState->SetRoundState(ERoundState::RoundEnd);
+
+	// 라운드 승자 기록
+	if (WinnerIndex >= 0)
+	{
+		GameState->AddRoundWin(WinnerIndex);
+	}
+
+	// 라운드 종료 알림
+	GameState->OnRoundEnded.Broadcast(GameState->GetCurrentRound(), WinnerIndex);
+
+	// Lua 콜백: OnRoundEnd(roundNumber, winnerIndex)
+	CallLuaCallbackWithTwoInts("OnRoundEnd", GameState->GetCurrentRound(), WinnerIndex);
+
+	// 매치 승리 조건 체크
+	int32 MatchWinner = CheckMatchWinCondition();
+	if (MatchWinner >= 0)
+	{
+		// 게임 종료
+		EGameResult Result = (MatchWinner == 0) ? EGameResult::Win : EGameResult::Lose;
+		HandleGameOver(Result);
+	}
+	else if (GameState->GetCurrentRound() >= GameState->GetMaxRounds())
+	{
+		// 최대 라운드 도달 - 무승부 처리
+		HandleGameOver(EGameResult::Draw);
+	}
+	else
+	{
+		// 다음 라운드로 진행
+		GameState->AdvanceToNextRound();
+		StartCountDown();
+	}
+}
+
+void AGameModeBase::StartCountDown(float CountDownTime)
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	bIsCountingDown = true;
+	CountDownRemaining = CountDownTime;
+	GameState->SetRoundState(ERoundState::CountDown);
+}
+
+// ============================================
+// 승리/패배 조건 체크
+// ============================================
+
+int32 AGameModeBase::CheckRoundWinCondition()
+{
+	// 기본 구현: 시간 초과 시 무승부
+	// 서브클래스에서 오버라이드하여 실제 승리 조건 구현
+	if (GameState && GameState->GetRoundTimeRemaining() <= 0.0f)
+	{
+		return -2;  // 무승부
+	}
+	return -1;  // 아직 승자 없음
+}
+
+int32 AGameModeBase::CheckMatchWinCondition()
+{
+	if (!GameState)
+	{
+		return -1;
+	}
+
+	int32 RoundsToWin = GameState->GetRoundsToWin();
+
+	// 각 플레이어의 승리 횟수 확인
+	for (int32 i = 0; i < 2; i++)
+	{
+		if (GameState->GetRoundWins(i) >= RoundsToWin)
+		{
+			return i;  // 승자 인덱스 반환
+		}
+	}
+
+	return -1;  // 아직 승자 없음
+}
+
+void AGameModeBase::HandleGameOver(EGameResult Result)
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	// Lua 콜백: OnGameOver(result)
+	CallLuaCallbackWithResult("OnGameOver", Result);
+
+	GameState->SetGameResult(Result);
+	EndMatch();
+}
+
+// ============================================
+// Getter
+// ============================================
+
+EGameState AGameModeBase::GetCurrentGameState() const
+{
+	return GameState ? GameState->GetGameState() : EGameState::None;
+}
+
+ERoundState AGameModeBase::GetCurrentRoundState() const
+{
+	return GameState ? GameState->GetRoundState() : ERoundState::None;
+}
+
+// ============================================
+// 설정
+// ============================================
+
+void AGameModeBase::SetMaxRounds(int32 InMaxRounds)
+{
+	if (GameState)
+	{
+		GameState->SetMaxRounds(InMaxRounds);
+	}
+}
+
+void AGameModeBase::SetRoundsToWin(int32 InRoundsToWin)
+{
+	if (GameState)
+	{
+		GameState->SetRoundsToWin(InRoundsToWin);
+	}
+}
+
+void AGameModeBase::SetRoundDuration(float Duration)
+{
+	if (GameState)
+	{
+		GameState->SetRoundDuration(Duration);
+	}
+}
+
+// ============================================
+// Protected
+// ============================================
+
+void AGameModeBase::InitGameState()
+{
+	if (GameStateClass && GWorld)
+	{
+		GameState = Cast<AGameStateBase>(GWorld->SpawnActor(GameStateClass, FTransform()));
+	}
+	else if (GWorld)
+	{
+		GameState = GWorld->SpawnActor<AGameStateBase>(FTransform());
+	}
+}
+
+void AGameModeBase::UpdateRoundTimer(float DeltaTime)
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	float TimeRemaining = GameState->GetRoundTimeRemaining();
+	TimeRemaining -= DeltaTime;
+
+	if (TimeRemaining < 0.0f)
+	{
+		TimeRemaining = 0.0f;
+	}
+
+	GameState->SetRoundTimeRemaining(TimeRemaining);
+}
+
+void AGameModeBase::UpdateCountDown(float DeltaTime)
+{
+	CountDownRemaining -= DeltaTime;
+
+	if (CountDownRemaining <= 0.0f)
+	{
+		bIsCountingDown = false;
+		CountDownRemaining = 0.0f;
+		StartRound();
+	}
 }
 
 APlayerController* AGameModeBase::Login()
@@ -144,4 +428,46 @@ AActor* AGameModeBase::FindPlayerStart(AController* Player)
 	// TODO: PlayerStart Actor를 찾아서 반환하도록 구현 필요
 	return nullptr;
 }
-  
+
+// ============================================
+// Lua 콜백 시스템
+// ============================================
+
+void AGameModeBase::FindLuaScriptComponent()
+{
+	LuaScript = Cast<ULuaScriptComponent>(GetComponent(ULuaScriptComponent::StaticClass()));
+}
+
+void AGameModeBase::CallLuaCallback(const char* FuncName)
+{
+	if (LuaScript)
+	{
+		LuaScript->Call(FuncName);
+	}
+}
+
+void AGameModeBase::CallLuaCallbackWithInt(const char* FuncName, int32 Value)
+{
+	if (LuaScript)
+	{
+		LuaScript->CallWithInt(FuncName, Value);
+	}
+}
+
+void AGameModeBase::CallLuaCallbackWithTwoInts(const char* FuncName, int32 Value1, int32 Value2)
+{
+	if (LuaScript)
+	{
+		LuaScript->CallWithTwoInts(FuncName, Value1, Value2);
+	}
+}
+
+void AGameModeBase::CallLuaCallbackWithResult(const char* FuncName, EGameResult Result)
+{
+	if (LuaScript)
+	{
+		// EGameResult를 int로 변환해서 전달
+		LuaScript->CallWithInt(FuncName, static_cast<int32>(Result));
+	}
+}
+
