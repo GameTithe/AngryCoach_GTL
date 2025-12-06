@@ -3,6 +3,7 @@
 #include "ProgressBarWidget.h"
 #include "TextureWidget.h"
 #include "ButtonWidget.h"
+#include "Source/Game/UI/GameUIManager.h"
 #include <algorithm>
 
 UUICanvas::UUICanvas()
@@ -555,7 +556,8 @@ bool UUICanvas::ProcessMouseInput(float MouseX, float MouseY, bool bLeftDown, bo
     if (!bVisible)
         return false;
 
-    // 캔버스 로컬 좌표로 변환
+    // 마우스 좌표를 캔버스 로컬 좌표로 변환
+    // Note: 위젯 좌표는 LoadUIAsset에서 이미 뷰포트 크기에 맞게 스케일링됨
     float LocalX = MouseX - X;
     float LocalY = MouseY - Y;
 
@@ -652,12 +654,14 @@ void UUICanvas::Render(ID2D1DeviceContext* D2DContext, float ViewportOffsetX, fl
     }
 
     // 캔버스 오프셋 + 뷰포트 오프셋 적용
+    // Note: 위젯 좌표/크기는 LoadUIAsset에서 이미 뷰포트 크기에 맞게 스케일링됨
     D2D1_MATRIX_3X2_F OriginalTransform;
     D2DContext->GetTransform(&OriginalTransform);
 
-    // 변환: 뷰포트 오프셋 + 캔버스 위치
+    // 변환: 뷰포트 오프셋 + 캔버스 위치만 적용 (스케일은 LoadUIAsset에서 처리됨)
     D2DContext->SetTransform(
-        D2D1::Matrix3x2F::Translation(ViewportOffsetX + X, ViewportOffsetY + Y) * OriginalTransform
+        D2D1::Matrix3x2F::Translation(ViewportOffsetX + X, ViewportOffsetY + Y) *
+        OriginalTransform
     );
 
     // ZOrder 순서대로 렌더링

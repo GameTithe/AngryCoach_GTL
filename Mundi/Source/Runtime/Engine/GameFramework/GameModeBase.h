@@ -9,6 +9,7 @@ class AController;
 class APlayerController;
 class AGameStateBase;
 class ULuaScriptComponent;
+class UIntroCutscene;
 
 
 class AGameModeBase : public AActor
@@ -121,6 +122,9 @@ protected:
 	// 카운트다운
 	float CountDownRemaining = 0.0f;
 	bool bIsCountingDown = false;
+
+	// 인트로 컷신
+	UIntroCutscene* IntroCutscene = nullptr;
 
 	// ============================================
 	// Lua 콜백 시스템

@@ -405,6 +405,18 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
     FString assetName;
     FJsonSerializer::ReadString(doc, "name", assetName, "UIAsset", false);
 
+    // 디자인 해상도 읽기
+    float designWidth = 1920.0f, designHeight = 1080.0f;
+    FJsonSerializer::ReadFloat(doc, "canvasWidth", designWidth, 1920.0f, false);
+    FJsonSerializer::ReadFloat(doc, "canvasHeight", designHeight, 1080.0f, false);
+
+    // 실제 뷰포트 크기와의 스케일 비율 계산
+    float scaleX = (designWidth > 0) ? ViewportWidth / designWidth : 1.0f;
+    float scaleY = (designHeight > 0) ? ViewportHeight / designHeight : 1.0f;
+
+    UE_LOG("[LoadUIAsset] Design: %.0fx%.0f, Viewport: %.0fx%.0f, Scale: %.3fx%.3f\n",
+           designWidth, designHeight, ViewportWidth, ViewportHeight, scaleX, scaleY);
+
     // 같은 이름의 캔버스가 있으면 삭제
     RemoveCanvas(assetName.c_str());
 
@@ -430,11 +442,18 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
         FJsonSerializer::ReadString(widgetObj, "name", widgetName, "", false);
         FJsonSerializer::ReadString(widgetObj, "type", widgetType, "", false);
 
-        float x = 0, y = 0, w = 100, h = 30;
-        FJsonSerializer::ReadFloat(widgetObj, "x", x, 0.0f, false);
-        FJsonSerializer::ReadFloat(widgetObj, "y", y, 0.0f, false);
-        FJsonSerializer::ReadFloat(widgetObj, "width", w, 100.0f, false);
-        FJsonSerializer::ReadFloat(widgetObj, "height", h, 30.0f, false);
+        // 디자인 해상도 기준 좌표/크기 읽기
+        float rawX = 0, rawY = 0, rawW = 100, rawH = 30;
+        FJsonSerializer::ReadFloat(widgetObj, "x", rawX, 0.0f, false);
+        FJsonSerializer::ReadFloat(widgetObj, "y", rawY, 0.0f, false);
+        FJsonSerializer::ReadFloat(widgetObj, "width", rawW, 100.0f, false);
+        FJsonSerializer::ReadFloat(widgetObj, "height", rawH, 30.0f, false);
+
+        // 실제 뷰포트에 맞게 스케일링
+        float x = rawX * scaleX;
+        float y = rawY * scaleY;
+        float w = rawW * scaleX;
+        float h = rawH * scaleY;
 
         int32 zOrder = 0;
         FJsonSerializer::ReadInt32(widgetObj, "zOrder", zOrder, 0, false);
@@ -519,7 +538,7 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
             canvas->CreateRect(widgetName.c_str(), x, y, w, h);
 
             FLinearColor color;
-            if (FJsonSerializer::ReadLinearColor(widgetObj, "foregroundColor", color, FLinearColor(1, 1, 1, 1), false))
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "color", color, FLinearColor(1, 1, 1, 1), false))
             {
                 canvas->SetWidgetForegroundColor(widgetName.c_str(), color.R, color.G, color.B, color.A);
             }

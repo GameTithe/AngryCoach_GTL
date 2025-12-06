@@ -238,7 +238,24 @@ void UUIWidget::PlayEnterAnimation()
 
     if (EnterAnimConfig.Type == EWidgetAnimType::None)
     {
-        UE_LOG("[UI] EnterAnimConfig.Type is None, returning\n");
+        UE_LOG("[UI] EnterAnimConfig.Type is None, ensuring widget is visible\n");
+        // 애니메이션 없이 바로 원본 상태로 표시
+        if (bOriginalCaptured)
+        {
+            X = OriginalX;
+            Y = OriginalY;
+            Width = OriginalWidth;
+            Height = OriginalHeight;
+            Opacity = OriginalOpacity;
+        }
+        else
+        {
+            // 원본이 캡처되지 않았으면 현재 값 유지, Opacity만 1로
+            if (Opacity <= 0.0f)
+            {
+                Opacity = 1.0f;
+            }
+        }
         return;
     }
 

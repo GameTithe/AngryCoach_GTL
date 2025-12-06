@@ -328,6 +328,7 @@
     <ClCompile Include="Source\Game\UI\Widgets\ButtonWidget.cpp" />
     <ClCompile Include="Source\Game\UI\Widgets\ProgressBarWidget.cpp" />
     <ClCompile Include="Source\Game\UI\Widgets\TextureWidget.cpp" />
+    <ClCompile Include="Source\Game\Cutscene\IntroCutscene.cpp" />
     <ClCompile Include="Source\Slate\UIManager.cpp" />
     <ClCompile Include="Source\Slate\USlateManager.cpp" />
     <ClCompile Include="Source\Slate\Widgets\ConsoleWidget.cpp" />
@@ -707,6 +708,7 @@
     <ClInclude Include="Source\Game\UI\Widgets\ButtonWidget.h" />
     <ClInclude Include="Source\Game\UI\Widgets\ProgressBarWidget.h" />
     <ClInclude Include="Source\Game\UI\Widgets\TextureWidget.h" />
+    <ClInclude Include="Source\Game\Cutscene\IntroCutscene.h" />
     <ClInclude Include="Source\Slate\UIManager.h" />
     <ClInclude Include="Source\Slate\USlateManager.h" />
     <ClInclude Include="Source\Slate\Widgets\ConsoleWidget.h" />

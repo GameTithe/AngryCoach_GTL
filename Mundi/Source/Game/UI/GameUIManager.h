@@ -62,6 +62,11 @@ public:
     float GetViewportWidth() const { return ViewportWidth; }
     float GetViewportHeight() const { return ViewportHeight; }
 
+    // UI 스케일 (뷰포트 / 디자인 해상도)
+    float GetUIScaleX() const { return ViewportWidth / DesignWidth; }
+    float GetUIScaleY() const { return ViewportHeight / DesignHeight; }
+    float GetUIScale() const { return std::min(GetUIScaleX(), GetUIScaleY()); }  // 비율 유지
+
     // ============================================
     // Canvas 시스템 (Lua 동적 UI)
     // ============================================
@@ -168,6 +173,10 @@ private:
     float ViewportY = 0.0f;
     float ViewportWidth = 1920.0f;
     float ViewportHeight = 1080.0f;
+
+    // UI 기준 해상도 (디자인 해상도)
+    static constexpr float DesignWidth = 800.0f;
+    static constexpr float DesignHeight = 600.0f;
 
     // ============================================
     // Canvas 시스템

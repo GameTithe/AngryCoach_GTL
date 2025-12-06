@@ -19,6 +19,10 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
     // Name
     doc["name"] = Name;
 
+    // 디자인 해상도 (캔버스 크기)
+    doc["canvasWidth"] = CanvasWidth;
+    doc["canvasHeight"] = CanvasHeight;
+
     // Widgets array
     JSON widgetsArray = JSON::Make(JSON::Class::Array);
     for (const auto& widget : Widgets)
@@ -74,6 +78,15 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
             widgetObj["subUV_NY"] = widget.SubUV_NY;
             widgetObj["subUV_Frame"] = widget.SubUV_Frame;
             widgetObj["additive"] = widget.bAdditive;
+        }
+
+        // Rect specific
+        if (widget.Type == "Rect")
+        {
+            JSON color = JSON::Make(JSON::Class::Array);
+            color.append(widget.ForegroundColor[0], widget.ForegroundColor[1],
+                        widget.ForegroundColor[2], widget.ForegroundColor[3]);
+            widgetObj["color"] = color;
         }
 
         // Button specific
@@ -170,6 +183,10 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
     if (FJsonSerializer::ReadString(doc, "name", tempName, "", false))
         Name = tempName;
 
+    // 디자인 해상도 (캔버스 크기)
+    FJsonSerializer::ReadFloat(doc, "canvasWidth", CanvasWidth, 1920.0f, false);
+    FJsonSerializer::ReadFloat(doc, "canvasHeight", CanvasHeight, 1080.0f, false);
+
     // Widgets
     Widgets.clear();
     JSON widgetsArray;
@@ -253,6 +270,15 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
                 widget.SubUV_Frame = tempInt;
 
             FJsonSerializer::ReadBool(widgetObj, "additive", widget.bAdditive, false, false);
+
+            // Rect
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "color", tempColor, FLinearColor(0.2f, 0.8f, 0.2f, 1.0f), false))
+            {
+                widget.ForegroundColor[0] = tempColor.R;
+                widget.ForegroundColor[1] = tempColor.G;
+                widget.ForegroundColor[2] = tempColor.B;
+                widget.ForegroundColor[3] = tempColor.A;
+            }
 
             // Button
             if (FJsonSerializer::ReadString(widgetObj, "hoveredTexturePath", tempStr, "", false))
@@ -578,8 +604,30 @@ void SUIEditorWindow::RenderToolbar()
     ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
     ImGui::SameLine();
 
-    // 캔버스(뷰포트) 크기 표시
-    ImGui::TextDisabled("Canvas: %.0fx%.0f", CanvasSize.x, CanvasSize.y);
+    // 캔버스(디자인 해상도) 크기 입력
+    ImGui::Text("Canvas:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    int canvasW = static_cast<int>(CanvasSize.x);
+    if (ImGui::DragInt("##CanvasW", &canvasW, 1.0f, 100, 4096))
+    {
+        if (canvasW < 100) canvasW = 100;
+        if (canvasW > 4096) canvasW = 4096;
+        CanvasSize.x = static_cast<float>(canvasW);
+        bModified = true;
+    }
+    ImGui::SameLine();
+    ImGui::Text("x");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    int canvasH = static_cast<int>(CanvasSize.y);
+    if (ImGui::DragInt("##CanvasH", &canvasH, 1.0f, 100, 4096))
+    {
+        if (canvasH < 100) canvasH = 100;
+        if (canvasH > 4096) canvasH = 4096;
+        CanvasSize.y = static_cast<float>(canvasH);
+        bModified = true;
+    }
 
     ImGui::Separator();
 }
@@ -1095,6 +1143,24 @@ void SUIEditorWindow::RenderHierarchy(float Width, float Height)
         {
             SelectWidget((int32_t)i);
         }
+
+        // 우클릭 컨텍스트 메뉴
+        if (ImGui::BeginPopupContextItem())
+        {
+            SelectWidget((int32_t)i);  // 우클릭 시 선택
+
+            if (ImGui::MenuItem("Delete"))
+            {
+                DeleteSelectedWidget();
+                ImGui::EndPopup();
+                break;  // 삭제 후 루프 탈출
+            }
+            if (ImGui::MenuItem("Duplicate"))
+            {
+                DuplicateSelectedWidget();
+            }
+            ImGui::EndPopup();
+        }
     }
 }
 
@@ -1537,6 +1603,10 @@ void SUIEditorWindow::LoadAsset(const std::string& Path)
         CurrentAssetPath = Path;
         SelectedWidgetIndex = -1;
         bModified = false;
+
+        // 로드한 캔버스 크기 적용
+        CanvasSize.x = CurrentAsset.CanvasWidth;
+        CanvasSize.y = CurrentAsset.CanvasHeight;
     }
 }
 
@@ -1548,6 +1618,10 @@ void SUIEditorWindow::SaveAsset()
     }
     else
     {
+        // 현재 캔버스 크기를 에셋에 저장
+        CurrentAsset.CanvasWidth = CanvasSize.x;
+        CurrentAsset.CanvasHeight = CanvasSize.y;
+
         if (CurrentAsset.SaveToFile(CurrentAssetPath))
         {
             bModified = false;
@@ -1579,6 +1653,10 @@ void SUIEditorWindow::SaveAssetAs()
         // 파일명에서 에셋 이름 추출
         std::filesystem::path p(path);
         CurrentAsset.Name = p.stem().string();
+
+        // 현재 캔버스 크기를 에셋에 저장
+        CurrentAsset.CanvasWidth = CanvasSize.x;
+        CurrentAsset.CanvasHeight = CanvasSize.y;
 
         if (CurrentAsset.SaveToFile(path))
         {

@@ -96,6 +96,10 @@ struct FUIAsset
     std::string Name;
     std::vector<FUIEditorWidget> Widgets;
 
+    // 디자인 해상도 (캔버스 크기)
+    float CanvasWidth = 1920.0f;
+    float CanvasHeight = 1080.0f;
+
     // 직렬화
     bool SaveToFile(const std::string& Path) const;
     bool LoadFromFile(const std::string& Path);

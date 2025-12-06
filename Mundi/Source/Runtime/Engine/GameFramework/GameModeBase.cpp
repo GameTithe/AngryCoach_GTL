@@ -10,6 +10,7 @@
 #include "Character.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 #include "LuaScriptComponent.h"
+#include "Source/Game/Cutscene/IntroCutscene.h"
 
 AGameModeBase::AGameModeBase()
 {
@@ -22,6 +23,11 @@ AGameModeBase::AGameModeBase()
 
 AGameModeBase::~AGameModeBase()
 {
+	if (IntroCutscene)
+	{
+		delete IntroCutscene;
+		IntroCutscene = nullptr;
+	}
 }
 
 void AGameModeBase::StartPlay()
@@ -46,6 +52,13 @@ void AGameModeBase::Tick(float DeltaTime)
 
 	if (!GameState)
 	{
+		return;
+	}
+
+	// 인트로 컷신 업데이트
+	if (IntroCutscene && !IntroCutscene->IsFinished())
+	{
+		IntroCutscene->Update(DeltaTime);
 		return;
 	}
 
@@ -117,7 +130,28 @@ void AGameModeBase::StartIntro()
 
 	GameState->SetRoundState(ERoundState::Intro);
 
-	// Lua 콜백: OnIntroStart
+	// 인트로 컷신 시작 (C++ 클래스로 처리)
+	if (IntroCutscene)
+	{
+		delete IntroCutscene;
+	}
+	IntroCutscene = new UIntroCutscene();
+	IntroCutscene->SetOnFinished([](void* InOwner)
+	{
+		// 컷신 완료 시 EndIntro 호출
+		if (AGameModeBase* GM = Cast<AGameModeBase>(static_cast<UObject*>(InOwner)))
+		{
+			GM->EndIntro();
+		}
+	}, this);
+
+	if (!IntroCutscene->Start())
+	{
+		UE_LOG("[GameMode] IntroCutscene failed to start, skipping intro...\n");
+		// 시작 실패 시 바로 EndIntro (콜백에서 이미 호출됨)
+	}
+
+	// Lua 콜백: OnIntroStart (옵션 - Lua에서 추가 처리 가능)
 	CallLuaCallback("OnIntroStart");
 }
 
@@ -126,6 +160,13 @@ void AGameModeBase::EndIntro()
 	if (!GameState)
 	{
 		return;
+	}
+
+	// 인트로 컷신 정리
+	if (IntroCutscene)
+	{
+		delete IntroCutscene;
+		IntroCutscene = nullptr;
 	}
 
 	// Lua 콜백: OnIntroEnd
