@@ -101,6 +101,7 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
     	KickComponent = nullptr;
         SkillComponent = nullptr;
         CurrentAccessory = nullptr;
+        SkeletalMeshComp = nullptr;  // APawn 멤버 - 재바인딩 필요
 
         for (UActorComponent* Comp : GetOwnedComponents())
         {
@@ -110,7 +111,7 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         	}
 
         	FString CompTag = Comp->GetTag();
-        	
+
             if (auto* Cap = Cast<UCapsuleComponent>(Comp))
             {
             	if (CompTag == FString("CharacterCollider"))
@@ -118,17 +119,22 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
             		CapsuleComponent = Cap;
             	}
             }
-        	
+
             if (auto* Move = Cast<UCharacterMovementComponent>(Comp))
             {
                 CharacterMovement = Move;
             }
-        	
+
             if (auto* Skill = Cast<USkillComponent>(Comp))
             {
                 SkillComponent = Skill;
             }
-        	
+
+            if (auto* SkelMesh = Cast<USkeletalMeshComponent>(Comp))
+            {
+                SkeletalMeshComp = SkelMesh;  // APawn 멤버 재바인딩
+            }
+
         	if (auto* Shape = Cast<UShapeComponent>(Comp))
         	{
         		if (CompTag == FString("Fist"))
@@ -162,6 +168,7 @@ void ACharacter::DuplicateSubObjects()
     CurrentAccessory = nullptr;
 	FistComponent = nullptr;
 	KickComponent = nullptr;
+	SkeletalMeshComp = nullptr;  // APawn 멤버 - 재바인딩 필요
 
     for (UActorComponent* Comp : GetOwnedComponents())
     {
@@ -171,7 +178,7 @@ void ACharacter::DuplicateSubObjects()
     	}
 
     	FName CompName = Comp->GetName();
-    	
+
         if (auto* Cap = Cast<UCapsuleComponent>(Comp))
         {
             CapsuleComponent = Cap;
@@ -183,6 +190,10 @@ void ACharacter::DuplicateSubObjects()
         else if (auto* Skill = Cast<USkillComponent>(Comp))
         {
             SkillComponent = Skill;
+        }
+        else if (auto* SkelMesh = Cast<USkeletalMeshComponent>(Comp))
+        {
+            SkeletalMeshComp = SkelMesh;  // APawn 멤버 재바인딩
         }
         else if (auto* Shape = Cast<UShapeComponent>(Comp))
         {

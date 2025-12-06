@@ -339,6 +339,24 @@ void USkeletalMeshComponent::EndPlay()
             DestroyPhysicsAssetBodies(*PhysScene);
         }
     }
+
+    // BeginPlay에서 생성한 객체들 정리
+    if (AnimInstance)
+    {
+        // AnimInstance가 소유한 StateMachine도 정리
+        if (UAnimationStateMachine* StateMachine = AnimInstance->GetStateMachine())
+        {
+            DeleteObject(StateMachine);
+        }
+        DeleteObject(AnimInstance);
+        AnimInstance = nullptr;
+    }
+
+    if (AnimGraph)
+    {
+        DeleteObject(AnimGraph);
+        AnimGraph = nullptr;
+    }
 }
 
 void USkeletalMeshComponent::SetSkeletalMesh(const FString& PathFileName)
