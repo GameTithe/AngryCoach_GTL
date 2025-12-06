@@ -3,6 +3,7 @@
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
 #include "AccessoryActor.h"
+#include "PunchAccessoryActor.h"
 #include "World.h"
 #include "Source/Runtime/Engine/Animation/AnimInstance.h"
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
@@ -23,21 +24,17 @@ void AAngryCoachCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// PIE 시작 시 기본 무기 장착 (테스트용)
-	if (GWorld && GWorld->bPie)
+	// 기본 펀치 악세서리 장착
+	if (GWorld)
 	{
-		FWideString KnifePath = UTF8ToWide("Data/Prefabs/FlowKnife.prefab");
-		AActor* Spawned = GWorld->SpawnPrefabActor(KnifePath);
-		if (Spawned)
+		APunchAccessoryActor* PunchAccessory = GWorld->SpawnActor<APunchAccessoryActor>();
+		if (PunchAccessory)
 		{
-			if (AAccessoryActor* Accessory = Cast<AAccessoryActor>(Spawned))
-			{
-				EquipAccessory(Accessory);
+			EquipAccessory(PunchAccessory);
 
-				if (SkillComponent)
-				{
-					SkillComponent->OverrideSkills(Accessory->GetGrantedSkills(), Accessory);
-				}
+			if (SkillComponent)
+			{
+				SkillComponent->OverrideSkills(PunchAccessory->GetGrantedSkills(), PunchAccessory);
 			}
 		}
 	}
@@ -81,6 +78,12 @@ void AAngryCoachCharacter::DuplicateSubObjects()
 		{
 			SkillComponent = Skill;
 		}
+	}
+
+	// SkillComponent가 없으면 새로 생성
+	if (!SkillComponent)
+	{
+		SkillComponent = CreateDefaultSubobject<USkillComponent>("SkillComponent");
 	}
 }
 

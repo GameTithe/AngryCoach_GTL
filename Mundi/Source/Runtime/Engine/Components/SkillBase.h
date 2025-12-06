@@ -4,6 +4,7 @@
 #include "USkillBase.generated.h"
 
 class AAccessoryActor;
+class UAnimMontage;
 
 class USkillBase: public UObject
 {
@@ -17,6 +18,6 @@ class USkillBase: public UObject
 
 protected:
 	AAccessoryActor* SourceAccessory = nullptr;
-	
+	UAnimMontage* Montage = nullptr;
 	void OnActivate(AActor* Caster);
 };

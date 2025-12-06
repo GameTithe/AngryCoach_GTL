@@ -172,7 +172,7 @@ void UBoneAnchorComponent::OnTransformUpdated()
             if (Skeleton)
             {
                 // 본 이름 가져오기
-                FString BoneName = Skeleton->GetBoneName(BoneIndex);
+                FString BoneName = Skeleton->GetBoneName(BoneIndex).ToString();
 
                 // 이 본에 붙은 소켓들 찾기
                 for (const FSkeletalMeshSocket& Socket : Skeleton->Sockets)
@@ -189,7 +189,7 @@ void UBoneAnchorComponent::OnTransformUpdated()
                             }
                         }
                     }
-                }
+                 }
             }
         }
     }
