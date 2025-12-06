@@ -180,12 +180,23 @@ void AGameModeBase::StartCountDown(float CountDownTime)
 
 int32 AGameModeBase::CheckRoundWinCondition()
 {
-	// 기본 구현: 시간 초과 시 무승부
-	// 서브클래스에서 오버라이드하여 실제 승리 조건 구현
-	if (GameState && GameState->GetRoundTimeRemaining() <= 0.0f)
+	if (!GameState)
+	{
+		return -1;
+	}
+
+	// R키 3번 입력 시 플레이어 승리 (테스트용)
+	if (GameState->GetRKeyCount() >= 3)
+	{
+		return 0;  // 플레이어 0 승리
+	}
+
+	// 시간 초과 시 무승부
+	if (GameState->GetRoundTimeRemaining() <= 0.0f)
 	{
 		return -2;  // 무승부
 	}
+
 	return -1;  // 아직 승자 없음
 }
 
@@ -436,6 +447,20 @@ AActor* AGameModeBase::FindPlayerStart(AController* Player)
 void AGameModeBase::FindLuaScriptComponent()
 {
 	LuaScript = Cast<ULuaScriptComponent>(GetComponent(ULuaScriptComponent::StaticClass()));
+
+	// LuaScriptComponent가 없으면 자동 생성하고 GameMode.lua 로드
+	if (!LuaScript)
+	{
+		if (UActorComponent* NewComp = AddNewComponent(ULuaScriptComponent::StaticClass(), nullptr))
+		{
+			LuaScript = Cast<ULuaScriptComponent>(NewComp);
+			if (LuaScript)
+			{
+				LuaScript->SetScriptFilePath("Data/Scripts/GameMode.lua");
+				LuaScript->BeginPlay();  // 수동으로 BeginPlay 호출하여 스크립트 로드
+			}
+		}
+	}
 }
 
 void AGameModeBase::CallLuaCallback(const char* FuncName)

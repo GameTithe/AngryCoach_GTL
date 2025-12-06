@@ -34,6 +34,9 @@ public:
 	bool CallWithTwoInts(const char* FuncName, int32 Value1, int32 Value2);
 	bool CallWithFloat(const char* FuncName, float Value);
 
+	// 스크립트 경로 설정 (런타임에서 동적으로 설정 시 사용)
+	void SetScriptFilePath(const FString& InPath) { ScriptFilePath = InPath; }
+
 	void CleanupLuaResources();
 
 	// Lua 환경 접근 (GameMode 콜백용)

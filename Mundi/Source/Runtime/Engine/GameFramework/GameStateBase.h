@@ -92,6 +92,15 @@ public:
 	// 상태 초기화
 	void ResetGameState();
 
+	// ============================================
+	// 커스텀 게임 데이터 (테스트용)
+	// ============================================
+
+	// R키 입력 카운트
+	int32 GetRKeyCount() const { return RKeyPressCount; }
+	void IncrementRKeyCount() { RKeyPressCount++; }
+	void ResetRKeyCount() { RKeyPressCount = 0; }
+
 protected:
 	// 현재 상태
 	EGameState CurrentGameState = EGameState::None;
@@ -99,8 +108,8 @@ protected:
 
 	// 라운드 정보
 	int32 CurrentRound = 0;
-	int32 MaxRounds = 3;           // 총 라운드 수
-	int32 RoundsToWin = 2;         // 승리에 필요한 라운드 수
+	int32 MaxRounds = 1;           // 총 라운드 수
+	int32 RoundsToWin = 1;         // 승리에 필요한 라운드 수
 
 	// 각 플레이어의 라운드 승리 횟수
 	TArray<int32> RoundWinsPerPlayer;
@@ -111,4 +120,7 @@ protected:
 
 	// 게임 결과
 	EGameResult GameResult = EGameResult::None;
+
+	// 커스텀 게임 데이터
+	int32 RKeyPressCount = 0;
 };

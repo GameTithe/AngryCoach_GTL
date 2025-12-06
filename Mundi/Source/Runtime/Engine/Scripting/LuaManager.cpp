@@ -530,6 +530,50 @@ FLuaManager::FLuaManager()
         }
     );
 
+    // R키 카운트 관련 함수 (테스트용)
+    SharedLib.set_function("GetRKeyCount",
+        []() -> int32
+        {
+            if (!GWorld) return 0;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    return GameState->GetRKeyCount();
+                }
+            }
+            return 0;
+        }
+    );
+
+    SharedLib.set_function("IncrementRKeyCount",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    GameState->IncrementRKeyCount();
+                }
+            }
+        }
+    );
+
+    SharedLib.set_function("ResetRKeyCount",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    GameState->ResetRKeyCount();
+                }
+            }
+        }
+    );
+
     RegisterComponentProxy(*Lua);
     ExposeGlobalFunctions();
     ExposeAllComponentsToLua();

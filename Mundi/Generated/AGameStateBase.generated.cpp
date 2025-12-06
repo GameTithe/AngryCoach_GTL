@@ -34,7 +34,7 @@ const bool AGameStateBase::bPropertiesRegistered = []() {
 // ===== Property Reflection =====
 
 BEGIN_PROPERTIES(AGameStateBase)
-    MARK_AS_SPAWNABLE("AGameStateBase", "Game State - manages game flow data")
+    MARK_AS_COMPONENT("AGameStateBase", "Auto-generated AGameStateBase")
 END_PROPERTIES()
 
 
@@ -44,40 +44,7 @@ extern "C" void LuaBind_Anchor_AGameStateBase() {}
 
 LUA_BIND_BEGIN(AGameStateBase)
 {
-    // State Getters
-    AddMethodR<EGameState, AGameStateBase>(T, "GetGameState", &AGameStateBase::GetGameState);
-    AddMethodR<ERoundState, AGameStateBase>(T, "GetRoundState", &AGameStateBase::GetRoundState);
-
-    // State Setters
-    AddMethod<AGameStateBase, EGameState>(T, "SetGameState", &AGameStateBase::SetGameState);
-    AddMethod<AGameStateBase, ERoundState>(T, "SetRoundState", &AGameStateBase::SetRoundState);
-
-    // Round Info
-    AddMethodR<int32, AGameStateBase>(T, "GetCurrentRound", &AGameStateBase::GetCurrentRound);
-    AddMethodR<int32, AGameStateBase>(T, "GetMaxRounds", &AGameStateBase::GetMaxRounds);
-    AddMethod<AGameStateBase, int32>(T, "SetMaxRounds", &AGameStateBase::SetMaxRounds);
-
-    // Round Wins
-    AddMethodR<int32, AGameStateBase, int32>(T, "GetRoundWins", &AGameStateBase::GetRoundWins);
-    AddMethod<AGameStateBase, int32>(T, "AddRoundWin", &AGameStateBase::AddRoundWin);
-    AddMethod<AGameStateBase>(T, "ResetRoundWins", &AGameStateBase::ResetRoundWins);
-
-    // Time
-    AddMethodR<float, AGameStateBase>(T, "GetRoundTimeRemaining", &AGameStateBase::GetRoundTimeRemaining);
-    AddMethod<AGameStateBase, float>(T, "SetRoundTimeRemaining", &AGameStateBase::SetRoundTimeRemaining);
-    AddMethodR<float, AGameStateBase>(T, "GetRoundDuration", &AGameStateBase::GetRoundDuration);
-    AddMethod<AGameStateBase, float>(T, "SetRoundDuration", &AGameStateBase::SetRoundDuration);
-
-    // Result
-    AddMethodR<EGameResult, AGameStateBase>(T, "GetGameResult", &AGameStateBase::GetGameResult);
-    AddMethod<AGameStateBase, EGameResult>(T, "SetGameResult", &AGameStateBase::SetGameResult);
-
-    // Rounds To Win
-    AddMethodR<int32, AGameStateBase>(T, "GetRoundsToWin", &AGameStateBase::GetRoundsToWin);
-    AddMethod<AGameStateBase, int32>(T, "SetRoundsToWin", &AGameStateBase::SetRoundsToWin);
-
-    // Utility
-    AddMethod<AGameStateBase>(T, "AdvanceToNextRound", &AGameStateBase::AdvanceToNextRound);
-    AddMethod<AGameStateBase>(T, "ResetGameState", &AGameStateBase::ResetGameState);
+    // No functions to bind
 }
 LUA_BIND_END()
+
