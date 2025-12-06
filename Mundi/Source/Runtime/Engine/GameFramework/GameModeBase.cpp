@@ -11,6 +11,7 @@
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 #include "LuaScriptComponent.h"
 #include "Source/Game/Cutscene/IntroCutscene.h"
+#include "Source/Runtime/InputCore/InputManager.h"
 
 AGameModeBase::AGameModeBase()
 {
@@ -130,6 +131,9 @@ void AGameModeBase::StartIntro()
 
 	GameState->SetRoundState(ERoundState::Intro);
 
+	// 인트로 중에는 게임플레이 입력 비활성화
+	UInputManager::GetInstance().SetGameplayInputEnabled(false);
+
 	// 인트로 컷신 시작 (C++ 클래스로 처리)
 	if (IntroCutscene)
 	{
@@ -185,6 +189,9 @@ void AGameModeBase::StartStartPage()
 
 	GameState->SetRoundState(ERoundState::StartPage);
 
+	// 스타트 페이지 중에는 게임플레이 입력 비활성화
+	UInputManager::GetInstance().SetGameplayInputEnabled(false);
+
 	// Lua 콜백: OnStartPageStart
 	CallLuaCallback("OnStartPageStart");
 }
@@ -218,6 +225,9 @@ void AGameModeBase::StartCharacterSelect()
 
 	GameState->SetRoundState(ERoundState::CharacterSelect);
 
+	// 캐릭터 선택 중에는 게임플레이 입력 비활성화
+	UInputManager::GetInstance().SetGameplayInputEnabled(false);
+
 	// Lua 콜백: OnCharacterSelectStart
 	CallLuaCallback("OnCharacterSelectStart");
 }
@@ -247,6 +257,9 @@ void AGameModeBase::StartRound()
 	// 타이머는 아직 시작하지 않음 - BeginBattle()에서 시작
 	GameState->SetRoundState(ERoundState::CountDown);
 
+	// 카운트다운 중에는 게임플레이 입력 비활성화
+	UInputManager::GetInstance().SetGameplayInputEnabled(false);
+
 	// Lua 콜백: OnRoundStart(roundNumber)
 	CallLuaCallbackWithInt("OnRoundStart", GameState->GetCurrentRound());
 }
@@ -261,6 +274,9 @@ void AGameModeBase::BeginBattle()
 	// 이제 진짜 전투 시작 - 타이머 시작
 	GameState->SetRoundState(ERoundState::InProgress);
 	GameState->SetRoundTimeRemaining(GameState->GetRoundDuration());
+
+	// 전투 시작 시 게임플레이 입력 활성화
+	UInputManager::GetInstance().SetGameplayInputEnabled(true);
 }
 
 void AGameModeBase::EndRound(int32 WinnerIndex)
@@ -275,6 +291,9 @@ void AGameModeBase::EndRound(int32 WinnerIndex)
 
 	GameState->SetRoundState(ERoundState::RoundEnd);
 	UE_LOG("[GameMode] EndRound: RoundState set to RoundEnd\n");
+
+	// 라운드 종료 시 게임플레이 입력 비활성화
+	UInputManager::GetInstance().SetGameplayInputEnabled(false);
 
 	// 라운드 승자 기록
 	if (WinnerIndex >= 0)
@@ -317,6 +336,9 @@ void AGameModeBase::StartCountDown(float CountDownTime)
 	bIsCountingDown = true;
 	CountDownRemaining = CountDownTime;
 	GameState->SetRoundState(ERoundState::CountDown);
+
+	// 카운트다운 중에는 게임플레이 입력 비활성화
+	UInputManager::GetInstance().SetGameplayInputEnabled(false);
 }
 
 // ============================================

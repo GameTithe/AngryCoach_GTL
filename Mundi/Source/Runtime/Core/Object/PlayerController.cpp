@@ -55,10 +55,16 @@ void APlayerController::SetupInput()
 
 void APlayerController::ProcessMovementInput(float DeltaTime)
 {
-	FVector InputDir = FVector::Zero();
-
 	// InputManager 사용
-	UInputManager& InputManager =  UInputManager::GetInstance();
+	UInputManager& InputManager = UInputManager::GetInstance();
+
+	// 게임플레이 입력이 비활성화되어 있으면 이동 입력 무시
+	if (!InputManager.IsGameplayInputEnabled())
+	{
+		return;
+	}
+
+	FVector InputDir = FVector::Zero();
 	if (InputManager.IsKeyDown('W'))
 	{
 		InputDir.X += 1.0f;

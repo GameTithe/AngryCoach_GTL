@@ -82,6 +82,11 @@ public:
     using ViewportCheckCallback = bool(*)(const FVector2D&);
     void SetViewportCheckCallback(ViewportCheckCallback Callback) { ViewportChecker = Callback; }
 
+    // 게임플레이 입력 활성화/비활성화 (WASD, 점프 등)
+    // 시스템 입력(F11 등)은 항상 작동
+    void SetGameplayInputEnabled(bool bEnabled) { bGameplayInputEnabled = bEnabled; }
+    bool IsGameplayInputEnabled() const { return bGameplayInputEnabled; }
+
 private:
     // 내부 헬퍼 함수들
     void UpdateMousePosition(int X, int Y);
@@ -118,4 +123,7 @@ private:
 
     // 뷰포트 윈도우 체크 콜백
     ViewportCheckCallback ViewportChecker = nullptr;
+
+    // 게임플레이 입력 활성화 여부 (WASD, 점프 등)
+    bool bGameplayInputEnabled = true;
 };
