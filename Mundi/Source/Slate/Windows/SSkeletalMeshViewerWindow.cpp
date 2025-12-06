@@ -5,7 +5,9 @@
 #include "Source/Runtime/Engine/SkeletalViewer/SkeletalViewerBootstrap.h"
 #include "Source/Editor/PlatformProcess.h"
 #include "Source/Runtime/Engine/GameFramework/SkeletalMeshActor.h"
+#include "Source/Runtime/Engine/GameFramework/StaticMeshActor.h"
 #include "Source/Runtime/Engine/Components/SkeletalMeshComponent.h"
+#include "Source/Runtime/Engine/Components/StaticMeshComponent.h"
 #include "Source/Runtime/Engine/Components/LineComponent.h"
 #include "SelectionManager.h"
 #include "USlateManager.h"
@@ -694,6 +696,7 @@ void SSkeletalMeshViewerWindow::OnRender()
 
                                         // Set newly created body as selected so right panel shows its details
                                         ActiveState->SelectedBodySetup = NewBody;
+                                        ActiveState->SelectedPreviewMesh = nullptr;
                                         UE_LOG("Added UBodySetup for bone %s to PhysicsAsset %s", ClickedBoneName, Phys->GetName().ToString().c_str());
                                     }
                                 }
@@ -726,6 +729,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                                     ActiveState->SelectedBodySetup = nullptr;
                                     ActiveState->SelectedBodyIndex = -1;
                                     ActiveState->SelectedConstraintIndex = -1;
+                                    ActiveState->SelectedPreviewMesh = nullptr;
 
                                     // 편집용 값 초기화
                                     ActiveState->EditSocketLocation = NewSocket.RelativeLocation;
@@ -750,6 +754,8 @@ void SSkeletalMeshViewerWindow::OnRender()
                             ActiveState->SelectedConstraintIndex = -1;
                             // Clear socket selection when bone is clicked
                             ActiveState->SelectedSocketIndex = -1;
+                            // Clear preview mesh selection when bone is clicked
+                            ActiveState->SelectedPreviewMesh = nullptr;
 
 							ActiveState->SelectedBodyIndexForGraph = -1;
 
@@ -796,12 +802,14 @@ void SSkeletalMeshViewerWindow::OnRender()
                                     ActiveState->SelectedBodySetup = MatchedBody;
 
                                     ActiveState->SelectedBodyIndex = ActiveState->CurrentPhysicsAsset->FindBodyIndex(FName(Label));
-                                    
+
                                     ActiveState->SelectedBodyIndexForGraph = ActiveState->CurrentPhysicsAsset->FindBodyIndex(FName(Label));
 
 
                                     // Clear constraint selection when body is selected
                                     ActiveState->SelectedConstraintIndex = -1;
+                                    // Clear preview mesh selection when body is selected
+                                    ActiveState->SelectedPreviewMesh = nullptr;
 
                                     // When user selects a body, also select the corresponding bone and move gizmo
                                     if (ActiveState->SelectedBoneIndex != Index)
@@ -966,6 +974,8 @@ void SSkeletalMeshViewerWindow::OnRender()
                                         // Clear body selection when constraint is selected
                                         ActiveState->SelectedBodySetup = nullptr;
                                         ActiveState->SelectedBodyIndex = -1;
+                                        // Clear preview mesh selection when constraint is selected
+                                        ActiveState->SelectedPreviewMesh = nullptr;
                                     }
                                     ImGui::PopStyleColor();
 
@@ -1023,14 +1033,8 @@ void SSkeletalMeshViewerWindow::OnRender()
                                         ActiveState->SelectedBodyIndex = -1;
                                         ActiveState->SelectedConstraintIndex = -1;
                                         ActiveState->SelectedBodyIndexForGraph = -1;
-
-                                        // 소켓이 속한 본도 선택
-                                        if (ActiveState->SelectedBoneIndex != Index)
-                                        {
-                                            ActiveState->SelectedBoneIndex = Index;
-                                            ActiveState->bBoneLinesDirty = true;
-                                            ExpandToSelectedBone(ActiveState, Index);
-                                        }
+                                        ActiveState->SelectedPreviewMesh = nullptr;
+                                        ActiveState->SelectedBoneIndex = -1;  // 본 선택도 해제
 
                                         // 편집용 값 초기화
                                         ActiveState->EditSocketLocation = Socket.RelativeLocation;
@@ -1050,9 +1054,102 @@ void SSkeletalMeshViewerWindow::OnRender()
                                     }
                                     ImGui::PopStyleColor();
 
-                                    // 소켓 우클릭 이벤트 - 삭제 메뉴
+                                    // 소켓 우클릭 이벤트 - 메뉴
                                     if (ImGui::BeginPopupContextItem())
                                     {
+                                        // 프리뷰 메시 스폰 - 로드된 StaticMesh 목록에서 선택
+                                        if (ImGui::BeginMenu("Spawn Preview Mesh"))
+                                        {
+                                            TArray<UStaticMesh*> AllMeshes = UResourceManager::GetInstance().GetAll<UStaticMesh>();
+                                            TArray<FString> AllPaths = UResourceManager::GetInstance().GetAllFilePaths<UStaticMesh>();
+
+                                            if (AllMeshes.empty())
+                                            {
+                                                ImGui::TextDisabled("No static meshes loaded");
+                                            }
+                                            else
+                                            {
+                                                for (int32 i = 0; i < AllMeshes.size(); ++i)
+                                                {
+                                                    UStaticMesh* Mesh = AllMeshes[i];
+                                                    if (!Mesh) continue;
+
+                                                    // 파일명만 표시
+                                                    FString DisplayName = AllPaths[i];
+                                                    size_t LastSlash = DisplayName.find_last_of("/\\");
+                                                    if (LastSlash != FString::npos)
+                                                        DisplayName = DisplayName.substr(LastSlash + 1);
+
+                                                    if (ImGui::MenuItem(DisplayName.c_str()))
+                                                    {
+                                                        if (ActiveState->PreviewActor)
+                                                        {
+                                                            USkeletalMeshComponent* SkelComp = ActiveState->PreviewActor->GetSkeletalMeshComponent();
+                                                            if (SkelComp)
+                                                            {
+                                                                // PreviewActor에 StaticMeshComponent 직접 추가
+                                                                UStaticMeshComponent* MeshComp = NewObject<UStaticMeshComponent>();
+                                                                MeshComp->ObjectName = "SocketPreviewMesh_" + Socket.SocketName;
+
+                                                                // 액터에 소유권 추가
+                                                                ActiveState->PreviewActor->AddOwnedComponent(MeshComp);
+
+                                                                // 소켓에 attach (등록 전에 해야 함)
+                                                                MeshComp->SetupAttachment(SkelComp, FName(Socket.SocketName));
+
+                                                                // 월드에 등록
+                                                                MeshComp->RegisterComponent(ActiveState->World);
+
+                                                                // 메시 설정
+                                                                MeshComp->SetStaticMesh(AllPaths[i]);
+
+                                                                // 상대 트랜스폼 설정
+                                                                MeshComp->SetRelativeLocation(FVector::Zero());
+                                                                MeshComp->SetRelativeRotation(FQuat::Identity());
+
+                                                                // 월드 스케일 1이 되도록 상대 스케일 계산 (소켓 스케일 포함)
+                                                                FTransform SocketWorld = SkelComp->GetSocketTransform(FName(Socket.SocketName));
+                                                                FVector SocketWorldScale = SocketWorld.Scale3D;
+                                                                FVector RelativeScaleForWorldOne = FVector(
+                                                                    SocketWorldScale.X != 0.0f ? 1.0f / SocketWorldScale.X : 1.0f,
+                                                                    SocketWorldScale.Y != 0.0f ? 1.0f / SocketWorldScale.Y : 1.0f,
+                                                                    SocketWorldScale.Z != 0.0f ? 1.0f / SocketWorldScale.Z : 1.0f
+                                                                );
+                                                                MeshComp->SetRelativeScale(RelativeScaleForWorldOne);
+
+                                                                // 프리뷰 메시 추적 및 선택
+                                                                ActiveState->SpawnedPreviewMeshes.Add(MeshComp);
+                                                                ActiveState->SelectedPreviewMesh = MeshComp;
+                                                                ActiveState->EditPreviewMeshLocation = MeshComp->GetRelativeLocation();
+                                                                ActiveState->EditPreviewMeshRotation = MeshComp->GetRelativeRotation().ToEulerZYXDeg();
+                                                                ActiveState->EditPreviewMeshScale = MeshComp->GetRelativeScale();
+
+                                                                // 다른 선택 해제
+                                                                ActiveState->SelectedSocketIndex = -1;
+                                                                ActiveState->SelectedBodySetup = nullptr;
+                                                                ActiveState->SelectedConstraintIndex = -1;
+                                                                ActiveState->SelectedBoneIndex = -1;
+                                                                ActiveState->SelectedBodyIndex = -1;
+
+                                                                // 기즈모를 프리뷰 메시 위치로 이동
+                                                                ActiveState->PreviewActor->RepositionAnchorToPreviewMesh(MeshComp);
+                                                                if (USceneComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                                                                {
+                                                                    ActiveState->World->GetSelectionManager()->SelectActor(ActiveState->PreviewActor);
+                                                                    ActiveState->World->GetSelectionManager()->SelectComponent(Anchor);
+                                                                }
+
+                                                                UE_LOG("Added preview mesh '%s' at socket %s", DisplayName.c_str(), Socket.SocketName.c_str());
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ImGui::EndMenu();
+                                        }
+
+                                        ImGui::Separator();
+
                                         if (ImGui::MenuItem("Delete Socket"))
                                         {
                                             // const_cast로 수정 가능하게
@@ -1075,6 +1172,54 @@ void SSkeletalMeshViewerWindow::OnRender()
                                             UE_LOG("Deleted socket %s from bone %s", Socket.SocketName.c_str(), CurrentBoneName);
                                         }
                                         ImGui::EndPopup();
+                                    }
+
+                                    // 이 소켓에 붙은 프리뷰 메시들 표시
+                                    for (int32 pi = 0; pi < ActiveState->SpawnedPreviewMeshes.Num(); ++pi)
+                                    {
+                                        UStaticMeshComponent* PreviewMesh = ActiveState->SpawnedPreviewMeshes[pi];
+                                        if (!PreviewMesh) continue;
+
+                                        // 이 소켓에 붙은 메시인지 확인
+                                        if (PreviewMesh->GetAttachSocketName().ToString() == Socket.SocketName)
+                                        {
+                                            ImGui::Indent(14.0f);
+
+                                            char PreviewLabel[256];
+                                            snprintf(PreviewLabel, sizeof(PreviewLabel), "[Mesh] %s", PreviewMesh->GetName().c_str());
+
+                                            bool bPreviewSelected = (ActiveState->SelectedPreviewMesh == PreviewMesh);
+
+                                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.6f, 0.2f, 1.0f)); // 주황색
+                                            if (ImGui::Selectable(PreviewLabel, bPreviewSelected))
+                                            {
+                                                ActiveState->SelectedPreviewMesh = PreviewMesh;
+                                                ActiveState->EditPreviewMeshLocation = PreviewMesh->GetRelativeLocation();
+                                                ActiveState->EditPreviewMeshRotation = PreviewMesh->GetRelativeRotation().ToEulerZYXDeg();
+                                                ActiveState->EditPreviewMeshScale = PreviewMesh->GetRelativeScale();
+
+                                                // 다른 선택 해제
+                                                ActiveState->SelectedBoneIndex = -1;
+                                                ActiveState->SelectedBodyIndex = -1;
+                                                ActiveState->SelectedSocketIndex = -1;
+                                                ActiveState->SelectedBodySetup = nullptr;
+                                                ActiveState->SelectedConstraintIndex = -1;
+
+                                                // 기즈모를 프리뷰 메시 위치로 이동
+                                                if (ActiveState->PreviewActor && ActiveState->World)
+                                                {
+                                                    ActiveState->PreviewActor->RepositionAnchorToPreviewMesh(PreviewMesh);
+                                                    if (USceneComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                                                    {
+                                                        ActiveState->World->GetSelectionManager()->SelectActor(ActiveState->PreviewActor);
+                                                        ActiveState->World->GetSelectionManager()->SelectComponent(Anchor);
+                                                    }
+                                                }
+                                            }
+                                            ImGui::PopStyleColor();
+
+                                            ImGui::Unindent(14.0f);
+                                        }
                                     }
 
                                     ImGui::Unindent(14.0f);
@@ -1649,6 +1794,14 @@ void SSkeletalMeshViewerWindow::OnRender()
                     {
                         FSkeletalMeshSocket& SelectedSocket = Skeleton->Sockets[ActiveState->SelectedSocketIndex];
 
+                        // 기즈모 이동 등으로 변경된 값 동기화 (UI 드래그 중이 아닐 때만)
+                        if (!ImGui::IsAnyItemActive())
+                        {
+                            ActiveState->EditSocketLocation = SelectedSocket.RelativeLocation;
+                            ActiveState->EditSocketRotation = SelectedSocket.RelativeRotation.ToEulerZYXDeg();
+                            ActiveState->EditSocketScale = SelectedSocket.RelativeScale;
+                        }
+
                         // Selected socket header
                         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
                         ImGui::Text("> Selected Socket");
@@ -1750,6 +1903,16 @@ void SSkeletalMeshViewerWindow::OnRender()
                             SelectedSocket.RelativeRotation = FQuat::MakeFromEulerZYX(ActiveState->EditSocketRotation);
                             SelectedSocket.RelativeScale = ActiveState->EditSocketScale;
                             ActiveState->bSocketTransformChanged = true;
+
+                            // 이 소켓에 붙은 프리뷰 메시들 트랜스폼 dirty 플래그 설정
+                            for (UStaticMeshComponent* PreviewMesh : ActiveState->SpawnedPreviewMeshes)
+                            {
+                                if (PreviewMesh && PreviewMesh->GetAttachSocketName().ToString() == SelectedSocket.SocketName)
+                                {
+                                    // 베이스 클래스 포인터로 캐스팅해서 public OnTransformUpdated 호출
+                                    static_cast<USceneComponent*>(PreviewMesh)->OnTransformUpdated();
+                                }
+                            }
                         }
 
                         ImGui::Spacing();
@@ -1882,6 +2045,124 @@ void SSkeletalMeshViewerWindow::OnRender()
                             ActiveState->bBoneLinesDirty = true;
                         }
                     }
+                }
+                else if (ActiveState->SelectedPreviewMesh) // Preview Mesh Properties
+                {
+                    UStaticMeshComponent* PreviewMesh = ActiveState->SelectedPreviewMesh;
+
+                    // Header
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.6f, 0.2f, 1.0f));
+                    ImGui::Text("> Preview Mesh");
+                    ImGui::PopStyleColor();
+
+                    ImGui::Spacing();
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.90f, 0.95f, 1.00f, 1.0f));
+                    ImGui::TextWrapped("%s", PreviewMesh->GetName().c_str());
+                    ImGui::PopStyleColor();
+
+                    ImGui::Spacing();
+                    ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.45f, 0.55f, 0.70f, 0.8f));
+                    ImGui::Separator();
+                    ImGui::PopStyleColor();
+
+                    // 현재 트랜스폼 값 가져오기 (UI 드래그 중이 아닐 때만)
+                    if (!ImGui::IsAnyItemActive())
+                    {
+                        ActiveState->EditPreviewMeshLocation = PreviewMesh->GetRelativeLocation();
+                        ActiveState->EditPreviewMeshRotation = PreviewMesh->GetRelativeRotation().ToEulerZYXDeg();
+                        ActiveState->EditPreviewMeshScale = PreviewMesh->GetRelativeScale();
+                    }
+
+                    ImGui::Spacing();
+                    ImGui::Text("Transform");
+                    ImGui::Spacing();
+
+                    // Location 편집
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+                    ImGui::Text("Location");
+                    ImGui::PopStyleColor();
+
+                    ImGui::PushItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.20f, 0.20f, 0.28f, 0.6f));
+                    bool bLocChanged = false;
+                    bLocChanged |= ImGui::DragFloat("##PreviewLocX", &ActiveState->EditPreviewMeshLocation.X, 0.01f, -1000.0f, 1000.0f, "X: %.3f");
+                    bLocChanged |= ImGui::DragFloat("##PreviewLocY", &ActiveState->EditPreviewMeshLocation.Y, 0.01f, -1000.0f, 1000.0f, "Y: %.3f");
+                    bLocChanged |= ImGui::DragFloat("##PreviewLocZ", &ActiveState->EditPreviewMeshLocation.Z, 0.01f, -1000.0f, 1000.0f, "Z: %.3f");
+                    ImGui::PopStyleColor();
+                    ImGui::PopItemWidth();
+
+                    if (bLocChanged)
+                    {
+                        PreviewMesh->SetRelativeLocation(ActiveState->EditPreviewMeshLocation);
+                        // 기즈모 위치 업데이트
+                        if (UBoneAnchorComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                        {
+                            Anchor->UpdateAnchorFromBone();
+                        }
+                    }
+
+                    ImGui::Spacing();
+
+                    // Rotation 편집
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
+                    ImGui::Text("Rotation");
+                    ImGui::PopStyleColor();
+
+                    ImGui::PushItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.20f, 0.20f, 0.28f, 0.6f));
+                    bool bRotChanged = false;
+                    bRotChanged |= ImGui::DragFloat("##PreviewRotX", &ActiveState->EditPreviewMeshRotation.X, 0.5f, -180.0f, 180.0f, "X: %.2f°");
+                    bRotChanged |= ImGui::DragFloat("##PreviewRotY", &ActiveState->EditPreviewMeshRotation.Y, 0.5f, -180.0f, 180.0f, "Y: %.2f°");
+                    bRotChanged |= ImGui::DragFloat("##PreviewRotZ", &ActiveState->EditPreviewMeshRotation.Z, 0.5f, -180.0f, 180.0f, "Z: %.2f°");
+                    ImGui::PopStyleColor();
+                    ImGui::PopItemWidth();
+
+                    if (bRotChanged)
+                    {
+                        PreviewMesh->SetRelativeRotation(FQuat::MakeFromEulerZYX(ActiveState->EditPreviewMeshRotation));
+                        // 기즈모 위치 업데이트
+                        if (UBoneAnchorComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                        {
+                            Anchor->UpdateAnchorFromBone();
+                        }
+                    }
+
+                    ImGui::Spacing();
+
+                    // Relative Scale 편집
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 1.0f, 1.0f));
+                    ImGui::Text("Relative Scale");
+                    ImGui::PopStyleColor();
+
+                    ImGui::PushItemWidth(-1);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.20f, 0.20f, 0.28f, 0.6f));
+                    bool bScaleChanged = false;
+                    bScaleChanged |= ImGui::DragFloat("##PreviewScaleX", &ActiveState->EditPreviewMeshScale.X, 0.01f, 0.001f, 100.0f, "X: %.3f");
+                    bScaleChanged |= ImGui::DragFloat("##PreviewScaleY", &ActiveState->EditPreviewMeshScale.Y, 0.01f, 0.001f, 100.0f, "Y: %.3f");
+                    bScaleChanged |= ImGui::DragFloat("##PreviewScaleZ", &ActiveState->EditPreviewMeshScale.Z, 0.01f, 0.001f, 100.0f, "Z: %.3f");
+                    ImGui::PopStyleColor();
+                    ImGui::PopItemWidth();
+
+                    if (bScaleChanged)
+                    {
+                        PreviewMesh->SetRelativeScale(ActiveState->EditPreviewMeshScale);
+                    }
+
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::Spacing();
+
+                    // Delete 버튼
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+                    if (ImGui::Button("Delete Preview Mesh", ImVec2(-1, 0)))
+                    {
+                        ActiveState->SpawnedPreviewMeshes.Remove(PreviewMesh);
+                        ActiveState->PreviewActor->RemoveOwnedComponent(PreviewMesh);
+                        ActiveState->SelectedPreviewMesh = nullptr;
+                        ActiveState->bPreviewMeshTransformChanged = false;
+                    }
+                    ImGui::PopStyleColor(2);
                 }
                 else
                 {
@@ -4717,6 +4998,7 @@ void SSkeletalMeshViewerWindow::DrawPhysicsConstraintGraph(ViewerState* State)
                 State->SelectedBodySetup = PhysAsset->BodySetups[BodyIndex];
                 State->SelectedBodyIndex = BodyIndex;
                 State->SelectedConstraintIndex = -1;
+                State->SelectedPreviewMesh = nullptr;
 
                 // Also select the corresponding bone
                 if (State->CurrentMesh)
@@ -4777,6 +5059,7 @@ void SSkeletalMeshViewerWindow::DrawPhysicsConstraintGraph(ViewerState* State)
                 State->SelectedBodySetup = nullptr;
                 State->SelectedBodyIndex = -1;
                 State->SelectedBoneIndex = -1;
+                State->SelectedPreviewMesh = nullptr;
             }
         }
     }
