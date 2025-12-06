@@ -28,6 +28,7 @@
 #include "Level.h"
 #include "LightManager.h"
 #include "LuaManager.h"
+#include "Source/Game/UI/GameUIManager.h"
 #include "ShapeComponent.h"
 #include "PlayerCameraManager.h"
 #include "Hash.h"
@@ -313,6 +314,12 @@ void UWorld::Tick(float DeltaSeconds)
 	if (LuaManager && bPie)
 	{
 		LuaManager->Tick(GetDeltaTime(EDeltaTime::Game));
+	}
+
+	// Game UI 업데이트 (위젯 애니메이션 처리)
+	if (bPie)
+	{
+		UGameUIManager::Get().Update(GetDeltaTime(EDeltaTime::Game));
 	}
 
 	// 물리 시뮬레이션 시작 (PIE에서만) - non-blocking

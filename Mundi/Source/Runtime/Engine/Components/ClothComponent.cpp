@@ -1,11 +1,13 @@
 ﻿#include "pch.h"
 #include "ClothComponent.h"
 #include "Source/Runtime/Engine/Physics/Cloth/ClothManager.h"
+#include "Source/Runtime/Engine/WeightPaint/ClothWeightAsset.h"
 #include "ResourceManager.h"
 #include "SceneView.h"
 #include "MeshBatchElement.h"
 #include <d3d11.h>
 #include <cfloat>
+#include <filesystem>
 
 using namespace nv::cloth;
 
@@ -348,7 +350,7 @@ void UClothComponent::SaveOriginalState()
 
 void UClothComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
-	Super::CollectMeshBatches(OutMeshBatchElements, View);
+	// ClothComponent는 자체 렌더링 로직을 사용 (Super 호출하지 않음)
 
 	// 1. SkeletalMesh 유효성 검사
 	if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData())
@@ -356,10 +358,10 @@ void UClothComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatch
 		return;
 	}
 
-	if (!bClothEnabled || !bClothInitialized)
+	// PIE 모드에서만 Cloth 초기화 시도
+	if (GetWorld() && GetWorld()->bPie && !bClothInitialized && bClothEnabled)
 	{
 		InitializeComponent();
-		return;
 	}
 
 	// 2. CPU 버퍼가 없으면 생성
@@ -369,9 +371,32 @@ void UClothComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatch
 		UE_LOG("[ClothComponent] Created CPUSkinnedVertexBuffer in CollectMeshBatches");
 	}
 
-	// 3. CPU 버퍼 업데이트 (Cloth 시뮬레이션 결과 반영)
-	if (CPUSkinnedVertexBuffer && SkinnedVertices.Num() > 0)
+	// 3. CPU 버퍼 업데이트
+	const FSkeletalMeshData* MeshAsset = SkeletalMesh->GetSkeletalMeshData();
+	const TArray<FSkinnedVertex>& OriginalVertices = MeshAsset->Vertices;
+
+	// PIE 모드이고 Cloth가 초기화되었으면 시뮬레이션 결과 사용
+	if (bClothInitialized && bClothEnabled && SkinnedVertices.Num() > 0)
 	{
+		SkeletalMesh->UpdateVertexBuffer(SkinnedVertices, CPUSkinnedVertexBuffer);
+	}
+	else
+	{
+		// 에디터 모드 또는 PIE 종료 후: 원본 메시 데이터로 렌더링
+		if (SkinnedVertices.Num() != OriginalVertices.Num())
+		{
+			SkinnedVertices.SetNum(OriginalVertices.Num());
+		}
+
+		for (int32 i = 0; i < OriginalVertices.Num(); ++i)
+		{
+			SkinnedVertices[i].pos = OriginalVertices[i].Position;
+			SkinnedVertices[i].tex = OriginalVertices[i].UV;
+			SkinnedVertices[i].Tangent = OriginalVertices[i].Tangent;
+			SkinnedVertices[i].normal = OriginalVertices[i].Normal;
+			SkinnedVertices[i].color = OriginalVertices[i].Color;
+		}
+
 		SkeletalMesh->UpdateVertexBuffer(SkinnedVertices, CPUSkinnedVertexBuffer);
 	}
 
@@ -453,6 +478,22 @@ void UClothComponent::SetupClothFromMesh()
 
 	BuildClothMesh();
 	CreateClothFabric();
+
+	// ★★★ 중요: CreateClothInstance 호출 전에 Weight를 ClothParticles에 적용! ★★★
+	// NvCloth는 createCloth()시 ClothParticles를 복사하므로, 그 전에 invMass가 설정되어야 함
+	if (!ClothWeightAssetPath.empty() || SkeletalMesh)
+	{
+		// Weight 에셋 로드 시도 (ClothVertexWeights 배열에 저장)
+		if (!LoadWeightsToArray())
+		{
+			// 에셋이 없으면 기본 가중치로 초기화
+			InitializeVertexWeights(1.0f);
+		}
+
+		// ClothParticles의 w(invMass)에 가중치 적용
+		ApplyWeightsToClothParticles();
+	}
+
 	CreateClothInstance();
 	CreatePhaseConfig();
 
@@ -464,9 +505,14 @@ void UClothComponent::SetupClothFromMesh()
 
 	if (bFabricValid && bClothValid && bHasTriangles)
 	{
+		// Cloth 생성 후에도 current/previous particles 동기화
+		ApplyPaintedWeights();
+
+		// Solver에 추가
 		FClothManager::GetInstance().AddClothToSolver(cloth);
 		ApplyClothProperties();
 		ApplyTetherConstraint();
+
 		UE_LOG("[ClothComponent] Cloth initialized successfully - Particles: %d, Indices: %d", ClothParticles.Num(), ClothIndices.Num());
 	}
 	else
@@ -590,14 +636,15 @@ void UClothComponent::BuildClothMesh()
 	// 위치를 정수 그리드로 양자화하여 해시맵 키로 사용
 	auto QuantizePosition = [POSITION_EPSILON](const FVector& Pos) -> uint64
 	{
-		// 각 축을 epsilon 단위로 양자화
-		int32 qx = static_cast<int32>(Pos.X / POSITION_EPSILON);
-		int32 qy = static_cast<int32>(Pos.Y / POSITION_EPSILON);
-		int32 qz = static_cast<int32>(Pos.Z / POSITION_EPSILON);
-		// 64비트 해시 생성 (21비트씩 사용)
-		return (static_cast<uint64>(qx & 0x1FFFFF) << 42) |
-		       (static_cast<uint64>(qy & 0x1FFFFF) << 21) |
-		       (static_cast<uint64>(qz & 0x1FFFFF));
+		// 각 축을 epsilon 단위로 양자화 (floor 사용하여 음수 좌표 올바르게 처리)
+		int32 qx = static_cast<int32>(std::floor(Pos.X / POSITION_EPSILON));
+		int32 qy = static_cast<int32>(std::floor(Pos.Y / POSITION_EPSILON));
+		int32 qz = static_cast<int32>(std::floor(Pos.Z / POSITION_EPSILON));
+		// 64비트 해시 생성 (21비트씩 사용, 부호 비트 포함)
+		uint64 ux = static_cast<uint64>(static_cast<uint32>(qx)) & 0x1FFFFF;
+		uint64 uy = static_cast<uint64>(static_cast<uint32>(qy)) & 0x1FFFFF;
+		uint64 uz = static_cast<uint64>(static_cast<uint32>(qz)) & 0x1FFFFF;
+		return (ux << 42) | (uy << 21) | uz;
 	};
 
 	// 양자화된 위치 -> particle 인덱스 매핑
@@ -672,7 +719,12 @@ void UClothComponent::BuildClothMesh()
 	}
 
 	// 5) MeshVertexToClothParticle 매핑 (전체 정점 -> particle)
+	// -1로 초기화하여 매핑되지 않은 버텍스 구분
 	MeshVertexToClothParticle.SetNum(AllVertices.Num());
+	for (int32 i = 0; i < MeshVertexToClothParticle.Num(); ++i)
+	{
+		MeshVertexToClothParticle[i] = -1;
+	}
 	for (const auto& Pair : GlobalToParticle)
 	{
 		MeshVertexToClothParticle[Pair.first] = Pair.second;
@@ -784,6 +836,437 @@ void UClothComponent::DuplicateSubObjects()
 	phases = nullptr;
 
 	// 초기화 플래그를 false로 설정하여 InitializeComponent에서 재생성되도록
-	bClothInitialized = false; 
-	 
+	bClothInitialized = false;
+
+}
+
+// ============================================================
+// Cloth Paint API 구현
+// ============================================================
+
+FVector UClothComponent::GetClothVertexPosition(int32 ClothVertexIndex) const
+{
+	if (ClothVertexIndex < 0 || ClothVertexIndex >= ClothParticles.Num())
+	{
+		return FVector::Zero();
+	}
+
+	const physx::PxVec4& Particle = ClothParticles[ClothVertexIndex];
+	return FVector(Particle.x, Particle.y, Particle.z);
+}
+
+float UClothComponent::GetVertexWeight(int32 ClothVertexIndex) const
+{
+	if (ClothVertexIndex < 0 || ClothVertexIndex >= ClothVertexWeights.Num())
+	{
+		return 1.0f;  // 기본값: 자유
+	}
+	return ClothVertexWeights[ClothVertexIndex];
+}
+
+void UClothComponent::SetVertexWeight(int32 ClothVertexIndex, float Weight)
+{
+	if (ClothVertexIndex < 0 || ClothVertexIndex >= ClothParticles.Num())
+	{
+		return;
+	}
+
+	// 가중치 배열이 충분하지 않으면 확장
+	if (ClothVertexWeights.Num() < ClothParticles.Num())
+	{
+		InitializeVertexWeights(1.0f);
+	}
+
+	// 0~1 범위로 클램프
+	Weight = FMath::Clamp(Weight, 0.0f, 1.0f);
+	ClothVertexWeights[ClothVertexIndex] = Weight;
+}
+
+void UClothComponent::SetVertexWeightByMeshVertex(uint32 MeshVertexIndex, float Weight)
+{
+	if (MeshVertexIndex >= (uint32)MeshVertexToClothParticle.Num())
+	{
+		return;
+	}
+
+	int32 ClothVertexIndex = MeshVertexToClothParticle[MeshVertexIndex];
+	if (ClothVertexIndex >= 0)
+	{
+		SetVertexWeight(ClothVertexIndex, Weight);
+	}
+}
+
+void UClothComponent::InitializeVertexWeights(float DefaultWeight)
+{
+	int32 VertexCount = ClothParticles.Num();
+	ClothVertexWeights.SetNum(VertexCount);
+
+	for (int32 i = 0; i < VertexCount; ++i)
+	{
+		ClothVertexWeights[i] = DefaultWeight;
+	}
+}
+
+void UClothComponent::ApplyPaintedWeights()
+{
+	if (!cloth || ClothVertexWeights.Num() == 0)
+	{
+		return;
+	}
+
+	// NvCloth의 invMass 업데이트
+	// Weight 0.0 = 고정 (invMass = 0)
+	// Weight 1.0 = 자유 (invMass = DefaultInvMass)
+
+	// ★ 중요: current와 previous 파티클 모두 업데이트해야 함!
+	MappedRange<physx::PxVec4> currentParticles = cloth->getCurrentParticles();
+	MappedRange<physx::PxVec4> previousParticles = cloth->getPreviousParticles();
+
+	int32 AppliedCount = 0;
+	int32 FixedCount = 0;
+
+	for (int32 i = 0; i < ClothVertexWeights.Num() && i < (int32)currentParticles.size(); ++i)
+	{
+		float Weight = ClothVertexWeights[i];
+		float InvMass = Weight * DefaultInvMass;  // Weight가 0이면 invMass도 0 (고정)
+
+		// 위치는 유지하고 invMass(W)만 업데이트 - current particles
+		currentParticles[i].w = InvMass;
+
+		// previous particles도 동일하게 업데이트
+		if (i < (int32)previousParticles.size())
+		{
+			previousParticles[i].w = InvMass;
+		}
+
+		AppliedCount++;
+		if (InvMass == 0.0f)
+		{
+			FixedCount++;
+		}
+	}
+
+	// ClothParticles(CPU-side)도 동기화
+	for (int32 i = 0; i < ClothVertexWeights.Num() && i < ClothParticles.Num(); ++i)
+	{
+		float Weight = ClothVertexWeights[i];
+		ClothParticles[i].w = Weight * DefaultInvMass;
+	}
+
+	UE_LOG("[ClothComponent] Applied weights to %d vertices (Fixed: %d)", AppliedCount, FixedCount);
+}
+
+void UClothComponent::ApplyWeightsToClothParticles()
+{
+	// ClothVertexWeights 배열의 가중치를 ClothParticles의 w(invMass)에 적용
+	// CreateClothInstance() 호출 전에 사용
+	if (ClothVertexWeights.Num() == 0 || ClothParticles.Num() == 0)
+	{
+		return;
+	}
+
+	int32 FixedCount = 0;
+	for (int32 i = 0; i < ClothVertexWeights.Num() && i < ClothParticles.Num(); ++i)
+	{
+		float Weight = ClothVertexWeights[i];
+		float InvMass = Weight * DefaultInvMass;
+		ClothParticles[i].w = InvMass;
+
+		if (InvMass == 0.0f)
+		{
+			FixedCount++;
+		}
+	}
+
+	// PreviousParticles도 동기화
+	PreviousParticles = ClothParticles;
+
+	UE_LOG("[ClothComponent] ApplyWeightsToClothParticles: %d particles (Fixed: %d)", ClothParticles.Num(), FixedCount);
+}
+
+bool UClothComponent::LoadWeightsToArray()
+{
+	// Weight 에셋에서 가중치를 ClothVertexWeights 배열에만 로드
+	// (NvCloth에 적용하지 않음 - CreateClothInstance 전에 사용)
+
+	if (ClothWeightAssetPath.empty())
+	{
+		// 경로가 설정되지 않은 경우, 메시 경로에서 자동 추론
+		if (SkeletalMesh)
+		{
+			FString MeshPath = SkeletalMesh->GetFilePath();
+			if (!MeshPath.empty())
+			{
+				size_t DotPos = MeshPath.find_last_of('.');
+				FString BasePath = (DotPos != FString::npos) ? MeshPath.substr(0, DotPos) : MeshPath;
+				ClothWeightAssetPath = BasePath + ".clothweight";
+			}
+		}
+	}
+
+	if (ClothWeightAssetPath.empty())
+	{
+		return false;
+	}
+
+	// 파일 존재 확인
+	if (!std::filesystem::exists(ClothWeightAssetPath))
+	{
+		UE_LOG("[ClothComponent] Weight asset file not found: %s", ClothWeightAssetPath.c_str());
+		return false;
+	}
+
+	// ClothWeightAsset 로드
+	UClothWeightAsset* WeightAsset = NewObject<UClothWeightAsset>();
+	if (!WeightAsset)
+	{
+		return false;
+	}
+
+	bool bSuccess = false;
+	if (WeightAsset->Load(ClothWeightAssetPath))
+	{
+		const auto& WeightMap = WeightAsset->GetVertexWeights();
+
+		// 먼저 기본값으로 초기화
+		InitializeVertexWeights(1.0f);
+
+		// 맵에서 가중치 로드
+		int32 LoadedCount = 0;
+		for (const auto& Pair : WeightMap)
+		{
+			uint32 VertexIndex = Pair.first;
+			float Weight = Pair.second;
+
+			if (VertexIndex < (uint32)ClothVertexWeights.Num())
+			{
+				ClothVertexWeights[VertexIndex] = FMath::Clamp(Weight, 0.0f, 1.0f);
+				LoadedCount++;
+			}
+		}
+
+		UE_LOG("[ClothComponent] LoadWeightsToArray: Loaded %d weights from asset", LoadedCount);
+		bSuccess = (LoadedCount > 0);
+	}
+
+	ObjectFactory::DeleteObject(WeightAsset);
+	return bSuccess;
+}
+
+void UClothComponent::LoadWeightsFromMap(const std::unordered_map<uint32, float>& InClothVertexWeights)
+{
+	if (ClothParticles.Num() == 0)
+	{
+		return;
+	}
+
+	// 먼저 기본값으로 초기화
+	InitializeVertexWeights(1.0f);
+
+	// 제공된 맵에서 가중치 로드
+	for (const auto& Pair : InClothVertexWeights)
+	{
+		uint32 VertexIndex = Pair.first;
+		float Weight = Pair.second;
+
+		if (VertexIndex < (uint32)ClothVertexWeights.Num())
+		{
+			ClothVertexWeights[VertexIndex] = FMath::Clamp(Weight, 0.0f, 1.0f);
+		}
+	}
+
+	// 적용
+	ApplyPaintedWeights();
+}
+
+int32 UClothComponent::FindClothVertexByMeshVertex(uint32 MeshVertexIndex) const
+{
+	if (MeshVertexIndex >= (uint32)MeshVertexToClothParticle.Num())
+	{
+		return -1;
+	}
+	return MeshVertexToClothParticle[MeshVertexIndex];
+}
+
+FVector UClothComponent::WeightToColor(float Weight)
+{
+	// Weight 0.0 = Red (고정)
+	// Weight 1.0 = Green (자유)
+	// 중간값 = 노랑에서 주황 계열로 보간
+	Weight = FMath::Clamp(Weight, 0.0f, 1.0f);
+
+	float R = 1.0f - Weight;  // 0.0에서 빨강, 1.0에서 검정
+	float G = Weight;          // 0.0에서 검정, 1.0에서 녹색
+	float B = 0.0f;
+
+	return FVector(R, G, B);
+}
+
+void UClothComponent::UpdateVertexColorsFromWeights()
+{
+	if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData() || !CPUSkinnedVertexBuffer)
+	{
+		return;
+	}
+
+	// 가중치 배열이 비어있으면 초기화
+	if (ClothVertexWeights.Num() == 0 && ClothParticles.Num() > 0)
+	{
+		InitializeVertexWeights(1.0f);
+	}
+
+	const FSkeletalMeshData* MeshAsset = SkeletalMesh->GetSkeletalMeshData();
+	const TArray<FSkinnedVertex>& OriginalVertices = MeshAsset->Vertices;
+
+	// SkinnedVertices가 초기화되지 않았으면 초기화
+	if (SkinnedVertices.Num() != OriginalVertices.Num())
+	{
+		SkinnedVertices.SetNum(OriginalVertices.Num());
+		for (int32 i = 0; i < OriginalVertices.Num(); ++i)
+		{
+			SkinnedVertices[i].pos = OriginalVertices[i].Position;
+			SkinnedVertices[i].tex = OriginalVertices[i].UV;
+			SkinnedVertices[i].Tangent = OriginalVertices[i].Tangent;
+			SkinnedVertices[i].normal = OriginalVertices[i].Normal;
+			SkinnedVertices[i].color = OriginalVertices[i].Color;
+		}
+	}
+
+	// 각 정점의 색상을 weight에 따라 업데이트
+	for (int32 GlobalIdx = 0; GlobalIdx < SkinnedVertices.Num(); ++GlobalIdx)
+	{
+		// Global 정점 인덱스 -> Cloth 파티클 인덱스
+		int32 ParticleIdx = FindClothVertexByMeshVertex(GlobalIdx);
+
+		float Weight = 1.0f;  // 기본값: 자유
+		if (ParticleIdx >= 0 && ParticleIdx < ClothVertexWeights.Num())
+		{
+			Weight = ClothVertexWeights[ParticleIdx];
+		}
+
+		// Weight를 색상으로 변환
+		FVector Color = WeightToColor(Weight);
+		SkinnedVertices[GlobalIdx].color = FVector4(Color.X, Color.Y, Color.Z, 1.0f);
+	}
+
+	// Vertex Buffer 업데이트
+	if (CPUSkinnedVertexBuffer)
+	{
+		SkeletalMesh->UpdateVertexBuffer(SkinnedVertices, CPUSkinnedVertexBuffer);
+	}
+
+	UE_LOG("[ClothComponent] Updated vertex colors from weights (%d vertices)", SkinnedVertices.Num());
+}
+
+bool UClothComponent::LoadWeightsFromAsset()
+{
+	if (ClothWeightAssetPath.empty())
+	{
+		// 경로가 설정되지 않은 경우, 메시 경로에서 자동 추론
+		if (SkeletalMesh)
+		{
+			FString MeshPath = SkeletalMesh->GetFilePath();
+			if (!MeshPath.empty())
+			{
+				// 확장자 제거하고 .clothweight 추가
+				size_t DotPos = MeshPath.find_last_of('.');
+				FString BasePath = (DotPos != FString::npos) ? MeshPath.substr(0, DotPos) : MeshPath;
+				ClothWeightAssetPath = BasePath + ".clothweight";
+			}
+		}
+	}
+
+	if (ClothWeightAssetPath.empty())
+	{
+		UE_LOG("[ClothComponent] No weight asset path specified");
+		return false;
+	}
+
+	// 파일 존재 확인
+	if (!std::filesystem::exists(ClothWeightAssetPath))
+	{
+		UE_LOG("[ClothComponent] Weight asset file not found: %s", ClothWeightAssetPath.c_str());
+		return false;
+	}
+
+	// ClothWeightAsset 로드
+	UClothWeightAsset* WeightAsset = NewObject<UClothWeightAsset>();
+	if (!WeightAsset)
+	{
+		UE_LOG("[ClothComponent] Failed to create ClothWeightAsset");
+		return false;
+	}
+
+	bool bSuccess = false;
+	if (WeightAsset->Load(ClothWeightAssetPath))
+	{
+		bSuccess = LoadWeightsFromAsset(WeightAsset);
+	}
+	else
+	{
+		UE_LOG("[ClothComponent] Failed to load weight asset: %s", ClothWeightAssetPath.c_str());
+	}
+
+	// 임시 에셋 삭제
+	ObjectFactory::DeleteObject(WeightAsset);
+	return bSuccess;
+}
+
+bool UClothComponent::LoadWeightsFromAsset(UClothWeightAsset* InAsset)
+{
+	if (!InAsset)
+	{
+		return false;
+	}
+
+	if (ClothParticles.Num() == 0)
+	{
+		UE_LOG("[ClothComponent] Cannot apply weights: no cloth particles");
+		return false;
+	}
+
+	// 에셋에서 가중치 맵 가져오기
+	const auto& WeightMap = InAsset->GetVertexWeights();
+
+	// 맵에서 가중치 로드
+	LoadWeightsFromMap(WeightMap);
+
+	UE_LOG("[ClothComponent] Loaded weights from asset: %d vertices",
+		   InAsset->GetVertexCount());
+
+	return true;
+}
+
+void UClothComponent::SetClothWeightAssetPath(const FString& InPath)
+{
+	// 경로가 같으면 무시
+	if (ClothWeightAssetPath == InPath)
+	{
+		return;
+	}
+
+	ClothWeightAssetPath = InPath;
+
+	// Cloth가 이미 초기화된 상태라면 weight를 다시 로드하고 적용
+	if (bClothInitialized && cloth)
+	{
+		if (!InPath.empty())
+		{
+			if (LoadWeightsFromAsset())
+			{
+				UE_LOG("[ClothComponent] Reloaded weights from new asset: %s", InPath.c_str());
+			}
+			else
+			{
+				UE_LOG("[ClothComponent] Failed to load weights from: %s", InPath.c_str());
+			}
+		}
+		else
+		{
+			// 경로가 비어있으면 기본 weight로 초기화
+			InitializeVertexWeights(1.0f);
+			ApplyPaintedWeights();
+			UE_LOG("[ClothComponent] Reset weights to default (path cleared)");
+		}
+	}
 }

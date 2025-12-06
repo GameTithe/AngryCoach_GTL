@@ -10,6 +10,10 @@
 
 #include "BlueprintGraph/BlueprintActionDatabase.h"
 
+#ifdef _GAME
+#include "Source/Game/UI/GameUIManager.h"
+#endif
+
 float UGameEngine::ClientWidth = 1024.0f;
 float UGameEngine::ClientHeight = 1024.0f;
 
@@ -81,6 +85,44 @@ LRESULT CALLBACK UGameEngine::WndProc(HWND hWnd, UINT message, WPARAM wParam, LP
 {
     // Input first
     INPUT.ProcessMessage(hWnd, message, wParam, lParam);
+
+#ifdef _GAME
+    // Game UI 입력 처리
+    switch (message)
+    {
+    case WM_MOUSEMOVE:
+    {
+        float MouseX = static_cast<float>(LOWORD(lParam));
+        float MouseY = static_cast<float>(HIWORD(lParam));
+        UGameUIManager::Get().OnMouseMove(MouseX, MouseY);
+        break;
+    }
+    case WM_LBUTTONDOWN:
+    {
+        float MouseX = static_cast<float>(LOWORD(lParam));
+        float MouseY = static_cast<float>(HIWORD(lParam));
+        UGameUIManager::Get().OnMouseDown(MouseX, MouseY);
+        break;
+    }
+    case WM_LBUTTONUP:
+    {
+        float MouseX = static_cast<float>(LOWORD(lParam));
+        float MouseY = static_cast<float>(HIWORD(lParam));
+        UGameUIManager::Get().OnMouseUp(MouseX, MouseY);
+        break;
+    }
+    case WM_KEYDOWN:
+    {
+        UGameUIManager::Get().OnKeyDown(static_cast<uint32_t>(wParam));
+        break;
+    }
+    case WM_KEYUP:
+    {
+        UGameUIManager::Get().OnKeyUp(static_cast<uint32_t>(wParam));
+        break;
+    }
+    }
+#endif
 
     switch (message)
     {

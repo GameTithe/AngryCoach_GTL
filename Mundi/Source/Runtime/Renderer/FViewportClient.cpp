@@ -338,3 +338,18 @@ void FViewportClient::MouseWheel(float DeltaSeconds)
 	CameraComponent->SetZoomFactor(zoomFactor);
 }
 
+FMatrix FViewportClient::GetViewMatrix() const
+{
+	if (!Camera)
+	{
+		return FMatrix::Identity();
+	}
+
+	FVector Eye = Camera->GetActorLocation();
+	FVector Forward = Camera->GetForward();
+	FVector At = Eye + Forward;
+	FVector Up = Camera->GetUp();
+
+	return FMatrix::LookAtLH(Eye, At, Up);
+}
+

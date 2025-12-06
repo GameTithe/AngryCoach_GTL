@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "SkinnedMeshComponent.h"
 #include "StaticMesh.h"
+#include <unordered_map>
 #include "NvCloth/include/Factory.h"
 #include "NvCloth/include/Fabric.h"
 #include "NvCloth/include/Cloth.h"
@@ -10,6 +11,8 @@
 #include "foundation/PxAllocatorCallback.h"
 #include "foundation/PxErrorCallback.h"
 #include "UClothComponent.generated.h"
+
+class UClothWeightAsset;
 
 
 /**
@@ -103,20 +106,46 @@ public:
 	FVector GetBoneLocation(const FName& BoneName);
 	//FVector GetAttachmentPosition(int32 AttachmentIndex);
 
-	// Cloth Pain API 
-	/*
-		int32 GetClothVertexCount() const { return ClothParticles.Num(); }
-		FVector GetClothVertexPosition(int32 ClothVertexIndex) const;
-		float GetVertexWeight(int32 ClothVertexIndex) const;
-		void SetVertexWeight(int32 ClothVertexIndex, float Weight);
-		void SetVertexWeightByMeshVertex(uint32 MeshVertexIndex, float Weight);
-		void InitializeVertexWeights();
-		void ApplyPaintedWeights();
-		void LoadWeightsFromPhysicsAsset(const TMap<uint32, float>& InClothVertexWeights);  // PhysicsAsset에서 weight 로드
-		const TArray<float>& GetVertexWeights() const { return ClothVertexWeights; }
-		const TArray<uint32>& GetClothVertexToMeshVertexMapping() const { return ClothVertexToMeshVertex; }
-		int32 FindClothVertexByMeshVertex(uint32 MeshVertexIndex) const; 
-	*/
+	// Cloth Paint API
+	int32 GetClothVertexCount() const { return ClothParticles.Num(); }
+	FVector GetClothVertexPosition(int32 ClothVertexIndex) const;
+	float GetVertexWeight(int32 ClothVertexIndex) const;
+	const TArray<uint32>& GetClothIndices() const { return ClothIndices; }
+	void SetVertexWeight(int32 ClothVertexIndex, float Weight);
+	void SetVertexWeightByMeshVertex(uint32 MeshVertexIndex, float Weight);
+	void InitializeVertexWeights(float DefaultWeight = 1.0f);
+	void ApplyPaintedWeights();
+	void ApplyWeightsToClothParticles();  // ClothParticles.w에 weight 적용 (CreateClothInstance 전에 호출)
+	bool LoadWeightsToArray();            // ClothVertexWeights 배열에만 로드 (NvCloth 적용 안함)
+	void LoadWeightsFromMap(const std::unordered_map<uint32, float>& InClothVertexWeights);
+	const TArray<float>& GetVertexWeights() const { return ClothVertexWeights; }
+	const TArray<uint32>& GetClothVertexToMeshVertexMapping() const { return ClothVertexToMeshVertex; }
+	int32 FindClothVertexByMeshVertex(uint32 MeshVertexIndex) const;
+
+	// Weight Asset API
+	/**
+	 * @brief ClothWeightAsset 파일 경로 설정
+	 * 경로가 변경되면 자동으로 weight를 다시 로드하고 NvCloth에 적용합니다.
+	 */
+	void SetClothWeightAssetPath(const FString& InPath);
+	const FString& GetClothWeightAssetPath() const { return ClothWeightAssetPath; }
+
+	/**
+	 * @brief ClothWeightAsset 파일에서 가중치 로드
+	 * @return 로드 성공 여부
+	 */
+	bool LoadWeightsFromAsset();
+
+	/**
+	 * @brief ClothWeightAsset을 직접 적용
+	 */
+	bool LoadWeightsFromAsset(UClothWeightAsset* InAsset);
+
+	// Weight Visualization
+	void SetWeightVisualizationEnabled(bool bEnabled) { bShowWeightVisualization = bEnabled; }
+	bool IsWeightVisualizationEnabled() const { return bShowWeightVisualization; }
+	void UpdateVertexColorsFromWeights();
+	static FVector WeightToColor(float Weight);
 
 protected:
 	// Internal helper
@@ -183,6 +212,12 @@ protected:
 	bool bClothInitialized = false;
 
 	// Cloth Paint
+	TArray<float> ClothVertexWeights;  // 각 Cloth 버텍스의 가중치 (0=고정, 1=자유)
+	float DefaultInvMass = 0.5f;       // 기본 invMass 값
+	bool bShowWeightVisualization = false;  // Weight 시각화 모드
+
+	UPROPERTY(EditAnywhere, Category="Cloth", Tooltip="Cloth Weight 에셋 파일 경로")
+	FString ClothWeightAssetPath;      // ClothWeightAsset 파일 경로
 
 	// Attachment Data
 

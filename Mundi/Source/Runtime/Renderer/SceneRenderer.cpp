@@ -143,7 +143,7 @@ void FSceneRenderer::Render()
 	// FXAA 등 화면에서 최종 이미지 품질을 위해 적용되는 효과를 적용
 	ApplyScreenEffectsPass();
 
-    // 최종적으로 Scene에 그려진 텍스쳐를 Back 버퍼에 그힌다
+    // 최종적으로 Scene에 그려진 텍스쳐를 Back 버퍼에 그린다
     CompositeToBackBuffer();
 
     // BackBuffer 위에 라인 오버레이(항상 위)를 그린다

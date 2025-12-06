@@ -618,6 +618,12 @@ void AGizmoActor::UpdateComponentVisibility()
 	// 선택된 액터가 없으면 모든 기즈모 컴포넌트를 비활성화
 	bool bHasSelection = SelectionManager && SelectionManager->GetSelectedComponent();
 
+	// bRender가 false면 기즈모 비활성화
+	if (!bRender)
+	{
+		bHasSelection = false;
+	}
+
 	// 드래그 중일 때는 고정된 축(DraggingAxis)을, 아닐 때는 호버 축(GizmoAxis)을 사용
 	uint32 HighlightAxis = bIsDragging ? DraggingAxis : GizmoAxis;
 
