@@ -75,6 +75,7 @@ public:
     // Attach/Detach
     // ──────────────────────────────
     void SetupAttachment(USceneComponent* InParent, EAttachmentRule Rule = EAttachmentRule::KeepWorld);
+    void SetupAttachment(USceneComponent* InParent, const FName& InSocketName, EAttachmentRule Rule = EAttachmentRule::KeepWorld);
     void DetachFromParent(bool bKeepWorld = true);
 
     // ──────────────────────────────
@@ -82,6 +83,7 @@ public:
     // ──────────────────────────────
     USceneComponent* GetAttachParent() const { return AttachParent; }
     const TArray<USceneComponent*>& GetAttachChildren() const { return AttachChildren; }
+    FName GetAttachSocketName() const { return AttachSocketName; }
     UWorld* GetWorld();
 
     // ───── 복사 관련 ────────────────────────────
@@ -158,6 +160,7 @@ protected:
     // Hierarchy
     USceneComponent* AttachParent = nullptr;
     TArray<USceneComponent*> AttachChildren;
+    FName AttachSocketName; // 부착된 소켓 이름 (없으면 NAME_None)
 
     // 로컬(부모 기준) 트랜스폼
     FTransform RelativeTransform;

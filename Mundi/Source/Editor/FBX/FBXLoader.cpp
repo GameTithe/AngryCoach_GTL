@@ -1,8 +1,7 @@
 ﻿#include "pch.h"
 #include "ObjectFactory.h"
 #include "FbxLoader.h"
-#include "fbxsdk/fileio/fbxiosettings.h"
-#include "fbxsdk/scene/geometry/fbxcluster.h"
+#include "fbxsdk/include/fbxsdk.h"
 #include "ObjectIterator.h"
 #include "WindowsBinReader.h"
 #include "WindowsBinWriter.h"
@@ -306,6 +305,7 @@ FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 
 	// 매시의 폴리곤이 삼각형이 아닐 수가 있음, Converter가 모두 삼각화해줌.
 	FbxGeometryConverter IGeometryConverter(SdkManager);
+	UE_LOG("Triangulate 시작: %s\n", NormalizedPath.c_str());
 	if (IGeometryConverter.Triangulate(Scene, true))
 	{
 		UE_LOG("Fbx 씬 삼각화 완료\n");

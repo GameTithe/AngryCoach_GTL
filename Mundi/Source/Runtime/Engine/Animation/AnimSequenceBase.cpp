@@ -33,7 +33,7 @@ UAnimDataModel* UAnimSequenceBase::GetDataModel() const
 
 bool UAnimSequenceBase::IsNotifyAvailable() const
 {
-    if (Notifies.Num() == 0)
+    if (!bNotifyMetaLoadAttempted)
     {
         UAnimSequenceBase* Self = const_cast<UAnimSequenceBase*>(this);
         (void)Self->GetAnimNotifyEvents();
@@ -43,9 +43,11 @@ bool UAnimSequenceBase::IsNotifyAvailable() const
 
 TArray<FAnimNotifyEvent>& UAnimSequenceBase::GetAnimNotifyEvents()
 {
-    // Lazy-load meta if empty and sidecar exists
-    if (Notifies.Num() == 0)
+    // Lazy-load meta if not attempted yet and sidecar exists
+    if (!bNotifyMetaLoadAttempted)
     {
+        bNotifyMetaLoadAttempted = true;
+
         FString FileName = "AnimNotifies";
         const FString Src = GetFilePath();
         if (!Src.empty())
@@ -66,7 +68,6 @@ TArray<FAnimNotifyEvent>& UAnimSequenceBase::GetAnimNotifyEvents()
         if (std::filesystem::exists(MetaPath, ec))
         {
             LoadMeta(MetaPathUtf8);
-            // UE_LOG("GetAnimNotifyEvents - Loaded %d notifies from %s", Notifies.Num(), MetaPathUtf8.c_str());
         }
     }
     return Notifies;
@@ -74,7 +75,7 @@ TArray<FAnimNotifyEvent>& UAnimSequenceBase::GetAnimNotifyEvents()
 
 const TArray<FAnimNotifyEvent>& UAnimSequenceBase::GetAnimNotifyEvents() const
 {
-    if (Notifies.Num() == 0)
+    if (!bNotifyMetaLoadAttempted)
     {
         // const-correctness workaround
         UAnimSequenceBase* Self = const_cast<UAnimSequenceBase*>(this);

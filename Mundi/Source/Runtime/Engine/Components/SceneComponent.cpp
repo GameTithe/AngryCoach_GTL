@@ -6,6 +6,7 @@
 #include "PrimitiveComponent.h"
 #include "WorldPartitionManager.h"
 #include "BillboardComponent.h"
+#include "SkeletalMeshComponent.h"
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 // USceneComponent.cpp
 TMap<uint32, USceneComponent*> USceneComponent::SceneIdMap;
@@ -121,9 +122,21 @@ void USceneComponent::AddRelativeScale3D(const FVector& DeltaScale)
 // ──────────────────────────────
 FTransform USceneComponent::GetWorldTransform() const
 {
-    // Dangling pointer 방지를 위한 체크 
+    // Dangling pointer 방지를 위한 체크
     if (AttachParent && !AttachParent->IsPendingDestroy())
     {
+        // 소켓에 부착된 경우 소켓 위치 기준으로 계산
+        if (!AttachSocketName.ToString().empty())
+        {
+            // 부모가 SkeletalMeshComponent인지 확인
+            USkeletalMeshComponent* SkelMeshParent = Cast<USkeletalMeshComponent>(AttachParent);
+            if (SkelMeshParent && SkelMeshParent->DoesSocketExist(AttachSocketName))
+            {
+                FTransform SocketTransform = SkelMeshParent->GetSocketTransform(AttachSocketName);
+                return SocketTransform.GetWorldTransform(RelativeTransform);
+            }
+        }
+
         return AttachParent->GetWorldTransform().GetWorldTransform(RelativeTransform);
     }
 
@@ -285,8 +298,8 @@ FMatrix USceneComponent::GetWorldMatrix() const
 // ──────────────────────────────
 void USceneComponent::SetupAttachment(USceneComponent* InParent, EAttachmentRule Rule)
 {
+    //if (!AttachParent) return;
     if (AttachParent == InParent) return;
-
     const FTransform OldWorld = GetWorldTransform();
 
     // 기존 부모에서 제거
@@ -318,6 +331,16 @@ void USceneComponent::SetupAttachment(USceneComponent* InParent, EAttachmentRule
     RelativeLocation = RelativeTransform.Translation;
     RelativeRotation = RelativeTransform.Rotation;
     RelativeScale = RelativeTransform.Scale3D;
+    AttachSocketName = FName(); // 소켓 없이 부착
+}
+
+void USceneComponent::SetupAttachment(USceneComponent* InParent, const FName& InSocketName, EAttachmentRule Rule)
+{
+    // 기본 부착 로직 수행
+    SetupAttachment(InParent, Rule);
+
+    // 소켓 이름 설정
+    AttachSocketName = InSocketName;
 }
 
 void USceneComponent::DetachFromParent(bool bKeepWorld)
