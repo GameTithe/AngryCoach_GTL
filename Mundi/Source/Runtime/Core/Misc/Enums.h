@@ -295,3 +295,36 @@ enum class ECollisionState : uint8
     QueryOnly,
     QueryAndPhysics
 };
+
+// ============================================
+// Game Flow Enums
+// ============================================
+
+// 전체 게임 상태 (매치 레벨)
+enum class EGameState : uint8
+{
+    None,
+    WaitingToStart,    // 게임 시작 대기
+    InProgress,        // 게임 진행 중
+    Paused,            // 일시정지
+    GameOver,          // 게임 종료
+};
+
+// 라운드 상태
+enum class ERoundState : uint8
+{
+    None,
+    WaitingToStart,    // 라운드 시작 대기
+    CountDown,         // 카운트다운 중
+    InProgress,        // 라운드 진행 중
+    RoundEnd,          // 라운드 종료
+};
+
+// 게임 결과
+enum class EGameResult : uint8
+{
+    None,
+    Win,
+    Lose,
+    Draw,
+};
