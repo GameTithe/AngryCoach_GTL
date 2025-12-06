@@ -295,6 +295,30 @@ public:
 
     int32 GetBoneIndexByName(const FName& BoneName) const;
 
+    /////////////////////////////////////////////////////////////
+    // Socket Section
+    /////////////////////////////////////////////////////////////
+public:
+    /**
+     * @brief 소켓의 월드 트랜스폼 가져오기
+     * @param SocketName 소켓 이름
+     * @return 소켓의 월드 트랜스폼 (소켓이 없으면 컴포넌트 트랜스폼 반환)
+     */
+    FTransform GetSocketTransform(const FName& SocketName) const;
+
+    /**
+     * @brief 소켓이 존재하는지 확인
+     * @param SocketName 소켓 이름
+     * @return 소켓이 존재하면 true
+     */
+    bool DoesSocketExist(const FName& SocketName) const;
+
+    /**
+     * @brief 모든 소켓 이름 가져오기
+     * @param OutSocketNames 소켓 이름 배열 (출력)
+     */
+    void GetAllSocketNames(TArray<FName>& OutSocketNames) const;
+
 private:
     UPhysicsAsset*   PhysicsAsset = nullptr;   // 이 메쉬에 쓸 물리 에셋 (콜라이더/조인트 정의)
     UPhysicsAsset*   PhysicsAssetOverride = nullptr; // Instance-level override asset (if any)

@@ -30,6 +30,7 @@
 #include "Source/Runtime/Engine/Physics/PhysicalMaterial.h"
 #include <cstring>
 #include "RenderManager.h"
+#include "WindowsBinWriter.h"
 
 namespace
 {
@@ -695,6 +696,46 @@ void SSkeletalMeshViewerWindow::OnRender()
                                         UE_LOG("Added UBodySetup for bone %s to PhysicsAsset %s", ClickedBoneName, Phys->GetName().ToString().c_str());
                                     }
                                 }
+
+                                // 소켓 추가 메뉴
+                                if (ImGui::MenuItem("Add Socket"))
+                                {
+                                    FSkeleton* MutableSkeleton = const_cast<FSkeleton*>(Skeleton);
+
+                                    // 고유한 소켓 이름 생성
+                                    FString NewSocketName = FString(ClickedBoneName) + "_Socket";
+                                    int32 Counter = 1;
+                                    while (MutableSkeleton->FindSocket(FName(NewSocketName)) != nullptr)
+                                    {
+                                        NewSocketName = FString(ClickedBoneName) + "_Socket" + std::to_string(Counter);
+                                        Counter++;
+                                    }
+
+                                    FSkeletalMeshSocket NewSocket;
+                                    NewSocket.SocketName = NewSocketName;
+                                    NewSocket.BoneName = ClickedBoneName;
+                                    NewSocket.RelativeLocation = FVector::Zero();
+                                    NewSocket.RelativeRotation = FQuat::Identity();
+                                    NewSocket.RelativeScale = FVector::One();
+
+                                    MutableSkeleton->AddSocket(NewSocket);
+
+                                    // 새로 생성된 소켓 선택
+                                    ActiveState->SelectedSocketIndex = static_cast<int32>(MutableSkeleton->Sockets.size()) - 1;
+                                    ActiveState->SelectedBodySetup = nullptr;
+                                    ActiveState->SelectedBodyIndex = -1;
+                                    ActiveState->SelectedConstraintIndex = -1;
+
+                                    // 편집용 값 초기화
+                                    ActiveState->EditSocketLocation = NewSocket.RelativeLocation;
+                                    ActiveState->EditSocketRotation = NewSocket.RelativeRotation.ToEulerZYXDeg();
+                                    ActiveState->EditSocketScale = NewSocket.RelativeScale;
+
+                                    // 변경 플래그 설정
+                                    ActiveState->bSocketTransformChanged = true;
+
+                                    UE_LOG("Added socket %s to bone %s", NewSocketName.c_str(), ClickedBoneName);
+                                }
                             }
                             ImGui::EndPopup();
                         }
@@ -706,6 +747,8 @@ void SSkeletalMeshViewerWindow::OnRender()
                             ActiveState->SelectedBodySetup = nullptr;
                             // Clear constraint selection when body is selected
                             ActiveState->SelectedConstraintIndex = -1;
+                            // Clear socket selection when bone is clicked
+                            ActiveState->SelectedSocketIndex = -1;
 
 							ActiveState->SelectedBodyIndexForGraph = -1;
 
@@ -946,6 +989,84 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 ImGui::Unindent(14.0f);
 
                                 ImGui::Unindent(14.0f);
+                            }
+                        }
+
+                        // =========== Socket UI ============
+                        // 현재 본에 연결된 소켓들을 표시
+                        if (Skeleton)
+                        {
+                            const TArray<FSkeletalMeshSocket>& Sockets = Skeleton->Sockets;
+                            const char* CurrentBoneName = Bones[Index].Name.c_str();
+
+                            for (int32 si = 0; si < static_cast<int32>(Sockets.size()); ++si)
+                            {
+                                const FSkeletalMeshSocket& Socket = Sockets[si];
+                                if (Socket.BoneName == CurrentBoneName)
+                                {
+                                    ImGui::Indent(14.0f);
+
+                                    char SocketLabel[256];
+                                    snprintf(SocketLabel, sizeof(SocketLabel), "[Socket] %s", Socket.SocketName.c_str());
+
+                                    bool bSocketSelected = (ActiveState->SelectedSocketIndex == si);
+
+                                    // 소켓 좌클릭 이벤트
+                                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.9f, 0.4f, 1.0f)); // 초록색으로 구분
+                                    if (ImGui::Selectable(SocketLabel, bSocketSelected))
+                                    {
+                                        ActiveState->SelectedSocketIndex = si;
+
+                                        // 다른 선택 해제
+                                        ActiveState->SelectedBodySetup = nullptr;
+                                        ActiveState->SelectedBodyIndex = -1;
+                                        ActiveState->SelectedConstraintIndex = -1;
+                                        ActiveState->SelectedBodyIndexForGraph = -1;
+
+                                        // 소켓이 속한 본도 선택
+                                        if (ActiveState->SelectedBoneIndex != Index)
+                                        {
+                                            ActiveState->SelectedBoneIndex = Index;
+                                            ActiveState->bBoneLinesDirty = true;
+                                            ExpandToSelectedBone(ActiveState, Index);
+                                        }
+
+                                        // 편집용 값 초기화
+                                        ActiveState->EditSocketLocation = Socket.RelativeLocation;
+                                        ActiveState->EditSocketRotation = Socket.RelativeRotation.ToEulerZYXDeg();
+                                        ActiveState->EditSocketScale = Socket.RelativeScale;
+                                    }
+                                    ImGui::PopStyleColor();
+
+                                    // 소켓 우클릭 이벤트 - 삭제 메뉴
+                                    if (ImGui::BeginPopupContextItem())
+                                    {
+                                        if (ImGui::MenuItem("Delete Socket"))
+                                        {
+                                            // const_cast로 수정 가능하게
+                                            FSkeleton* MutableSkeleton = const_cast<FSkeleton*>(Skeleton);
+                                            MutableSkeleton->RemoveSocket(FName(Socket.SocketName));
+
+                                            // 선택 해제
+                                            if (ActiveState->SelectedSocketIndex == si)
+                                            {
+                                                ActiveState->SelectedSocketIndex = -1;
+                                            }
+                                            else if (ActiveState->SelectedSocketIndex > si)
+                                            {
+                                                ActiveState->SelectedSocketIndex--;
+                                            }
+
+                                            // 변경 플래그 설정
+                                            ActiveState->bSocketTransformChanged = true;
+
+                                            UE_LOG("Deleted socket %s from bone %s", Socket.SocketName.c_str(), CurrentBoneName);
+                                        }
+                                        ImGui::EndPopup();
+                                    }
+
+                                    ImGui::Unindent(14.0f);
+                                }
                             }
                         }
 
@@ -1506,6 +1627,141 @@ void SSkeletalMeshViewerWindow::OnRender()
                             ImGui::DragFloat3("Rotation B (Synced)", &EulerB.X, 0.5f, -180.0f, 180.0f, "%.2f°");
                             ImGui::EndDisabled();
                             ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "(Auto-synced with Rotation A)");
+                        }
+                    }
+                }
+                else if (ActiveState->SelectedSocketIndex >= 0 && ActiveState->CurrentMesh) // Socket Properties
+                {
+                    FSkeleton* Skeleton = const_cast<FSkeleton*>(ActiveState->CurrentMesh->GetSkeleton());
+                    if (Skeleton && ActiveState->SelectedSocketIndex < static_cast<int32>(Skeleton->Sockets.size()))
+                    {
+                        FSkeletalMeshSocket& SelectedSocket = Skeleton->Sockets[ActiveState->SelectedSocketIndex];
+
+                        // Selected socket header
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
+                        ImGui::Text("> Selected Socket");
+                        ImGui::PopStyleColor();
+
+                        ImGui::Spacing();
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.90f, 0.95f, 1.00f, 1.0f));
+                        ImGui::TextWrapped("%s", SelectedSocket.SocketName.c_str());
+                        ImGui::PopStyleColor();
+
+                        ImGui::Spacing();
+                        ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.45f, 0.55f, 0.70f, 0.8f));
+                        ImGui::Separator();
+                        ImGui::PopStyleColor();
+
+                        // 소켓 이름 편집
+                        ImGui::Text("Socket Name:");
+                        char SocketNameBuf[128];
+                        strncpy_s(SocketNameBuf, SelectedSocket.SocketName.c_str(), sizeof(SocketNameBuf) - 1);
+                        ImGui::PushItemWidth(-1);
+                        if (ImGui::InputText("##SocketName", SocketNameBuf, sizeof(SocketNameBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+                        {
+                            // 중복 이름 체크
+                            FString NewName = SocketNameBuf;
+                            bool bDuplicate = false;
+                            for (int32 i = 0; i < static_cast<int32>(Skeleton->Sockets.size()); ++i)
+                            {
+                                if (i != ActiveState->SelectedSocketIndex && Skeleton->Sockets[i].SocketName == NewName)
+                                {
+                                    bDuplicate = true;
+                                    break;
+                                }
+                            }
+                            if (!bDuplicate && !NewName.empty())
+                            {
+                                SelectedSocket.SocketName = NewName;
+                                ActiveState->bSocketTransformChanged = true;
+                            }
+                        }
+                        ImGui::PopItemWidth();
+
+                        ImGui::Spacing();
+                        ImGui::Text("Attached Bone: %s", SelectedSocket.BoneName.c_str());
+
+                        ImGui::Spacing();
+                        ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.45f, 0.55f, 0.70f, 0.8f));
+                        ImGui::Separator();
+                        ImGui::PopStyleColor();
+                        ImGui::Spacing();
+
+                        // Location 편집
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+                        ImGui::Text("Relative Location");
+                        ImGui::PopStyleColor();
+
+                        ImGui::PushItemWidth(-1);
+                        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.28f, 0.20f, 0.20f, 0.6f));
+                        bool bSocketChanged = false;
+                        bSocketChanged |= ImGui::DragFloat("##SocketLocX", &ActiveState->EditSocketLocation.X, 0.1f, 0.0f, 0.0f, "X: %.3f");
+                        bSocketChanged |= ImGui::DragFloat("##SocketLocY", &ActiveState->EditSocketLocation.Y, 0.1f, 0.0f, 0.0f, "Y: %.3f");
+                        bSocketChanged |= ImGui::DragFloat("##SocketLocZ", &ActiveState->EditSocketLocation.Z, 0.1f, 0.0f, 0.0f, "Z: %.3f");
+                        ImGui::PopStyleColor();
+                        ImGui::PopItemWidth();
+
+                        ImGui::Spacing();
+
+                        // Rotation 편집
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
+                        ImGui::Text("Relative Rotation");
+                        ImGui::PopStyleColor();
+
+                        ImGui::PushItemWidth(-1);
+                        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.20f, 0.28f, 0.20f, 0.6f));
+                        bSocketChanged |= ImGui::DragFloat("##SocketRotX", &ActiveState->EditSocketRotation.X, 0.5f, -180.0f, 180.0f, "X: %.2f°");
+                        bSocketChanged |= ImGui::DragFloat("##SocketRotY", &ActiveState->EditSocketRotation.Y, 0.5f, -180.0f, 180.0f, "Y: %.2f°");
+                        bSocketChanged |= ImGui::DragFloat("##SocketRotZ", &ActiveState->EditSocketRotation.Z, 0.5f, -180.0f, 180.0f, "Z: %.2f°");
+                        ImGui::PopStyleColor();
+                        ImGui::PopItemWidth();
+
+                        ImGui::Spacing();
+
+                        // Scale 편집
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 1.0f, 1.0f));
+                        ImGui::Text("Relative Scale");
+                        ImGui::PopStyleColor();
+
+                        ImGui::PushItemWidth(-1);
+                        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.20f, 0.20f, 0.28f, 0.6f));
+                        bSocketChanged |= ImGui::DragFloat("##SocketScaleX", &ActiveState->EditSocketScale.X, 0.01f, 0.001f, 100.0f, "X: %.3f");
+                        bSocketChanged |= ImGui::DragFloat("##SocketScaleY", &ActiveState->EditSocketScale.Y, 0.01f, 0.001f, 100.0f, "Y: %.3f");
+                        bSocketChanged |= ImGui::DragFloat("##SocketScaleZ", &ActiveState->EditSocketScale.Z, 0.01f, 0.001f, 100.0f, "Z: %.3f");
+                        ImGui::PopStyleColor();
+                        ImGui::PopItemWidth();
+
+                        // 변경 사항을 소켓에 적용
+                        if (bSocketChanged)
+                        {
+                            SelectedSocket.RelativeLocation = ActiveState->EditSocketLocation;
+                            SelectedSocket.RelativeRotation = FQuat::MakeFromEulerZYX(ActiveState->EditSocketRotation);
+                            SelectedSocket.RelativeScale = ActiveState->EditSocketScale;
+                            ActiveState->bSocketTransformChanged = true;
+                        }
+
+                        ImGui::Spacing();
+                        ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.45f, 0.55f, 0.70f, 0.8f));
+                        ImGui::Separator();
+                        ImGui::PopStyleColor();
+                        ImGui::Spacing();
+
+                        // 저장 버튼
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.60f, 0.40f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.70f, 0.50f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.50f, 0.30f, 1.0f));
+                        if (ImGui::Button("Save Skeleton Data", ImVec2(-1, 30)))
+                        {
+                            if (SaveSkeletonData(ActiveState))
+                            {
+                                UE_LOG("Skeleton data with sockets saved successfully");
+                            }
+                        }
+                        ImGui::PopStyleColor(3);
+
+                        if (ActiveState->bSocketTransformChanged)
+                        {
+                            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "* Unsaved changes");
                         }
                     }
                 }
@@ -2268,6 +2524,45 @@ bool SSkeletalMeshViewerWindow::SavePhysicsAsset(ViewerState* State)
 
     UE_LOG("Failed to save physics asset: %s", TargetPath.c_str());
     return false;
+}
+
+bool SSkeletalMeshViewerWindow::SaveSkeletonData(ViewerState* State)
+{
+    if (!State || !State->CurrentMesh)
+    {
+        return false;
+    }
+
+    const FSkeletalMeshData* MeshData = State->CurrentMesh->GetSkeletalMeshData();
+    if (!MeshData)
+    {
+        UE_LOG("Failed to save skeleton: MeshData is null");
+        return false;
+    }
+
+    FString CacheFilePath = MeshData->CacheFilePath;
+    if (CacheFilePath.empty())
+    {
+        UE_LOG("Failed to save skeleton: CacheFilePath is empty");
+        return false;
+    }
+
+    try
+    {
+        FWindowsBinWriter Writer(CacheFilePath);
+        // const_cast because MeshData is accessed const but serialization may need non-const
+        Writer << *const_cast<FSkeletalMeshData*>(MeshData);
+        Writer.Close();
+
+        UE_LOG("Skeleton data saved to: %s", CacheFilePath.c_str());
+        State->bSocketTransformChanged = false;
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        UE_LOG("Failed to save skeleton data: %s", e.what());
+        return false;
+    }
 }
 
 void SSkeletalMeshViewerWindow::OpenNewTab(const char* Name)

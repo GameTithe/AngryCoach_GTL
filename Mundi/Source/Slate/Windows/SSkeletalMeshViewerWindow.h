@@ -126,8 +126,9 @@ private:
 
 private:
     void UpdateBoneTransformFromSkeleton(ViewerState* State);
-   
+
     bool SavePhysicsAsset(ViewerState* State);
+    bool SaveSkeletonData(ViewerState* State);
 
     void ApplyBoneTransform(ViewerState* State);
 

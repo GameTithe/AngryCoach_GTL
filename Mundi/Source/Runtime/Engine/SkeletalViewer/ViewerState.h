@@ -105,4 +105,12 @@ public:
 	float SectionBlendTime = 0.0f;                   // 블렌드 진행 시간
 	float SectionBlendDuration = 0.0f;              // 블렌드 총 시간
 	float PrevSectionEndTime = 0.0f;                 // 이전 섹션 끝 시간
+
+	// ======== 소켓 편집 관련 ==========
+	int32 SelectedSocketIndex = -1;                  // 현재 선택된 소켓 인덱스 (FSkeleton::Sockets 배열의 인덱스)
+	FVector EditSocketLocation = FVector::Zero();    // 소켓 위치 편집용
+	FVector EditSocketRotation = FVector::Zero();    // 소켓 회전 편집용 (Euler)
+	FVector EditSocketScale = FVector::One();        // 소켓 스케일 편집용
+	char NewSocketNameBuffer[128] = {0};             // 새 소켓 이름 입력 버퍼
+	bool bSocketTransformChanged = false;            // 소켓 트랜스폼 변경 여부
 };
