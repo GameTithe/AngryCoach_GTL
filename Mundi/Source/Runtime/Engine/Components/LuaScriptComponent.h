@@ -29,9 +29,18 @@ public:
 	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const AActor::FTriggerHit* TriggerHit);
 	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const AActor::FContactHit* ContactHit);
 
-	bool Call(const char* FuncName, sol::variadic_args VarArgs); // 다른 클래스가 날 호출할 때 씀
+	bool Call(const char* FuncName); // 인자 없이 호출
+	bool CallWithInt(const char* FuncName, int32 Value);
+	bool CallWithTwoInts(const char* FuncName, int32 Value1, int32 Value2);
+	bool CallWithFloat(const char* FuncName, float Value);
+
+	// 스크립트 경로 설정 (런타임에서 동적으로 설정 시 사용)
+	void SetScriptFilePath(const FString& InPath) { ScriptFilePath = InPath; }
 
 	void CleanupLuaResources();
+
+	// Lua 환경 접근 (GameMode 콜백용)
+	sol::environment& GetEnv() { return Env; }
 protected:
 	// 이 컴포넌트가 실행할 .lua 스크립트 파일의 경로 (에디터에서 설정)
 	UPROPERTY(EditAnywhere, Category="Script", Tooltip="Lua Script 파일 경로입니다")

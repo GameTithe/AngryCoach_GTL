@@ -7,6 +7,8 @@
 #include "CameraActor.h"
 #include "CameraComponent.h"
 #include "PlayerCameraManager.h"
+#include "GameModeBase.h"
+#include "GameStateBase.h"
 #include <tuple>
 
 #include "Source/Game/UI/GameUIManager.h"
@@ -353,6 +355,245 @@ FLuaManager::FLuaManager()
         "G", &FLinearColor::G,
         "B", &FLinearColor::B,
         "A", &FLinearColor::A
+    );
+
+    // ============================================
+    // Game Flow Enums
+    // ============================================
+    SharedLib.new_enum("EGameState",
+        "None", EGameState::None,
+        "WaitingToStart", EGameState::WaitingToStart,
+        "InProgress", EGameState::InProgress,
+        "Paused", EGameState::Paused,
+        "GameOver", EGameState::GameOver
+    );
+
+    SharedLib.new_enum("ERoundState",
+        "None", ERoundState::None,
+        "CharacterSelect", ERoundState::CharacterSelect,
+        "CountDown", ERoundState::CountDown,
+        "InProgress", ERoundState::InProgress,
+        "RoundEnd", ERoundState::RoundEnd
+    );
+
+    SharedLib.new_enum("EGameResult",
+        "None", EGameResult::None,
+        "Win", EGameResult::Win,
+        "Lose", EGameResult::Lose,
+        "Draw", EGameResult::Draw
+    );
+
+    // ============================================
+    // GameMode/GameState Global Functions
+    // ============================================
+    SharedLib.set_function("GetGameMode",
+        []() -> AGameModeBase*
+        {
+            if (!GWorld) return nullptr;
+            return GWorld->GetGameMode();
+        }
+    );
+
+    SharedLib.set_function("GetGameState",
+        []() -> AGameStateBase*
+        {
+            if (!GWorld) return nullptr;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                return GameMode->GetGameState();
+            }
+            return nullptr;
+        }
+    );
+
+    SharedLib.set_function("GetCurrentGameState",
+        []() -> EGameState
+        {
+            if (!GWorld) return EGameState::None;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                return GameMode->GetCurrentGameState();
+            }
+            return EGameState::None;
+        }
+    );
+
+    SharedLib.set_function("GetCurrentRoundState",
+        []() -> ERoundState
+        {
+            if (!GWorld) return ERoundState::None;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                return GameMode->GetCurrentRoundState();
+            }
+            return ERoundState::None;
+        }
+    );
+
+    SharedLib.set_function("GetCurrentRound",
+        []() -> int32
+        {
+            if (!GWorld) return 0;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    return GameState->GetCurrentRound();
+                }
+            }
+            return 0;
+        }
+    );
+
+    SharedLib.set_function("GetRoundTimeRemaining",
+        []() -> float
+        {
+            if (!GWorld) return 0.0f;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    return GameState->GetRoundTimeRemaining();
+                }
+            }
+            return 0.0f;
+        }
+    );
+
+    SharedLib.set_function("GetRoundWins",
+        [](int32 PlayerIndex) -> int32
+        {
+            if (!GWorld) return 0;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    return GameState->GetRoundWins(PlayerIndex);
+                }
+            }
+            return 0;
+        }
+    );
+
+    SharedLib.set_function("StartMatch",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->StartMatch();
+            }
+        }
+    );
+
+    SharedLib.set_function("EndMatch",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->EndMatch();
+            }
+        }
+    );
+
+    SharedLib.set_function("StartCharacterSelect",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->StartCharacterSelect();
+            }
+        }
+    );
+
+    SharedLib.set_function("EndCharacterSelect",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->EndCharacterSelect();
+            }
+        }
+    );
+
+    SharedLib.set_function("StartRound",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->StartRound();
+            }
+        }
+    );
+
+    SharedLib.set_function("EndRound",
+        [](int32 WinnerIndex)
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->EndRound(WinnerIndex);
+            }
+        }
+    );
+
+    SharedLib.set_function("StartCountDown",
+        [](sol::optional<float> CountDownTime)
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->StartCountDown(CountDownTime.value_or(3.0f));
+            }
+        }
+    );
+
+    // R키 카운트 관련 함수 (테스트용)
+    SharedLib.set_function("GetRKeyCount",
+        []() -> int32
+        {
+            if (!GWorld) return 0;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    return GameState->GetRKeyCount();
+                }
+            }
+            return 0;
+        }
+    );
+
+    SharedLib.set_function("IncrementRKeyCount",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    GameState->IncrementRKeyCount();
+                }
+            }
+        }
+    );
+
+    SharedLib.set_function("ResetRKeyCount",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    GameState->ResetRKeyCount();
+                }
+            }
+        }
     );
 
     RegisterComponentProxy(*Lua);

@@ -129,6 +129,7 @@
     <ClCompile Include="Source\Runtime\Engine\Components\SkeletalMeshComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\SkinnedMeshComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\GameModeBase.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\GameStateBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\SkeletalMeshActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\BoneAnchorComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Fade.cpp" />
@@ -352,6 +353,7 @@
     <ClCompile Include="Generated\AController.generated.cpp"><Filter>Generated</Filter></ClCompile>
     <ClCompile Include="Generated\APlayerController.generated.cpp"><Filter>Generated</Filter></ClCompile>
     <ClCompile Include="Generated\AGameModeBase.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\AGameStateBase.generated.cpp"><Filter>Generated</Filter></ClCompile>
     <ClCompile Include="Generated\ACharacter.generated.cpp"><Filter>Generated</Filter></ClCompile>
     <ClCompile Include="Generated\UCharacterMovementComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
     <ClCompile Include="Generated\UPawnMovementComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
@@ -487,6 +489,7 @@
     <ClInclude Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Shake.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\GameEngine.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\GameModeBase.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\GameStateBase.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\PlayerCameraManager.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\DirectionalLightActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\EmptyActor.h" />
@@ -735,6 +738,7 @@
     <ClInclude Include="Generated\AController.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Generated\APlayerController.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Generated\AGameModeBase.generated.h"><Filter>Generated</Filter></ClInclude>
+    <ClInclude Include="Generated\AGameStateBase.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Generated\ACharacter.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Generated\UCharacterMovementComponent.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Generated\UPawnMovementComponent.generated.h"><Filter>Generated</Filter></ClInclude>
