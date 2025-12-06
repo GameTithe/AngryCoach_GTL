@@ -294,12 +294,19 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_StandAlone|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\Game\AngryCoachCharacter.cpp" />
     <ClCompile Include="Source\Game\AngryCoachGameMode.cpp" />
     <ClCompile Include="Source\Game\AngryCoachPlayerController.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\MyCar.cpp" />
     <ClCompile Include="Source\Editor\FBX\BlendSpace\BlendSpace2D.cpp" />
-    <ClCompile Include="Source\Runtime\Engine\Components\AccessoryComponent.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\AccessoryActor.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\AccessoryHeavyAttackSkill.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\AccessoryLightAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\ClothComponent.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\DefaultHeavyAttackSkill.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\DefaultLightAttackSkill.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\SkillBase.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\SkillComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_DOF.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\SpringArmComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Gamma.cpp" />
@@ -723,7 +730,16 @@
     <ClCompile Include="Generated\AMyCar.generated.cpp" />
     <ClCompile Include="Generated\USpringArmComponent.generated.cpp" />
     <ClCompile Include="Generated\UClothComponent.generated.cpp" />
-  <ClCompile Include="Generated\AAngryCoachGameMode.generated.cpp" /><ClCompile Include="Generated\AAngryCoachPlayerController.generated.cpp" /></ItemGroup>
+    <ClCompile Include="Generated\AAngryCoachGameMode.generated.cpp" />
+     <ClCompile Include="Generated\AAngryCoachPlayerController.generated.cpp" />
+    <ClCompile Include="Generated\AAccessoryActor.generated.cpp" />
+    <ClCompile Include="Generated\USkillBase.generated.cpp" />
+    <ClCompile Include="Generated\USkillComponent.generated.cpp" />
+    <ClCompile Include="Generated\UAccessoryHeavyAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UAccessoryLightAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UDefaultHeavyAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UDefaultLightAttackSkill.generated.cpp" />
+  <ClCompile Include="Generated\AAngryCoachCharacter.generated.cpp" /></ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -912,6 +928,7 @@
     <ClInclude Include="Source\Editor\FBX\FBXSceneUtilities.h" />
     <ClInclude Include="Source\Editor\FBX\FBXSkeletonLoader.h" />
     <ClInclude Include="Source\Editor\PlatformProcess.h" />
+    <ClInclude Include="Source\Game\AngryCoachCharacter.h" />
     <ClInclude Include="Source\Game\AngryCoachGameMode.h" />
     <ClInclude Include="Source\Game\AngryCoachPlayerController.h" />
     <ClInclude Include="Source\Runtime\AssetManagement\SkeletalMesh.h" />
@@ -944,10 +961,14 @@
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimTypes.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\Team2AnimInstance.h" />
     <ClInclude Include="Source\Runtime\Engine\Audio\Sound.h" />
-    <ClInclude Include="Source\Runtime\Engine\Components\AccessoryComponent.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\AccessoryActor.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\AccessoryHeavyAttackSkill.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\AccessoryLightAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\AudioComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\CapsuleComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\ClothComponent.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\DefaultHeavyAttackSkill.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\DefaultLightAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\LuaScriptComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\MovementComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\ParticleSystemComponent.h" />
@@ -958,6 +979,8 @@
     <ClInclude Include="Source\Runtime\Engine\Components\BoneAnchorComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\ShapeComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\SkeletalMeshComponent.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\SkillBase.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\SkillComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\SkinnedMeshComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\SphereComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\SpringArmComponent.h" />
@@ -1033,6 +1056,7 @@
     <ClInclude Include="Source\Runtime\Engine\WeightPaint\ClothWeightAsset.h" />
     <ClInclude Include="Source\Runtime\Engine\WeightPaint\WeightPaintState.h" />
     <ClInclude Include="Source\Runtime\Engine\WeightPaint\WeightPaintViewportClient.h" />
+    <ClInclude Include="Source\Runtime\Engine\Skill\SkillTypes.h" />
     <ClInclude Include="Source\Runtime\Renderer\FSkeletalViewerViewportClient.h" />
     <ClInclude Include="Source\Runtime\Renderer\LightManager.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\AmbientLightComponent.h" />
@@ -1233,7 +1257,16 @@
     <ClInclude Include="Generated\AMyCar.generated.h" />
     <ClInclude Include="Generated\USpringArmComponent.generated.h" />
     <ClInclude Include="Generated\UClothComponent.generated.h" />
-  <ClInclude Include="Generated\AAngryCoachGameMode.generated.h" /><ClInclude Include="Generated\AAngryCoachPlayerController.generated.h" /></ItemGroup>
+    <ClInclude Include="Generated\AAngryCoachGameMode.generated.h" />
+    <ClInclude Include="Generated\AAngryCoachPlayerController.generated.h" />
+    <ClInclude Include="Generated\AAccessoryActor.generated.h" />
+    <ClInclude Include="Generated\USkillBase.generated.h" />
+    <ClInclude Include="Generated\USkillComponent.generated.h" />
+    <ClInclude Include="Generated\UAccessoryHeavyAttackSkill.generated.h" />
+    <ClInclude Include="Generated\UAccessoryLightAttackSkill.generated.h" />
+    <ClInclude Include="Generated\UDefaultHeavyAttackSkill.generated.h" />
+    <ClInclude Include="Generated\UDefaultLightAttackSkill.generated.h" />
+  <ClInclude Include="Generated\AAngryCoachCharacter.generated.h" /></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />

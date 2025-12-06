@@ -26,7 +26,18 @@ bool UMaterial::Load(const FString& InFilePath, ID3D11Device* InDevice)
 		Shader = UResourceManager::GetInstance().Load<UShader>(shaderName);
 		UResourceManager::GetInstance().Load<UTexture>(InFilePath);
 		MaterialInfo.DiffuseTextureFileName = InFilePath;
-	} // hlsl 의 경우 
+	}  
+	else if (InFilePath.find(".png") != std::string::npos ||
+		InFilePath.find(".jpg") != std::string::npos ||
+		InFilePath.find(".jpeg") != std::string::npos ||
+		InFilePath.find(".tga") != std::string::npos)
+	{
+		// 기본 Particle Sprite Shader 사용
+		Shader = UResourceManager::GetInstance().Load<UShader>("Shaders/Effects/ParticleSprite.hlsl");
+		// Texture 로드
+		UResourceManager::GetInstance().Load<UTexture>(InFilePath, true);  // true = sRGB
+		MaterialInfo.DiffuseTextureFileName = InFilePath;
+	}// hlsl 의 경우 
 	else if (InFilePath.find(".hlsl") != std::string::npos)
 	{
 		Shader = UResourceManager::GetInstance().Load<UShader>(InFilePath);

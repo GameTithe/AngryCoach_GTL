@@ -122,7 +122,25 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
         EvaluatePoseForState(CurrentPlayState, FromPose, DeltaSeconds);
         EvaluatePoseForState(BlendTargetState, TargetPose, DeltaSeconds);
 
-        BlendPoseArrays(FromPose, TargetPose, BlendAlpha, BasePose);
+        // 블렌딩용 시퀀스 가져오기
+        UAnimSequence* FromSeq = CurrentPlayState.Sequence;
+        if (!FromSeq && CurrentPlayState.PoseProvider)
+            FromSeq = CurrentPlayState.PoseProvider->GetDominantSequence();
+
+        UAnimSequence* ToSeq = BlendTargetState.Sequence;
+        if (!ToSeq && BlendTargetState.PoseProvider)
+            ToSeq = BlendTargetState.PoseProvider->GetDominantSequence();
+
+        // 본 개수가 다르면 본 이름 기준 블렌딩
+        if (CurrentSkeleton && FromSeq && ToSeq &&
+            (FromPose.Num() != CurrentSkeleton->Bones.Num() || TargetPose.Num() != CurrentSkeleton->Bones.Num()))
+        {
+            BlendPosesByBoneName(FromPose, FromSeq, TargetPose, ToSeq, BlendAlpha, BasePose);
+        }
+        else
+        {
+            BlendPoseArrays(FromPose, TargetPose, BlendAlpha, BasePose);
+        }
 
         BlendTimeRemaining = FMath::Max(BlendTimeRemaining - DeltaSeconds, 0.0f);
         if (BlendTimeRemaining <= 1e-4f)
@@ -165,7 +183,17 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
                     CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, CurrPose);
 
                     float Alpha = MontageState->SectionBlendTime / FMath::Max(MontageState->SectionBlendTotalTime, 0.001f);
-                    BlendPoseArrays(PrevPose, CurrPose, FMath::Clamp(Alpha, 0.0f, 1.0f), MontagePose);
+
+                    // 본 개수가 다르면 본 이름 기준 블렌딩
+                    if (CurrentSkeleton &&
+                        (PrevPose.Num() != CurrentSkeleton->Bones.Num() || CurrPose.Num() != CurrentSkeleton->Bones.Num()))
+                    {
+                        BlendPosesByBoneName(PrevPose, PrevSeq, CurrPose, CurrentSeq, FMath::Clamp(Alpha, 0.0f, 1.0f), MontagePose);
+                    }
+                    else
+                    {
+                        BlendPoseArrays(PrevPose, CurrPose, FMath::Clamp(Alpha, 0.0f, 1.0f), MontagePose);
+                    }
                 }
                 else
                 {
@@ -175,6 +203,14 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
             else
             {
                 CurrentSeq->EvaluatePose(MontageState->Position, DeltaSeconds, MontagePose);
+            }
+
+            // 몽타주 포즈가 스켈레톤과 크기가 다르면 매핑
+            if (CurrentSkeleton && MontagePose.Num() != CurrentSkeleton->Bones.Num())
+            {
+                TArray<FTransform> MappedMontagePose;
+                MapPoseToSkeleton(MontagePose, CurrentSeq, MappedMontagePose);
+                MontagePose = MappedMontagePose;
             }
 
             // 몽타주 포즈를 기본 포즈 위에 블렌드
@@ -193,7 +229,24 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     // 최종 포즈 적용
     if (OwningComponent && FinalPose.Num() > 0)
     {
-        OwningComponent->SetAnimationPose(FinalPose);
+        // 현재 재생 중인 시퀀스 가져오기 (본 이름 매핑용)
+        UAnimSequence* MappingSequence = CurrentPlayState.Sequence;
+        if (!MappingSequence && CurrentPlayState.PoseProvider)
+        {
+            MappingSequence = CurrentPlayState.PoseProvider->GetDominantSequence();
+        }
+
+        // 포즈 크기가 스켈레톤과 다르면 본 이름으로 매핑
+        if (CurrentSkeleton && MappingSequence && FinalPose.Num() != CurrentSkeleton->Bones.Num())
+        {
+            TArray<FTransform> MappedPose;
+            MapPoseToSkeleton(FinalPose, MappingSequence, MappedPose);
+            OwningComponent->SetAnimationPose(MappedPose);
+        }
+        else
+        {
+            OwningComponent->SetAnimationPose(FinalPose);
+        }
     }
 
     // 노티파이 트리거
@@ -665,7 +718,21 @@ void UAnimInstance::GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPos
 
         if (OwningComponent && BlendedPose.Num() > 0)
         {
-            OwningComponent->SetAnimationPose(BlendedPose);
+            // 포즈 크기가 스켈레톤과 다르면 본 이름으로 매핑
+            UAnimSequence* MappingSeq = CurrentPlayState.Sequence;
+            if (!MappingSeq && CurrentPlayState.PoseProvider)
+                MappingSeq = CurrentPlayState.PoseProvider->GetDominantSequence();
+
+            if (CurrentSkeleton && MappingSeq && BlendedPose.Num() != CurrentSkeleton->Bones.Num())
+            {
+                TArray<FTransform> MappedPose;
+                MapPoseToSkeleton(BlendedPose, MappingSeq, MappedPose);
+                OwningComponent->SetAnimationPose(MappedPose);
+            }
+            else
+            {
+                OwningComponent->SetAnimationPose(BlendedPose);
+            }
         }
 
         BlendTimeRemaining = FMath::Max(BlendTimeRemaining - DeltaSeconds, 0.0f);
@@ -686,7 +753,21 @@ void UAnimInstance::GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPos
 
         if (Pose.Num() > 0)
         {
-            OwningComponent->SetAnimationPose(Pose);
+            // 포즈 크기가 스켈레톤과 다르면 본 이름으로 매핑
+            UAnimSequence* MappingSeq = CurrentPlayState.Sequence;
+            if (!MappingSeq && CurrentPlayState.PoseProvider)
+                MappingSeq = CurrentPlayState.PoseProvider->GetDominantSequence();
+
+            if (CurrentSkeleton && MappingSeq && Pose.Num() != CurrentSkeleton->Bones.Num())
+            {
+                TArray<FTransform> MappedPose;
+                MapPoseToSkeleton(Pose, MappingSeq, MappedPose);
+                OwningComponent->SetAnimationPose(MappedPose);
+            }
+            else
+            {
+                OwningComponent->SetAnimationPose(Pose);
+            }
         }
     }
 

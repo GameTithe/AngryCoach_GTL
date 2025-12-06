@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "AngryCoachPlayerController.h"
-#include "Character.h"
+#include "AngryCoachCharacter.h"
 #include "CameraComponent.h"
 #include "CameraActor.h"
 #include "InputManager.h"
@@ -14,7 +14,7 @@ AAngryCoachPlayerController::~AAngryCoachPlayerController()
 {
 }
 
-void AAngryCoachPlayerController::SetControlledCharacters(ACharacter* InPlayer1, ACharacter* InPlayer2)
+void AAngryCoachPlayerController::SetControlledCharacters(AAngryCoachCharacter* InPlayer1, AAngryCoachCharacter* InPlayer2)
 {
 	Player1 = InPlayer1;
 	Player2 = InPlayer2;
@@ -71,12 +71,25 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		Player1->AddMovementInput(WorldDir * (Player1->GetVelocity() * DeltaTime));
 	}
 
-	// RTYU 액션
-	if (InputManager.IsKeyPressed('R'))
+	// I - 점프
+	if (InputManager.IsKeyPressed('I'))
 	{
 		Player1->Jump();
 	}
-	// T, Y, U는 추가 액션용 (TODO)
+
+	// T - 약공, Y - 강공, U - 스킬
+	if (InputManager.IsKeyPressed('T'))
+	{
+		Player1->OnAttackInput(EAttackInput::Light);
+	}
+	if (InputManager.IsKeyPressed('Y'))
+	{
+		Player1->OnAttackInput(EAttackInput::Heavy);
+	}
+	if (InputManager.IsKeyPressed('U'))
+	{
+		Player1->OnAttackInput(EAttackInput::Skill);
+	}
 }
 
 void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
@@ -111,13 +124,26 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 		// 이동 적용
 		Player2->AddMovementInput(WorldDir * (Player2->GetVelocity() * DeltaTime));
 	}
-	
-	// 넘패드 액션
-	if (InputManager.IsKeyPressed(VK_NUMPAD1))
+
+	// Numpad6 - 점프
+	if (InputManager.IsKeyPressed(VK_NUMPAD6))
 	{
 		Player2->Jump();
 	}
-	// VK_NUMPAD2, VK_NUMPAD3, VK_DECIMAL은 추가 액션용 (TODO)
+
+	// Numpad1 - 약공, Numpad2 - 강공, Numpad3 - 스킬
+	if (InputManager.IsKeyPressed(VK_NUMPAD1))
+	{
+		Player2->OnAttackInput(EAttackInput::Light);
+	}
+	if (InputManager.IsKeyPressed(VK_NUMPAD2))
+	{
+		Player2->OnAttackInput(EAttackInput::Heavy);
+	}
+	if (InputManager.IsKeyPressed(VK_NUMPAD3))
+	{
+		Player2->OnAttackInput(EAttackInput::Skill);
+	}
 }
 
 void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
@@ -139,8 +165,4 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 	FVector CurrentPos = GameCamera->GetActorLocation();
 	FVector NewPos = FMath::Lerp(CurrentPos, TargetCameraPos, CameraLerpSpeed * DeltaTime);
 	GameCamera->SetActorLocation(NewPos);
-
-	// 카메라가 중심점을 바라보도록 회전 (필요시)
-	// FVector LookDir = CenterPos - NewPos;
-	// GameCamera->SetActorRotation(LookDir.ToQuat());
 }

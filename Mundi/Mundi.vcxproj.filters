@@ -360,7 +360,22 @@
     <ClCompile Include="Generated\USpringArmComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Components\ClothComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Physics\Cloth\ClothManager.cpp" />
-  <ClCompile Include="Generated\UClothComponent.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\AAngryCoachGameMode.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\AAngryCoachPlayerController.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
+    <ClCompile Include="Generated\UClothComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\AAngryCoachGameMode.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\AAngryCoachPlayerController.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\UClothComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\UAccessaryComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\USkillBase.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\USkillBaseComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\UAccessoryComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\UAccessoryActor.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\AAccessoryActor.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\USkillComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\UAccessoryHeavyAttackSkill.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\UAccessoryLightAttackSkill.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\UDefaultHeavyAttackSkill.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\UDefaultLightAttackSkill.generated.cpp"><Filter>Generated</Filter></ClCompile>
+  <ClCompile Include="Generated\AAngryCoachCharacter.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
   <ItemGroup>
     <ClInclude Include="Generated\AActor.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Generated\AAmbientLightActor.generated.h"><Filter>Generated</Filter></ClInclude>
@@ -743,7 +758,22 @@
     <ClInclude Include="Generated\USpringArmComponent.generated.h"><Filter>Generated</Filter></ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Components\ClothComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Physics\Cloth\ClothManager.h" />
-  <ClInclude Include="Generated\UClothComponent.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\AAngryCoachGameMode.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\AAngryCoachPlayerController.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
+  <ClInclude Include="Generated\UClothComponent.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\AAngryCoachGameMode.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\AAngryCoachPlayerController.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\UClothComponent.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\UAccessaryComponent.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\USkillBase.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\USkillBaseComponent.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\UAccessoryComponent.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\UAccessoryActor.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\AAccessoryActor.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\USkillComponent.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\UAccessoryHeavyAttackSkill.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\UAccessoryLightAttackSkill.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\UDefaultHeavyAttackSkill.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\UDefaultLightAttackSkill.generated.h"><Filter>Generated</Filter></ClInclude>
+  <ClInclude Include="Generated\AAngryCoachCharacter.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />
