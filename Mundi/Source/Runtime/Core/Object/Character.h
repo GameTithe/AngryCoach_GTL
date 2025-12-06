@@ -23,6 +23,8 @@ public:
 	// 캐릭터 고유 기능
 	virtual void Jump();
 	virtual void StopJumping();
+
+	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
 	 
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 	UCharacterMovementComponent* GetCharacterMovement() const { return CharacterMovement; }
@@ -33,8 +35,19 @@ public:
 	//APawn에서 정의 됨
 	USkeletalMeshComponent* GetMesh() const { return SkeletalMeshComp; }
 
+	void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+
+	void Attack();
+
 protected:
     UCapsuleComponent* CapsuleComponent;
+	// 캐릭터 기본 공격 - 주먹, 발차기
+	UShapeComponent* FistComponent;
+	UShapeComponent* KickComponent;
     UCharacterMovementComponent* CharacterMovement;
+
+	float BaseDamage = 10.0f;
 
 };
