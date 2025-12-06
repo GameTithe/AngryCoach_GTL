@@ -22,8 +22,7 @@ void USkillComponent::BeginPlay()
 
 	// 게임 시작 시 기본 스킬 활성화
 	SetDefaultSkills();
-
-	UE_LOG("[SkillComponent] Default skills initialized");
+	  
 }
 
 void USkillComponent::HandleInput(ESkillSlot Slot)
@@ -48,12 +47,10 @@ void USkillComponent::OverrideSkills(const TMap<ESkillSlot, USkillBase*>& NewSki
 	// 기존에 가지고 있던 스킬 목록 비우기
 	ActiveSkills.Empty();
 
-	// 맨몸 스킬 등록
-	BuildSkillInstances(DefualtSkill, nullptr);
-
-	//악세 스킬 Override
+	// 악세서리 스킬만 등록 (맨몸 스킬은 등록하지 않음)
 	BuildSkillInstances(NewSkill, InAccessory);
-}
+	//BuildSkillInstances(DefualtSkill, nullptr);
+ }
 
 void USkillComponent::SetDefaultSkills()
 {
@@ -71,19 +68,16 @@ void USkillComponent::BuildSkillInstances(const TMap<ESkillSlot, USkillBase*>& S
 
 		if (Skill)
 		{
-			// 스킬 객체(UObject) 생성
-			USkillBase* NewSkillInstance = NewObject<USkillBase>();
-			NewSkillInstance = Skill;
-			
-	
 			// 스킬과 악세서리 맵핑
 			if (Source)
 			{
-				NewSkillInstance->SetSourceAccessory(Source);
+				Skill->SetSourceAccessory(Source);
 			}
 
 			// 맵에 등록 (이미 있으면 덮어씌워짐)
-			ActiveSkills.Add(Slot, NewSkillInstance);
+			ActiveSkills.Add(Slot, Skill);
+
+			UE_LOG("[SkillComponent] Registered skill for slot %d", static_cast<int>(Slot));
 		}
 	}
 }

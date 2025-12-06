@@ -34,9 +34,16 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Accessory", Tooltip = "악세서리 이름")
 	FString AccessoryName;
-
+	
 	UPROPERTY(EditAnywhere, Category = "Accessory", Tooltip = "악세서리 설명")
 	FString Description;
+
+
+	void DuplicateSubObjects() override;
+	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
+protected:
+	ACharacter* OwningCharacter = nullptr;
 
 public:
 	UFUNCTION()
@@ -47,4 +54,5 @@ public:
 
 	// 스킬 getter
 	const TMap<ESkillSlot, USkillBase*>& GetGrantedSkills() const { return GrantedSkills; }
+	ACharacter* GetOwningCharacter() const { return OwningCharacter; }
 };

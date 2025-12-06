@@ -285,8 +285,8 @@ FMatrix USceneComponent::GetWorldMatrix() const
 // ──────────────────────────────
 void USceneComponent::SetupAttachment(USceneComponent* InParent, EAttachmentRule Rule)
 {
+    //if (!AttachParent) return;
     if (AttachParent == InParent) return;
-
     const FTransform OldWorld = GetWorldTransform();
 
     // 기존 부모에서 제거

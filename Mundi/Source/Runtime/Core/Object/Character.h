@@ -27,7 +27,15 @@ public:
 
 	// 스킬 관련
 	void HandleSkillInput();
-	 
+
+	// 악세서리 관련
+	void EquipAccessory(class AAccessoryActor* Accessory);
+	void UnequipAccessory();
+	class AAccessoryActor* GetCurrentAccessory() const { return CurrentAccessory; }
+
+	// 기본 무기 스폰
+	void SpawnDefaultWeapon();
+
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 	UCharacterMovementComponent* GetCharacterMovement() const { return CharacterMovement; }
 
@@ -43,5 +51,5 @@ protected:
     UCapsuleComponent* CapsuleComponent;
     UCharacterMovementComponent* CharacterMovement;
 	USkillComponent* SkillComponent;
-
+	class AAccessoryActor* CurrentAccessory = nullptr; 
 };
