@@ -7,7 +7,6 @@
 #include "Delegates.h"
 #include "AActor.generated.h"
 
-
 struct FHitResult;
 class UWorld;
 class USceneComponent;

@@ -2,8 +2,9 @@
 
 #include "SceneComponent.h"
 #include "Material.h"
-#include "UPrimitiveComponent.generated.h"
+
 #include "DamageTypes.h"
+#include "UPrimitiveComponent.generated.h"
 
 struct FBodyInstance;
 struct FSceneCompData;

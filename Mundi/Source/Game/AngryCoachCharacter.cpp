@@ -21,6 +21,10 @@ AAngryCoachCharacter::~AAngryCoachCharacter()
 
 void AAngryCoachCharacter::BeginPlay()
 {
+	/*
+	 * 부모 클래스(ACharacter)에서 Delegate 바인딩 중
+	 * 구현에 따라서 AAngryCoachCharacter에서 바인딩할 지 결정
+	 */
 	Super::BeginPlay();
 
 	// PIE 시작 시 기본 무기 장착 (테스트용)
@@ -168,21 +172,36 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 	// 지금은 단순 매핑
 	ESkillSlot Slot = ESkillSlot::None;
 
+	// BaseDage 테스트용 하드 코딩
 	switch (Input)
 	{
 	case EAttackInput::Light:
-		Slot = ESkillSlot::LightAttack;
-		break;
+		{
+			Slot = ESkillSlot::LightAttack;			
+			BaseDamage = 5.0f;
+			break;
+		}
 	case EAttackInput::Heavy:
-		Slot = ESkillSlot::HeavyAttack;
-		break;
+		{
+			Slot = ESkillSlot::HeavyAttack;
+			BaseDamage = 10.0f;
+			break;
+		}
 	case EAttackInput::Skill:
-		Slot = ESkillSlot::Speical;
-		break;
+		{
+			Slot = ESkillSlot::Speical;
+			/*
+			 * TODO
+			 * Skil별 데미지 적용
+			 */
+			BaseDamage = 15.0f;
+			break;
+		}
 	}
 
 	if (Slot != ESkillSlot::None)
 	{
 		SkillComponent->HandleInput(Slot);
 	}
+	Super::Attack();
 }

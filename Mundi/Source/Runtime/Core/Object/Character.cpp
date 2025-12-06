@@ -222,63 +222,6 @@ void ACharacter::StopJumping()
 	}
 }
 
-void ACharacter::HandleSkillInput()
-{
-	if (!SkillComponent)
-		return;
-
-	UInputManager& InputMgr = UInputManager::GetInstance();
-
-	// F키 - Light Attack
-	if (InputMgr.IsKeyPressed('F'))
-	{
-		SkillComponent->HandleInput(ESkillSlot::LightAttack);
-	}
-
-	// G키 - Heavy Attack
-	if (InputMgr.IsKeyPressed('G'))
-	{
-		SkillComponent->HandleInput(ESkillSlot::HeavyAttack);
-	}
-}
-
-void ACharacter::EquipAccessory(AAccessoryActor* Accessory)
-{
-	if (!Accessory)
-		return;
-
-	// 기존 악세서리가 있으면 먼저 해제
-	if (CurrentAccessory)
-	{
-		UnequipAccessory();
-	}
-
-	// 새 악세서리 등록
-	CurrentAccessory = Accessory;
-
-	// 악세서리의 Equip 로직 실행 (부착 + 스킬 등록)
-	Accessory->Equip(this);
-	 
-}
-
-void ACharacter::UnequipAccessory()
-{
-	if (!CurrentAccessory)
-		return;
-
-	// 악세서리의 Unequip 로직 실행
-	CurrentAccessory->Unequip();
-
-	// 스킬을 기본 스킬로 복원
-	if (SkillComponent)
-	{
-		SkillComponent->SetDefaultSkills();
-	}
-	 
-
-	CurrentAccessory = nullptr;
-}
-
 float ACharacter::TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator)
 {
 	return Super::TakeDamage(DamageAmount, HitResult, Instigator);

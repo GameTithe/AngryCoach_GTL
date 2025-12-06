@@ -24,18 +24,7 @@ public:
 	// 캐릭터 고유 기능
 	virtual void Jump();
 	virtual void StopJumping();
-
-	// 스킬 관련
-	void HandleSkillInput();
-
-	// 악세서리 관련
-	void EquipAccessory(class AAccessoryActor* Accessory);
-	void UnequipAccessory();
-	class AAccessoryActor* GetCurrentAccessory() const { return CurrentAccessory; }
-
-	// 기본 무기 스폰
-	void SpawnDefaultWeapon();
-
+	
 
 	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
 	 
@@ -53,8 +42,6 @@ public:
 	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 
 	void Attack();
-
-	USkillComponent* GetSkillComponent() const { return SkillComponent; }
 
 protected:
 	UCapsuleComponent* CapsuleComponent = nullptr;
