@@ -294,8 +294,8 @@ bool UCharacterMovementComponent::SafeMoveUpdatedComponent(const FVector& Delta,
 	// 디버깅 로그
 	if (bHit)
 	{
-		UE_LOG("[CharacterMovement] Sweep HIT! Distance: %.3f, Normal: (%.2f, %.2f, %.2f)",
-			OutHit.Distance, OutHit.ImpactNormal.X, OutHit.ImpactNormal.Y, OutHit.ImpactNormal.Z);
+		// UE_LOG("[CharacterMovement] Sweep HIT! Distance: %.3f, Normal: (%.2f, %.2f, %.2f)",
+		// 	OutHit.Distance, OutHit.ImpactNormal.X, OutHit.ImpactNormal.Y, OutHit.ImpactNormal.Z);
 	}
 
 	if (bHit && OutHit.bBlockingHit)

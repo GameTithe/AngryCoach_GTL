@@ -62,6 +62,9 @@ TArray<FAnimNotifyEvent>& UAnimSequenceBase::GetAnimNotifyEvents()
         std::filesystem::path MetaPath(UTF8ToWide(MetaPathUtf8));
         std::error_code ec;
 
+        // UE_LOG("GetAnimNotifyEvents - FilePath: %s, MetaPath: %s, Exists: %d",
+        //     Src.c_str(), MetaPathUtf8.c_str(), std::filesystem::exists(MetaPath, ec) ? 1 : 0);
+
         if (std::filesystem::exists(MetaPath, ec))
         {
             LoadMeta(MetaPathUtf8);

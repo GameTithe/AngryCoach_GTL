@@ -200,7 +200,7 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
             // 0.5 단위로 속도가 변경될 때마다 로그 출력
             if (FMath::Abs(CurrentSpeed - LastLoggedSpeed) >= 0.5f)
             {
-                UE_LOG("[Team2AnimInstance] Speed: %.2f (W key - Increasing)", CurrentSpeed);
+                // UE_LOG("[Team2AnimInstance] Speed: %.2f (W key - Increasing)", CurrentSpeed);
                 LastLoggedSpeed = CurrentSpeed;
             }
         }
@@ -214,7 +214,7 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
             // 0.5 단위로 속도가 변경될 때마다 로그 출력
             if (FMath::Abs(CurrentSpeed - LastLoggedSpeed) >= 0.5f)
             {
-                UE_LOG("[Team2AnimInstance] Speed: %.2f (S key - Decreasing)", CurrentSpeed);
+                // UE_LOG("[Team2AnimInstance] Speed: %.2f (S key - Decreasing)", CurrentSpeed);
                 LastLoggedSpeed = CurrentSpeed;
             }
         }
@@ -223,7 +223,7 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
         {
             CurrentSpeed = 0.0f;
             AnimInstance->SetMovementSpeed(CurrentSpeed);
-            UE_LOG("[Team2AnimInstance] Speed RESET to 0.0");
+            // UE_LOG("[Team2AnimInstance] Speed RESET to 0.0");
             LastLoggedSpeed = CurrentSpeed;
         }
 
@@ -264,9 +264,9 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
         LogTimer += DeltaTime;
         if (LogTimer >= 5.0f)
         {
-            UE_LOG("[Team2AnimInstance] Current Speed: %.2f, IsMoving: %d, Threshold: 5.0",
-                CurrentSpeed,
-                AnimInstance->GetIsMoving() ? 1 : 0);
+            // UE_LOG("[Team2AnimInstance] Current Speed: %.2f, IsMoving: %d, Threshold: 5.0",
+            //     CurrentSpeed,
+            //     AnimInstance->GetIsMoving() ? 1 : 0);
             LogTimer = 0.0f;
         }
 
