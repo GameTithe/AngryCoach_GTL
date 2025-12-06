@@ -40,6 +40,14 @@ public:
 	virtual void StartMatch();
 	virtual void EndMatch();
 
+	// 인트로 컷신 시작/종료 (최초 1회)
+	virtual void StartIntro();
+	virtual void EndIntro();  // Lua에서 인트로 완료 시 호출
+
+	// 게임 스타트 화면 시작/종료 (최초 1회)
+	virtual void StartStartPage();
+	virtual void EndStartPage();  // Lua에서 스타트 버튼 클릭 시 호출
+
 	// 캐릭터 선택 시작/종료
 	virtual void StartCharacterSelect();
 	virtual void EndCharacterSelect();  // Lua에서 선택 완료 시 호출

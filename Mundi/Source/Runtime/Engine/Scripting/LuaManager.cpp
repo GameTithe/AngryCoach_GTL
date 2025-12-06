@@ -371,6 +371,8 @@ FLuaManager::FLuaManager()
 
     SharedLib.new_enum("ERoundState",
         "None", ERoundState::None,
+        "Intro", ERoundState::Intro,
+        "StartPage", ERoundState::StartPage,
         "CharacterSelect", ERoundState::CharacterSelect,
         "CountDown", ERoundState::CountDown,
         "InProgress", ERoundState::InProgress,
@@ -509,6 +511,28 @@ FLuaManager::FLuaManager()
             if (auto* GameMode = GWorld->GetGameMode())
             {
                 GameMode->EndMatch();
+            }
+        }
+    );
+
+    SharedLib.set_function("EndIntro",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->EndIntro();
+            }
+        }
+    );
+
+    SharedLib.set_function("EndStartPage",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->EndStartPage();
             }
         }
     );

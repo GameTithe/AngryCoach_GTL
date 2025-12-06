@@ -314,6 +314,8 @@ enum class EGameState : uint8
 enum class ERoundState : uint8
 {
     None,
+    Intro,             // 인트로 컷신 재생 (최초 1회)
+    StartPage,         // 게임 스타트 화면 (최초 1회)
     CharacterSelect,   // 캐릭터/악세사리 선택
     CountDown,         // 카운트다운 중 (Ready/Go)
     InProgress,        // 라운드 진행 중 (전투)

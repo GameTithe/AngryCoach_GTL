@@ -88,9 +88,11 @@ void AGameModeBase::StartMatch()
 	// Lua 콜백: OnMatchStart
 	CallLuaCallback("OnMatchStart");
 
-	// 첫 번째 라운드 - 캐릭터 선택으로 시작
+	// 첫 번째 라운드 준비
 	GameState->AdvanceToNextRound();
-	StartCharacterSelect();
+
+	// 인트로 컷신으로 시작 (최초 1회)
+	StartIntro();
 }
 
 void AGameModeBase::EndMatch()
@@ -106,11 +108,71 @@ void AGameModeBase::EndMatch()
 	CallLuaCallback("OnMatchEnd");
 }
 
+void AGameModeBase::StartIntro()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	GameState->SetRoundState(ERoundState::Intro);
+
+	// Lua 콜백: OnIntroStart
+	CallLuaCallback("OnIntroStart");
+}
+
+void AGameModeBase::EndIntro()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	// Lua 콜백: OnIntroEnd
+	CallLuaCallback("OnIntroEnd");
+
+	// 인트로 완료 → 게임 스타트 화면으로
+	StartStartPage();
+}
+
+void AGameModeBase::StartStartPage()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	GameState->SetRoundState(ERoundState::StartPage);
+
+	// Lua 콜백: OnStartPageStart
+	CallLuaCallback("OnStartPageStart");
+}
+
+void AGameModeBase::EndStartPage()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	// Lua 콜백: OnStartPageEnd
+	CallLuaCallback("OnStartPageEnd");
+
+	// 게임 스타트 화면 완료 → 캐릭터 선택으로
+	StartCharacterSelect();
+}
+
 void AGameModeBase::StartCharacterSelect()
 {
 	if (!GameState)
 	{
 		return;
+	}
+
+	// 라운드 종료 상태에서 호출된 경우 (다음 라운드로 진행)
+	if (GameState->GetRoundState() == ERoundState::RoundEnd)
+	{
+		GameState->AdvanceToNextRound();
 	}
 
 	GameState->SetRoundState(ERoundState::CharacterSelect);
