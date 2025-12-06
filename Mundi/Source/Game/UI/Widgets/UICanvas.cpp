@@ -154,6 +154,14 @@ void UUICanvas::SetWidgetZOrder(const std::string& WidgetName, int32_t Z)
     }
 }
 
+void UUICanvas::SetWidgetOpacity(const std::string& WidgetName, float Opacity)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->Opacity = std::clamp(Opacity, 0.0f, 1.0f);
+    }
+}
+
 void UUICanvas::SetWidgetForegroundColor(const std::string& WidgetName, float R, float G, float B, float A)
 {
     if (auto* Widget = dynamic_cast<UProgressBarWidget*>(FindWidget(WidgetName)))

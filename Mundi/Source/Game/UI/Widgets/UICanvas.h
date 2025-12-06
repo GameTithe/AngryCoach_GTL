@@ -94,6 +94,7 @@ public:
     void SetWidgetSize(const std::string& Name, float W, float H);
     void SetWidgetVisible(const std::string& Name, bool bVisible);
     void SetWidgetZOrder(const std::string& Name, int32_t Z);
+    void SetWidgetOpacity(const std::string& Name, float Opacity);
     void SetWidgetForegroundColor(const std::string& Name, float R, float G, float B, float A);
     void SetWidgetBackgroundColor(const std::string& Name, float R, float G, float B, float A);
     void SetWidgetRightToLeft(const std::string& Name, bool bRTL);

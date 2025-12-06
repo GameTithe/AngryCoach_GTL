@@ -942,6 +942,10 @@ void FLuaManager::ExposeUIFunctions()
         {
             if (Self) Self->SetWidgetZOrder(Name, Z);
         },
+        "SetWidgetOpacity", [](UUICanvas* Self, const std::string& Name, float Opacity)
+        {
+            if (Self) Self->SetWidgetOpacity(Name, Opacity);
+        },
         "SetForegroundColor", [](UUICanvas* Self, const std::string& Name,
                                  float R, float G, float B, float A)
         {
