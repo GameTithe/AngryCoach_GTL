@@ -345,6 +345,23 @@ void UUICanvas::StopWidgetAnimation(const std::string& WidgetName)
     }
 }
 
+void UUICanvas::ShakeWidget(const std::string& WidgetName, float Intensity, float Duration,
+                            float Frequency, bool bDecay)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->StartShake(Intensity, Duration, Frequency, bDecay);
+    }
+}
+
+void UUICanvas::StopWidgetShake(const std::string& WidgetName)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->StopShake();
+    }
+}
+
 void UUICanvas::PlayAllEnterAnimations()
 {
     UE_LOG("[UI] PlayAllEnterAnimations called for canvas %s, widget count=%d\n", Name.c_str(), (int)Widgets.size());
@@ -383,6 +400,7 @@ void UUICanvas::Update(float DeltaTime)
         if (Pair.second)
         {
             Pair.second->Update(DeltaTime);
+            Pair.second->UpdateShake(DeltaTime);
         }
     }
 }

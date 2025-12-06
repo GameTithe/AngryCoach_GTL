@@ -160,6 +160,22 @@ public:
     void StopWidgetAnimation(const std::string& Name);
 
     /**
+     * @brief 위젯 진동 애니메이션 시작
+     * @param Name 위젯 이름
+     * @param Intensity 진동 강도 (픽셀)
+     * @param Duration 지속 시간 (0이면 무한)
+     * @param Frequency 진동 빈도 (Hz)
+     * @param bDecay 시간에 따라 감쇠할지
+     */
+    void ShakeWidget(const std::string& Name, float Intensity, float Duration = 0.0f,
+                     float Frequency = 15.0f, bool bDecay = true);
+
+    /**
+     * @brief 위젯 진동 애니메이션 중지
+     */
+    void StopWidgetShake(const std::string& Name);
+
+    /**
      * @brief 모든 위젯 Enter 애니메이션 재생
      */
     void PlayAllEnterAnimations();

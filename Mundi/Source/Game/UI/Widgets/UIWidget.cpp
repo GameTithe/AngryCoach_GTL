@@ -1,6 +1,12 @@
 #include "pch.h"
 #include "UIWidget.h"
 #include <algorithm>
+#include <random>
+
+// PI 상수
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 void UUIWidget::Update(float DeltaTime)
 {
@@ -63,6 +69,61 @@ void UUIWidget::Update(float DeltaTime)
     }
 }
 
+// Shake 애니메이션 업데이트 (Update와 별도로 호출)
+void UUIWidget::UpdateShake(float DeltaTime)
+{
+    if (!Animation.bShaking)
+        return;
+
+    Animation.ShakeElapsed += DeltaTime;
+
+    // 지속 시간 체크 (0이면 무한)
+    if (Animation.ShakeDuration > 0.0f && Animation.ShakeElapsed >= Animation.ShakeDuration)
+    {
+        // 진동 종료, 원래 위치로 복원
+        X = Animation.ShakeBaseX;
+        Y = Animation.ShakeBaseY;
+        Animation.ResetShake();
+        return;
+    }
+
+    // 감쇠 계산 (시간이 지나면서 약해짐)
+    float decay = 1.0f;
+    if (Animation.bShakeDecay && Animation.ShakeDuration > 0.0f)
+    {
+        // 시간이 지남에 따라 1.0 -> 0.0
+        decay = 1.0f - (Animation.ShakeElapsed / Animation.ShakeDuration);
+        decay = decay * decay;  // Quadratic decay for smoother falloff
+    }
+
+    float intensity = Animation.ShakeIntensity * decay;
+    float time = Animation.ShakeElapsed;
+    float freq = Animation.ShakeFrequency;
+
+    // 불규칙한 진동을 위해 여러 사인파 합성
+    // 기본 주파수 + 배음 + 서로 다른 위상
+    float offsetX = 0.0f;
+    float offsetY = 0.0f;
+
+    // X축: 여러 주파수 합성
+    offsetX += sinf(time * freq * 2.0f * (float)M_PI + Animation.ShakePhaseX) * 0.5f;
+    offsetX += sinf(time * freq * 1.3f * 2.0f * (float)M_PI + Animation.ShakePhaseX * 2.1f) * 0.3f;
+    offsetX += sinf(time * freq * 2.7f * 2.0f * (float)M_PI + Animation.ShakePhaseX * 0.7f) * 0.2f;
+
+    // Y축: 다른 주파수/위상
+    offsetY += sinf(time * freq * 1.1f * 2.0f * (float)M_PI + Animation.ShakePhaseY) * 0.5f;
+    offsetY += sinf(time * freq * 1.7f * 2.0f * (float)M_PI + Animation.ShakePhaseY * 1.8f) * 0.3f;
+    offsetY += sinf(time * freq * 2.3f * 2.0f * (float)M_PI + Animation.ShakePhaseY * 0.5f) * 0.2f;
+
+    // 강도 적용
+    offsetX *= intensity;
+    offsetY *= intensity;
+
+    // 위치 업데이트
+    X = Animation.ShakeBaseX + offsetX;
+    Y = Animation.ShakeBaseY + offsetY;
+}
+
 void UUIWidget::MoveTo(float TargetX, float TargetY, float Duration, EEasingType Easing)
 {
     Animation.StartX = X;
@@ -112,6 +173,40 @@ void UUIWidget::FadeTo(float TargetOpacity, float Duration, EEasingType Easing)
 void UUIWidget::StopAnimation()
 {
     Animation.Reset();
+}
+
+void UUIWidget::StartShake(float Intensity, float Duration, float Frequency, bool bDecay)
+{
+    // 현재 위치를 기준점으로 저장
+    Animation.ShakeBaseX = X;
+    Animation.ShakeBaseY = Y;
+
+    Animation.ShakeIntensity = Intensity;
+    Animation.ShakeDuration = Duration;
+    Animation.ShakeFrequency = Frequency;
+    Animation.bShakeDecay = bDecay;
+    Animation.ShakeElapsed = 0.0f;
+
+    // 불규칙성을 위한 랜덤 위상 생성
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_real_distribution<float> dist(0.0f, 2.0f * (float)M_PI);
+
+    Animation.ShakePhaseX = dist(gen);
+    Animation.ShakePhaseY = dist(gen);
+
+    Animation.bShaking = true;
+}
+
+void UUIWidget::StopShake()
+{
+    if (Animation.bShaking)
+    {
+        // 원래 위치로 복원
+        X = Animation.ShakeBaseX;
+        Y = Animation.ShakeBaseY;
+        Animation.ResetShake();
+    }
 }
 
 void UUIWidget::CaptureOriginalValues()

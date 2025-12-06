@@ -1129,6 +1129,38 @@ void FLuaManager::ExposeUIFunctions()
             if (Self) Self->StopWidgetAnimation(Name);
         },
 
+        // ======== 진동 애니메이션 ========
+
+        // 진동 시작 (강도, 지속시간, 빈도, 감쇠여부)
+        "ShakeWidget", sol::overload(
+            // ShakeWidget(name, intensity)
+            [](UUICanvas* Self, const std::string& Name, float Intensity)
+            {
+                if (Self) Self->ShakeWidget(Name, Intensity, 0.0f, 15.0f, true);
+            },
+            // ShakeWidget(name, intensity, duration)
+            [](UUICanvas* Self, const std::string& Name, float Intensity, float Duration)
+            {
+                if (Self) Self->ShakeWidget(Name, Intensity, Duration, 15.0f, true);
+            },
+            // ShakeWidget(name, intensity, duration, frequency)
+            [](UUICanvas* Self, const std::string& Name, float Intensity, float Duration, float Frequency)
+            {
+                if (Self) Self->ShakeWidget(Name, Intensity, Duration, Frequency, true);
+            },
+            // ShakeWidget(name, intensity, duration, frequency, decay)
+            [](UUICanvas* Self, const std::string& Name, float Intensity, float Duration, float Frequency, bool bDecay)
+            {
+                if (Self) Self->ShakeWidget(Name, Intensity, Duration, Frequency, bDecay);
+            }
+        ),
+
+        // 진동 중지
+        "StopShake", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (Self) Self->StopWidgetShake(Name);
+        },
+
         // Enter 애니메이션 재생
         "PlayEnterAnimation", [](UUICanvas* Self, const std::string& Name)
         {
