@@ -13,7 +13,6 @@
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
 	// SkillComponent 생성
-	SkillComponent = CreateDefaultSubobject<USkillComponent>("SkillComponent");
 }
 
 AAngryCoachCharacter::~AAngryCoachCharacter()
@@ -24,8 +23,8 @@ void AAngryCoachCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 기본 펀치 악세서리 장착
-	if (GWorld)
+	// 기본 펀치 악세서리 장착 (이미 장착된 게 없을 때만)
+	if (GWorld && !CurrentAccessory)
 	{
 		APunchAccessoryActor* PunchAccessory = GWorld->SpawnActor<APunchAccessoryActor>();
 		if (PunchAccessory)
@@ -62,6 +61,12 @@ void AAngryCoachCharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				SkillComponent = Skill;
 			}
 		}
+
+		// SkillComponent가 없으면 새로 생성
+		if (!SkillComponent)
+		{
+			SkillComponent = CreateDefaultSubobject<USkillComponent>("SkillComponent");
+		}
 	}
 }
 
@@ -90,14 +95,27 @@ void AAngryCoachCharacter::DuplicateSubObjects()
 // ===== 몽타주 =====
 void AAngryCoachCharacter::PlayMontage(UAnimMontage* Montage)
 {
-	if (!Montage) return;
+	if (!Montage)
+	{
+		UE_LOG("[PlayMontage] Montage is null!");
+		return;
+	}
 
 	USkeletalMeshComponent* MeshComp = GetMesh();
-	if (!MeshComp) return;
+	if (!MeshComp)
+	{
+		UE_LOG("[PlayMontage] MeshComp is null!");
+		return;
+	}
 
 	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-	if (!AnimInstance) return;
+	if (!AnimInstance)
+	{
+		UE_LOG("[PlayMontage] AnimInstance is null! MeshComp: %p", MeshComp);
+		return;
+	}
 
+	UE_LOG("[PlayMontage] Playing montage. AnimInstance: %p", AnimInstance);
 	AnimInstance->PlayMontage(Montage);
 }
 

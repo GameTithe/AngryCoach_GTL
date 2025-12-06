@@ -1,11 +1,20 @@
 #include "pch.h"
 #include "PunchLightAttackSkill.h"
 #include "PunchAccessoryActor.h"
+#include "Source/Runtime/Engine/Animation/AnimMontage.h"
 
 UPunchLightAttackSkill::UPunchLightAttackSkill()
 {
 	ObjectName = "PunchLightAttack";
 	Montage = RESOURCE.Load<UAnimMontage>("Data/Montages/Combo.Montage.montage.json");
+	if (!Montage)
+	{
+		UE_LOG("[PunchLightAttackSkill] Failed to load montage!");
+	}
+	else
+	{
+		UE_LOG("[PunchLightAttackSkill] Montage loaded, sections: %d", Montage->GetNumSections());
+	}
 }
 
 void UPunchLightAttackSkill::Activate(AActor* Caster)
