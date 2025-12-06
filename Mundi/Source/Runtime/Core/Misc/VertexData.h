@@ -266,10 +266,51 @@ struct FBone
     }
 };
 
+/**
+ * @brief 스켈레탈 메시 소켓 - 본에 부착되는 가상의 부착점
+ * 무기, 이펙트 등을 특정 본에 상대적인 위치에 부착할 때 사용
+ */
+struct FSkeletalMeshSocket
+{
+    FString SocketName;         // 소켓 이름
+    FString BoneName;           // 부착할 본 이름
+    FVector RelativeLocation;   // 본 기준 상대 위치
+    FQuat RelativeRotation;     // 본 기준 상대 회전
+    FVector RelativeScale;      // 상대 스케일
+
+    FSkeletalMeshSocket()
+        : RelativeLocation(FVector::Zero())
+        , RelativeRotation(FQuat::Identity())
+        , RelativeScale(FVector::One())
+    {}
+
+    friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshSocket& Socket)
+    {
+        if (Ar.IsSaving())
+        {
+            Serialization::WriteString(Ar, Socket.SocketName);
+            Serialization::WriteString(Ar, Socket.BoneName);
+            Ar << Socket.RelativeLocation;
+            Ar << Socket.RelativeRotation;
+            Ar << Socket.RelativeScale;
+        }
+        else if (Ar.IsLoading())
+        {
+            Serialization::ReadString(Ar, Socket.SocketName);
+            Serialization::ReadString(Ar, Socket.BoneName);
+            Ar << Socket.RelativeLocation;
+            Ar << Socket.RelativeRotation;
+            Ar << Socket.RelativeScale;
+        }
+        return Ar;
+    }
+};
+
 struct FSkeleton
 {
     FString Name; // 스켈레톤 이름
     TArray<FBone> Bones; // 본 배열
+    TArray<FSkeletalMeshSocket> Sockets; // 소켓 배열
     TMap <FString, int32> BoneNameToIndex; // 이름으로 본 검색
 
     /**
@@ -301,6 +342,59 @@ struct FSkeleton
         return FName();
     }
 
+    /**
+     * @brief 소켓 이름으로 소켓 찾기
+     * @param SocketName 찾을 소켓 이름
+     * @return 소켓 포인터, 없으면 nullptr
+     */
+    const FSkeletalMeshSocket* FindSocket(const FName& SocketName) const
+    {
+        for (const auto& Socket : Sockets)
+        {
+            if (Socket.SocketName == SocketName.ToString())
+            {
+                return &Socket;
+            }
+        }
+        return nullptr;
+    }
+
+    FSkeletalMeshSocket* FindSocket(const FName& SocketName)
+    {
+        for (auto& Socket : Sockets)
+        {
+            if (Socket.SocketName == SocketName.ToString())
+            {
+                return &Socket;
+            }
+        }
+        return nullptr;
+    }
+
+    /**
+     * @brief 소켓 추가
+     */
+    void AddSocket(const FSkeletalMeshSocket& Socket)
+    {
+        Sockets.Add(Socket);
+    }
+
+    /**
+     * @brief 소켓 제거
+     */
+    bool RemoveSocket(const FName& SocketName)
+    {
+        for (int32 i = 0; i < static_cast<int32>(Sockets.size()); ++i)
+        {
+            if (Sockets[i].SocketName == SocketName.ToString())
+            {
+                Sockets.RemoveAt(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
     friend FArchive& operator<<(FArchive& Ar, FSkeleton& Skeleton)
     {
         if (Ar.IsSaving())
@@ -313,7 +407,14 @@ struct FSkeleton
             {
                 Ar << bone;
             }
-            // BoneNameToIndex는 로드 시 재구축 가능하므로 저장 안 함
+
+            // 소켓 저장
+            uint32 socketCount = static_cast<uint32>(Skeleton.Sockets.size());
+            Ar << socketCount;
+            for (auto& socket : Skeleton.Sockets)
+            {
+                Ar << socket;
+            }
         }
         else if (Ar.IsLoading())
         {
@@ -333,12 +434,37 @@ struct FSkeleton
             {
                 Skeleton.BoneNameToIndex[Skeleton.Bones[i].Name] = i;
             }
+
+            // 소켓 로드 (하위 호환성: 기존 캐시에 소켓 데이터가 없을 수 있음)
+            try
+            {
+                uint32 socketCount;
+                Ar << socketCount;
+                // 소켓 개수가 비정상적으로 크면 기존 포맷으로 간주
+                if (socketCount > 10000)
+                {
+                    Skeleton.Sockets.clear();
+                }
+                else
+                {
+                    Skeleton.Sockets.resize(socketCount);
+                    for (auto& socket : Skeleton.Sockets)
+                    {
+                        Ar << socket;
+                    }
+                }
+            }
+            catch (...)
+            {
+                // 기존 캐시 파일은 소켓 데이터가 없음 - 무시
+                Skeleton.Sockets.clear();
+            }
         }
         return Ar;
     }
 
     /**
-    * @brief 전체 본 개수 반환 
+    * @brief 전체 본 개수 반환
     */
     int32 GetNumBones() const
     {
@@ -355,6 +481,14 @@ struct FSkeleton
             return Bones[BoneIndex].ParentIndex;
         }
        return INDEX_NONE;
+    }
+
+    /**
+    * @brief 전체 소켓 개수 반환
+    */
+    int32 GetNumSockets() const
+    {
+        return static_cast<int32>(Sockets.size());
     }
 };
 

@@ -940,9 +940,76 @@ int32 USkeletalMeshComponent::GetBoneIndexByName(const FName& BoneName) const
     {
         return -1;
     }
-    
+
     const FSkeleton& Skeleton = SkeletalMesh->GetSkeletalMeshData()->Skeleton;
     return Skeleton.FindBoneIndex(BoneName);
+}
+
+// ============================================================
+// Socket Section
+// ============================================================
+
+FTransform USkeletalMeshComponent::GetSocketTransform(const FName& SocketName) const
+{
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData())
+    {
+        return GetWorldTransform();
+    }
+
+    const FSkeleton& Skeleton = SkeletalMesh->GetSkeletalMeshData()->Skeleton;
+    const FSkeletalMeshSocket* Socket = Skeleton.FindSocket(SocketName);
+
+    if (!Socket)
+    {
+        // 소켓이 없으면 컴포넌트 트랜스폼 반환
+        return GetWorldTransform();
+    }
+
+    // 소켓이 부착된 본의 인덱스 찾기
+    int32 BoneIndex = Skeleton.FindBoneIndex(FName(Socket->BoneName));
+    if (BoneIndex == INDEX_NONE)
+    {
+        return GetWorldTransform();
+    }
+
+    // 본의 월드 트랜스폼 가져오기
+    FTransform BoneWorldTransform = const_cast<USkeletalMeshComponent*>(this)->GetBoneWorldTransform(BoneIndex);
+
+    // 소켓의 상대 트랜스폼 적용
+    FTransform SocketRelativeTransform;
+    SocketRelativeTransform.Translation = Socket->RelativeLocation;
+    SocketRelativeTransform.Rotation = Socket->RelativeRotation;
+    SocketRelativeTransform.Scale3D = Socket->RelativeScale;
+
+    // 본 트랜스폼에 소켓 상대 트랜스폼 적용
+    return BoneWorldTransform.GetWorldTransform(SocketRelativeTransform);
+}
+
+bool USkeletalMeshComponent::DoesSocketExist(const FName& SocketName) const
+{
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData())
+    {
+        return false;
+    }
+
+    const FSkeleton& Skeleton = SkeletalMesh->GetSkeletalMeshData()->Skeleton;
+    return Skeleton.FindSocket(SocketName) != nullptr;
+}
+
+void USkeletalMeshComponent::GetAllSocketNames(TArray<FName>& OutSocketNames) const
+{
+    OutSocketNames.clear();
+
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData())
+    {
+        return;
+    }
+
+    const FSkeleton& Skeleton = SkeletalMesh->GetSkeletalMeshData()->Skeleton;
+    for (const auto& Socket : Skeleton.Sockets)
+    {
+        OutSocketNames.Add(FName(Socket.SocketName));
+    }
 }
 
 // ============================================================
