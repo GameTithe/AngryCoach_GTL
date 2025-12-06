@@ -2,6 +2,7 @@
 #include "Actor.h"
 #include "Source/Runtime/Engine/Skill/SkillTypes.h" 
 #include "AAccessoryActor.generated.h"
+
 class UStaticMeshComponent;
 class USkillBase;
 class ACharacter;
@@ -37,7 +38,6 @@ public:
 	
 	UPROPERTY(EditAnywhere, Category = "Accessory", Tooltip = "악세서리 설명")
 	FString Description;
-
 
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
