@@ -108,14 +108,14 @@ protected:
 
 	// 라운드 정보
 	int32 CurrentRound = 0;
-	int32 MaxRounds = 1;           // 총 라운드 수
-	int32 RoundsToWin = 1;         // 승리에 필요한 라운드 수
+	int32 MaxRounds = 999;         // 총 라운드 수 (무한 루프 테스트용)
+	int32 RoundsToWin = 999;       // 승리에 필요한 라운드 수
 
 	// 각 플레이어의 라운드 승리 횟수
 	TArray<int32> RoundWinsPerPlayer;
 
 	// 시간 정보
-	float RoundDuration = 20.0f;   // 라운드 제한 시간 (초)
+	float RoundDuration = 3.0f;   // 라운드 제한 시간 (초) - 테스트용 3초
 	float RoundTimeRemaining = 0.0f;
 
 	// 게임 결과

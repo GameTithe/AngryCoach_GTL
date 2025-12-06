@@ -46,6 +46,7 @@ public:
 
 	// 라운드 시작/종료
 	virtual void StartRound();
+	virtual void BeginBattle();  // ReadyGo 완료 후 실제 전투 시작 (타이머 시작)
 	virtual void EndRound(int32 WinnerIndex);  // -1이면 무승부
 
 	// 카운트다운 시작 (Ready/Go 시퀀스)

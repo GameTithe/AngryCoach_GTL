@@ -403,6 +403,9 @@ void UEditorEngine::StartPIE()
 {
     UE_LOG("[info] START PIE");
 
+    // PIE 시작 전에 이전 PIE에서 남은 UI 캔버스 정리
+    UGameUIManager::Get().RemoveAllCanvases();
+
     UWorld* EditorWorld = WorldContexts[0].World;
     UWorld* PIEWorld = UWorld::DuplicateWorldForPIE(EditorWorld);
 

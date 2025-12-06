@@ -461,6 +461,21 @@ FLuaManager::FLuaManager()
         }
     );
 
+    // 라운드 타이머 리셋 (ReadyGo 시퀀스 후 호출)
+    SharedLib.set_function("ResetRoundTimer",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    GameState->SetRoundTimeRemaining(GameState->GetRoundDuration());
+                }
+            }
+        }
+    );
+
     SharedLib.set_function("GetRoundWins",
         [](int32 PlayerIndex) -> int32
         {
@@ -527,6 +542,17 @@ FLuaManager::FLuaManager()
             if (auto* GameMode = GWorld->GetGameMode())
             {
                 GameMode->StartRound();
+            }
+        }
+    );
+
+    SharedLib.set_function("BeginBattle",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->BeginBattle();
             }
         }
     );
@@ -1262,58 +1288,18 @@ void FLuaManager::ExposeUIFunctions()
         // NOTE: sol::protected_function을 shared_ptr로 래핑하여 람다 캡처 시 수명 문제 해결
         "SetOnClick", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
         {
-            if (!Self)
-            {
-                UE_LOG("[UI] SetOnClick: Self is null\n");
-                return;
-            }
+            if (!Self) return;
+            auto* Button = dynamic_cast<UButtonWidget*>(Self->FindWidget(Name));
+            if (!Button || !Callback.valid()) return;
 
-            UUIWidget* Widget = Self->FindWidget(Name);
-            if (!Widget)
-            {
-                UE_LOG("[UI] SetOnClick: Widget '%s' not found\n", Name.c_str());
-                return;
-            }
-
-            auto* Button = dynamic_cast<UButtonWidget*>(Widget);
-            if (!Button)
-            {
-                UE_LOG("[UI] SetOnClick: Widget '%s' is not a Button (type=%d)\n",
-                       Name.c_str(), static_cast<int>(Widget->Type));
-                return;
-            }
-
-            if (!Callback.valid())
-            {
-                UE_LOG("[UI] SetOnClick: Callback is not valid\n");
-                return;
-            }
-
-            // protected_function을 shared_ptr로 래핑
             auto CallbackPtr = std::make_shared<sol::protected_function>(Callback);
-            UE_LOG("[UI] SetOnClick: Setting callback for button '%s' (ptr=%p)\n", Name.c_str(), CallbackPtr.get());
-
-            Button->OnClick = [CallbackPtr, Name]()
+            Button->OnClick = [CallbackPtr]()
             {
-                UE_LOG("[UI] Button '%s' OnClick invoked (ptr=%p)\n", Name.c_str(), CallbackPtr.get());
                 if (CallbackPtr && CallbackPtr->valid())
                 {
-                    UE_LOG("[UI] Button '%s' callback is valid, calling...\n", Name.c_str());
-                    sol::protected_function_result result = (*CallbackPtr)();
-                    if (!result.valid())
-                    {
-                        sol::error err = result;
-                        UE_LOG("[UI] Button OnClick error: %s\n", err.what());
-                    }
-                    UE_LOG("[UI] Button '%s' callback completed\n", Name.c_str());
-                }
-                else
-                {
-                    UE_LOG("[UI] Button '%s' callback is invalid!\n", Name.c_str());
+                    (*CallbackPtr)();
                 }
             };
-
-            UE_LOG("[UI] SetOnClick: Callback set successfully for '%s'\n", Name.c_str());
         },
 
         // 버튼 호버 시작 콜백 설정

@@ -281,11 +281,22 @@ bool ULuaScriptComponent::CallWithInt(const char* FuncName, int32 Value)
 
 bool ULuaScriptComponent::CallWithTwoInts(const char* FuncName, int32 Value1, int32 Value2)
 {
-	if (!Env.valid()) return false;
+	UE_LOG("[Lua] CallWithTwoInts: %s(%d, %d)\n", FuncName, Value1, Value2);
+
+	if (!Env.valid())
+	{
+		UE_LOG("[Lua] CallWithTwoInts: Env is not valid!\n");
+		return false;
+	}
 
 	sol::protected_function Func = FLuaManager::GetFunc(Env, FuncName);
-	if (!Func.valid()) return false;
+	if (!Func.valid())
+	{
+		UE_LOG("[Lua] CallWithTwoInts: Function '%s' not found!\n", FuncName);
+		return false;
+	}
 
+	UE_LOG("[Lua] CallWithTwoInts: Calling function...\n");
 	auto Result = Func(Value1, Value2);
 	if (!Result.valid())
 	{
@@ -293,6 +304,7 @@ bool ULuaScriptComponent::CallWithTwoInts(const char* FuncName, int32 Value1, in
 		UE_LOG("[Lua][error] %s\n", Err.what());
 		return false;
 	}
+	UE_LOG("[Lua] CallWithTwoInts: Function returned successfully\n");
 	return true;
 }
 

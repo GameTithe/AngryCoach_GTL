@@ -64,7 +64,7 @@ void AGameModeBase::Tick(float DeltaTime)
 
 		// 승리 조건 체크
 		int32 RoundWinner = CheckRoundWinCondition();
-		if (RoundWinner >= -1 && RoundWinner != -1)  // -1이 아니면 승자가 결정됨 (-2는 무승부)
+		if (RoundWinner != -1)  // -1이 아니면 승자가 결정됨 (0,1=승자, -2=무승부)
 		{
 			EndRound(RoundWinner == -2 ? -1 : RoundWinner);
 		}
@@ -129,8 +129,8 @@ void AGameModeBase::EndCharacterSelect()
 	// Lua 콜백: OnCharacterSelectEnd
 	CallLuaCallback("OnCharacterSelectEnd");
 
-	// 캐릭터 선택 완료 → 카운트다운(Ready/Go) 시작
-	StartCountDown();
+	// 캐릭터 선택 완료 → 바로 라운드 시작 (Lua에서 ReadyGo 시퀀스 처리)
+	StartRound();
 }
 
 void AGameModeBase::StartRound()
@@ -140,21 +140,38 @@ void AGameModeBase::StartRound()
 		return;
 	}
 
-	GameState->SetRoundState(ERoundState::InProgress);
-	GameState->SetRoundTimeRemaining(GameState->GetRoundDuration());
+	// CountDown 상태로 설정 (Lua에서 ReadyGo 시퀀스 처리)
+	// 타이머는 아직 시작하지 않음 - BeginBattle()에서 시작
+	GameState->SetRoundState(ERoundState::CountDown);
 
 	// Lua 콜백: OnRoundStart(roundNumber)
 	CallLuaCallbackWithInt("OnRoundStart", GameState->GetCurrentRound());
 }
 
-void AGameModeBase::EndRound(int32 WinnerIndex)
+void AGameModeBase::BeginBattle()
 {
 	if (!GameState)
 	{
 		return;
 	}
 
+	// 이제 진짜 전투 시작 - 타이머 시작
+	GameState->SetRoundState(ERoundState::InProgress);
+	GameState->SetRoundTimeRemaining(GameState->GetRoundDuration());
+}
+
+void AGameModeBase::EndRound(int32 WinnerIndex)
+{
+	UE_LOG("[GameMode] EndRound called! WinnerIndex=%d\n", WinnerIndex);
+
+	if (!GameState)
+	{
+		UE_LOG("[GameMode] EndRound: GameState is null!\n");
+		return;
+	}
+
 	GameState->SetRoundState(ERoundState::RoundEnd);
+	UE_LOG("[GameMode] EndRound: RoundState set to RoundEnd\n");
 
 	// 라운드 승자 기록
 	if (WinnerIndex >= 0)
@@ -166,7 +183,9 @@ void AGameModeBase::EndRound(int32 WinnerIndex)
 	GameState->OnRoundEnded.Broadcast(GameState->GetCurrentRound(), WinnerIndex);
 
 	// Lua 콜백: OnRoundEnd(roundNumber, winnerIndex)
+	UE_LOG("[GameMode] EndRound: Calling Lua OnRoundEnd callback...\n");
 	CallLuaCallbackWithTwoInts("OnRoundEnd", GameState->GetCurrentRound(), WinnerIndex);
+	UE_LOG("[GameMode] EndRound: Lua callback returned\n");
 
 	// 매치 승리 조건 체크
 	int32 MatchWinner = CheckMatchWinCondition();
@@ -181,12 +200,8 @@ void AGameModeBase::EndRound(int32 WinnerIndex)
 		// 최대 라운드 도달 - 무승부 처리
 		HandleGameOver(EGameResult::Draw);
 	}
-	else
-	{
-		// 다음 라운드로 진행 - 캐릭터 선택부터 다시
-		GameState->AdvanceToNextRound();
-		StartCharacterSelect();
-	}
+	// NOTE: 다음 라운드 시작은 Lua의 OnRoundEnd에서 처리
+	// (RoundEndSequence 코루틴에서 GameSet UI 표시 후 StartCountDown 호출)
 }
 
 void AGameModeBase::StartCountDown(float CountDownTime)
