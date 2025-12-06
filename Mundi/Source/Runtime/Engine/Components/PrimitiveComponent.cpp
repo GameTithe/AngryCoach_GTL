@@ -2,7 +2,7 @@
 #include "PrimitiveComponent.h"
 #include "SceneComponent.h"
 #include "Actor.h"
-#include "Collision.h"
+#include "Pawn.h"
 #include "WorldPartitionManager.h"
 #include "../Physics/BodyInstance.h"
 
@@ -26,9 +26,10 @@ void UPrimitiveComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    OnComponentBeginOverlap.AddDynamic(this, &UPrimitiveComponent::OnBeginOverlap);
-    OnComponentEndOverlap.AddDynamic(this, &UPrimitiveComponent::OnEndOverlap);
-    OnComponentHit.AddDynamic(this, &UPrimitiveComponent::OnHit);
+    // 필요하면 바인딩
+    // OnComponentBeginOverlap.AddDynamic(this, &UPrimitiveComponent::OnBeginOverlap);
+    // OnComponentEndOverlap.AddDynamic(this, &UPrimitiveComponent::OnEndOverlap);
+    // OnComponentHit.AddDynamic(this, &UPrimitiveComponent::OnHit);
 }
 
 void UPrimitiveComponent::TickComponent(float DeltaTime)
@@ -222,7 +223,6 @@ void UPrimitiveComponent::OnHit(UPrimitiveComponent* A, UPrimitiveComponent* B, 
 {
     UE_LOG("OnHit");
 }
-
 
 bool UPrimitiveComponent::IsOverlappingActor(const AActor* Other) const
 {

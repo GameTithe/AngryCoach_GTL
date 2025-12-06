@@ -39,6 +39,7 @@ BEGIN_PROPERTIES(UActorComponent)
     ADD_PROPERTY(bool, bIsActive, "렌더링", true)
     ADD_PROPERTY(bool, bHiddenInGame, "렌더링", true)
     ADD_PROPERTY(bool, bTickEnabled, "렌더링", true)
+    ADD_PROPERTY(FString, Tag, "Tag", true)
 END_PROPERTIES()
 
 // ===== Lua Binding =====

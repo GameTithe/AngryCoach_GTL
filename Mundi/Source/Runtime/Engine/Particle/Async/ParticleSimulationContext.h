@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Collision.h"
+#include "DamageTypes.h"
 #include "OBB.h"
 #include "ShapeComponent.h"
 

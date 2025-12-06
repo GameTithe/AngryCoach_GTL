@@ -25,6 +25,8 @@ public:
 
 	// 이동 입력을 추가 
 	virtual void AddMovementInput(FVector Direction, float Scale = 1.0f);
+
+	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override; 
 	
 	// 현재 이동 입력 벡터 가져오기 
 	FVector ConsumeMovementInputVector();
@@ -34,6 +36,10 @@ public:
 
     // Movement component access (virtual so derived types can supply their own)
     virtual UPawnMovementComponent* GetMovementComponent() const { return PawnMovementComponent; }
+
+	void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 protected:
 	
 	// 현재 Pawn을 컨트롤하는 컨트롤러 

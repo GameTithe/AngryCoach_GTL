@@ -74,6 +74,9 @@ public:
     // ───── 직렬화 ────────────────────────────
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
+    void SetTag(const FString& InTag) { Tag = InTag; }
+    FString GetTag() const { return Tag; }
+
 protected:
     AActor* Owner = nullptr;     // 소유 액터
 
@@ -95,4 +98,7 @@ protected:
     // 저장되지 않는 실시간 상태 변수
     bool bRegistered = false;       // RegisterComponent가 호출됐는가
     bool bPendingDestroy = false;   // DestroyComponent 의도 플래그, NOTE: 현재 작동 안함
+
+    UPROPERTY(EditAnywhere, Category = "Tag")
+    FString Tag;
 };

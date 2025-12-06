@@ -5,6 +5,7 @@
 class UCapsuleComponent;
 class USkeletalMeshComponent;
 class UCharacterMovementComponent;
+class USkillComponent;
 
 UCLASS(DisplayName = "캐릭터", Description = "캐릭터 액터 (프레임워크)")
 class ACharacter : public APawn
@@ -24,15 +25,46 @@ public:
 	virtual void Jump();
 	virtual void StopJumping();
 
-	// 컴포넌트 접근자
+	// 스킬 관련
+	void HandleSkillInput();
+
+	// 악세서리 관련
+	void EquipAccessory(class AAccessoryActor* Accessory);
+	void UnequipAccessory();
+	class AAccessoryActor* GetCurrentAccessory() const { return CurrentAccessory; }
+
+	// 기본 무기 스폰
+	void SpawnDefaultWeapon();
+
+
+	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
+	 
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 	UCharacterMovementComponent* GetCharacterMovement() const { return CharacterMovement; }
+
+	// APawn 인터페이스: 파생 클래스의 MovementComponent를 노출
+	virtual UPawnMovementComponent* GetMovementComponent() const override { return reinterpret_cast<UPawnMovementComponent*>(CharacterMovement); }
+
+	//APawn에서 정의 됨
 	USkeletalMeshComponent* GetMesh() const { return SkeletalMeshComp; }
 
-	// APawn 인터페이스
-	virtual UPawnMovementComponent* GetMovementComponent() const override { return reinterpret_cast<UPawnMovementComponent*>(CharacterMovement); }
+	void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+
+	void Attack();
+
+	USkillComponent* GetSkillComponent() const { return SkillComponent; }
 
 protected:
 	UCapsuleComponent* CapsuleComponent = nullptr;
 	UCharacterMovementComponent* CharacterMovement = nullptr;
+	// 캐릭터 기본 공격 - 주먹, 발차기
+	UShapeComponent* FistComponent;
+	UShapeComponent* KickComponent;
+	USkillComponent* SkillComponent;
+	class AAccessoryActor* CurrentAccessory = nullptr; 
+
+	float BaseDamage = 10.0f;
+
 };
