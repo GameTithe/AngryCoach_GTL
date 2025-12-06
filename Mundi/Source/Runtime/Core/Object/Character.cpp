@@ -85,8 +85,7 @@ void ACharacter::BeginPlay()
 		KickComponent->OnComponentHit.AddDynamic(this, &ACharacter::OnHit);
 		KickComponent->OnComponentBeginOverlap.AddDynamic(this, &ACharacter::OnBeginOverlap);
 		KickComponent->OnComponentEndOverlap.AddDynamic(this, &ACharacter::OnEndOverlap);
-	}	
-}
+	}
 
     // Hardcode: equip FlowKnife prefab on PIE start (moved from Lua to C++)
     if (GWorld && GWorld->bPie)
