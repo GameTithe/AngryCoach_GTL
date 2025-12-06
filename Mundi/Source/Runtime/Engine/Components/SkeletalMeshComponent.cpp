@@ -1413,10 +1413,10 @@ void USkeletalMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandl
         }
 
         // Base (USkinnedMeshComponent) already restores SkeletalMesh; ensure internal state is initialized
-        if (SkeletalMesh)
-        {
-            SetSkeletalMesh(SkeletalMesh->GetPathFileName());
-        }
+        // if (SkeletalMesh)
+        // {
+        //     SetSkeletalMesh(SkeletalMesh->GetPathFileName());
+        // }
 
         // Load animation graph from saved path if available
         if (!AnimGraphPath.empty())

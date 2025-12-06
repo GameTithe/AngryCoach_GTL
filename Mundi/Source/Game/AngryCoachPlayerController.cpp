@@ -112,12 +112,12 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 		Player2->AddMovementInput(WorldDir * (Player2->GetVelocity() * DeltaTime));
 	}
 	
-	// RTYU 액션
-	if (InputManager.IsKeyPressed('1'))
+	// 넘패드 액션
+	if (InputManager.IsKeyPressed(VK_NUMPAD1))
 	{
-		Player1->Jump();
+		Player2->Jump();
 	}
-	// 2, 3, .는 추가 액션용 (TODO)
+	// VK_NUMPAD2, VK_NUMPAD3, VK_DECIMAL은 추가 액션용 (TODO)
 }
 
 void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
