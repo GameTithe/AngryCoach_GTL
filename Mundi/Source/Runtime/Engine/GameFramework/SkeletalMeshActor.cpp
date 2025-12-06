@@ -256,6 +256,23 @@ void ASkeletalMeshActor::RepositionAnchorToSocket(int32 SocketIndex)
     BoneAnchor->SetVisibility(true);
 }
 
+void ASkeletalMeshActor::RepositionAnchorToPreviewMesh(UStaticMeshComponent* InPreviewMesh)
+{
+    // Ensure viewer components exist before using them
+    EnsureViewerComponents();
+
+    if (!BoneAnchor || !InPreviewMesh)
+    {
+        return;
+    }
+
+    // Wire target for preview mesh mode
+    BoneAnchor->SetPreviewMeshTarget(InPreviewMesh);
+
+    BoneAnchor->SetEditability(true);
+    BoneAnchor->SetVisibility(true);
+}
+
 void ASkeletalMeshActor::DuplicateSubObjects()
 {
     Super::DuplicateSubObjects();

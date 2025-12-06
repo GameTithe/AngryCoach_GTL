@@ -113,4 +113,12 @@ public:
 	FVector EditSocketScale = FVector::One();        // 소켓 스케일 편집용
 	char NewSocketNameBuffer[128] = {0};             // 새 소켓 이름 입력 버퍼
 	bool bSocketTransformChanged = false;            // 소켓 트랜스폼 변경 여부
+
+	// ======== 프리뷰 메시 관련 ==========
+	class UStaticMeshComponent* SelectedPreviewMesh = nullptr;  // 현재 선택된 프리뷰 메시
+	TArray<class UStaticMeshComponent*> SpawnedPreviewMeshes;   // 스폰된 프리뷰 메시 목록
+	FVector EditPreviewMeshLocation = FVector::Zero();
+	FVector EditPreviewMeshRotation = FVector::Zero();
+	FVector EditPreviewMeshScale = FVector::One();
+	bool bPreviewMeshTransformChanged = false;
 };
