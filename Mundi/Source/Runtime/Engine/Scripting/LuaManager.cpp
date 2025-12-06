@@ -7,6 +7,8 @@
 #include "CameraActor.h"
 #include "CameraComponent.h"
 #include "PlayerCameraManager.h"
+#include "AccessoryActor.h"
+#include "Character.h"
 #include <tuple>
 
 sol::object MakeCompProxy(sol::state_view SolState, void* Instance, UClass* Class) {
@@ -432,6 +434,125 @@ void FLuaManager::ExposeAllComponentsToLua()
             if (!Comp) return sol::make_object(*Lua, sol::nil); 
             
             return MakeCompProxy(*Lua, Comp, Class);
+        }
+    );
+
+    SharedLib.set_function("GetRootComponent",
+        [this](sol::object Obj)
+        {
+            if (!Obj.is<FGameObject&>()) {
+                UE_LOG("[Lua][error] Error: Expected GameObject\n");
+                return sol::make_object(*Lua, sol::nil);
+            }
+
+            FGameObject& GameObject = Obj.as<FGameObject&>();
+            AActor* Actor = GameObject.GetOwner();
+
+            USceneComponent* RootComp = Actor->GetRootComponent();
+            if (!RootComp) return sol::make_object(*Lua, sol::nil);
+
+            return MakeCompProxy(*Lua, RootComp, RootComp->GetClass());
+        }
+    );
+
+    SharedLib.set_function("AttachToComponent",
+        [this](sol::object CompObj, sol::object ParentObj, const FString& SocketName)
+        {
+            // CompObj는 LuaComponentProxy
+            if (!CompObj.is<LuaComponentProxy&>()) {
+                UE_LOG("[Lua][error] Error: Expected Component as first argument\n");
+                return;
+            }
+
+            LuaComponentProxy& Proxy = CompObj.as<LuaComponentProxy&>();
+            USceneComponent* Comp = Cast<USceneComponent>(static_cast<UActorComponent*>(Proxy.Instance));
+            if (!Comp) {
+                UE_LOG("[Lua][error] Error: Component is not a SceneComponent\n");
+                return;
+            }
+
+            USceneComponent* Parent = nullptr;
+
+            // ParentObj can be either GameObject or Component
+            if (ParentObj.is<FGameObject&>()) {
+                FGameObject& ParentGameObject = ParentObj.as<FGameObject&>();
+                AActor* ParentActor = ParentGameObject.GetOwner();
+                Parent = ParentActor->GetRootComponent();
+            } else if (ParentObj.is<LuaComponentProxy&>()) {
+                LuaComponentProxy& ParentProxy = ParentObj.as<LuaComponentProxy&>();
+                Parent = Cast<USceneComponent>(static_cast<UActorComponent*>(ParentProxy.Instance));
+            }
+
+            if (!Parent) {
+                UE_LOG("[Lua][error] Error: Invalid parent component\n");
+                return;
+            }
+
+            Comp->SetupAttachment(Parent);
+        }
+    );
+
+    SharedLib.set_function("EquipAccessory",
+        [this](sol::object AccessoryObj, sol::object CharacterObj)
+        {
+            // AccessoryObj는 GameObject (AccessoryActor)
+            if (!AccessoryObj.is<FGameObject&>()) {
+                UE_LOG("[Lua][error] Error: Expected GameObject for accessory\n");
+                return;
+            }
+
+            // CharacterObj는 GameObject (Character)
+            if (!CharacterObj.is<FGameObject&>()) {
+                UE_LOG("[Lua][error] Error: Expected GameObject for character\n");
+                return;
+            }
+
+            FGameObject& AccessoryGameObject = AccessoryObj.as<FGameObject&>();
+            FGameObject& CharacterGameObject = CharacterObj.as<FGameObject&>();
+
+            AActor* AccessoryActorBase = AccessoryGameObject.GetOwner();
+            AActor* CharacterActorBase = CharacterGameObject.GetOwner();
+
+            // Cast to specific types
+            AAccessoryActor* Accessory = Cast<AAccessoryActor>(AccessoryActorBase);
+            ACharacter* Character = Cast<ACharacter>(CharacterActorBase);
+
+            if (!Accessory) {
+                UE_LOG("[Lua][error] Error: Accessory is not an AccessoryActor\n");
+                return;
+            }
+
+            if (!Character) {
+                UE_LOG("[Lua][error] Error: Character is not an ACharacter\n");
+                return;
+            }
+
+            // Call Equip
+            Accessory->Equip(Character);
+            UE_LOG("[Lua] AccessoryActor equipped to Character\n");
+        }
+    );
+
+    SharedLib.set_function("UnequipAccessory",
+        [this](sol::object AccessoryObj)
+        {
+            if (!AccessoryObj.is<FGameObject&>()) {
+                UE_LOG("[Lua][error] Error: Expected GameObject for accessory\n");
+                return;
+            }
+
+            FGameObject& AccessoryGameObject = AccessoryObj.as<FGameObject&>();
+            AActor* AccessoryActorBase = AccessoryGameObject.GetOwner();
+
+            AAccessoryActor* Accessory = Cast<AAccessoryActor>(AccessoryActorBase);
+
+            if (!Accessory) {
+                UE_LOG("[Lua][error] Error: Accessory is not an AccessoryActor\n");
+                return;
+            }
+
+            Accessory->Unequip();
+            UE_LOG("[Lua] AccessoryActor unequipped\n");
         }
     );
 }

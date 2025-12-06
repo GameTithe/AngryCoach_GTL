@@ -33,6 +33,8 @@ public:
 	//APawn에서 정의 됨
 	USkeletalMeshComponent* GetMesh() const { return SkeletalMeshComp; }
 
+	// TODO: 루아로 옮겨 ?
+	// 
 protected:
     UCapsuleComponent* CapsuleComponent;
     UCharacterMovementComponent* CharacterMovement;

@@ -590,7 +590,7 @@ void UClothComponent::BuildClothMesh()
 	// 위치를 정수 그리드로 양자화하여 해시맵 키로 사용
 	auto QuantizePosition = [POSITION_EPSILON](const FVector& Pos) -> uint64
 	{
-		// 각 축을 epsilon 단위로 양자화
+		// 각 축을 epsilon 단위로   양자화
 		int32 qx = static_cast<int32>(Pos.X / POSITION_EPSILON);
 		int32 qy = static_cast<int32>(Pos.Y / POSITION_EPSILON);
 		int32 qz = static_cast<int32>(Pos.Z / POSITION_EPSILON);
