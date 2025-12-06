@@ -35,7 +35,7 @@ APlayerController* AAngryCoachGameMode::Login()
 void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	// Player 1 스폰 (WASD + Space) - 프리팹으로 스폰
-	FWideString P1PrefabPath = UTF8ToWide(GDataDir) + L"/Prefabs/Future.prefab";
+	FWideString P1PrefabPath = UTF8ToWide(GDataDir) + L"/Prefabs/ICGPlayer.prefab";
 	if (AActor* P1Actor = GWorld->SpawnPrefabActor(P1PrefabPath))
 	{
 		Player1 = Cast<ACharacter>(P1Actor);
@@ -47,7 +47,7 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 	}
 
 	// Player 2 스폰 (화살표 + RCtrl) - 프리팹으로 스폰
-	FWideString P2PrefabPath = UTF8ToWide(GDataDir) + L"/Prefabs/Future.prefab";
+	FWideString P2PrefabPath = UTF8ToWide(GDataDir) + L"/Prefabs/BSHPlayer.prefab";
 	if (AActor* P2Actor = GWorld->SpawnPrefabActor(P2PrefabPath))
 	{
 		Player2 = Cast<ACharacter>(P2Actor);

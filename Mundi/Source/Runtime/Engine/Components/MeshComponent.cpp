@@ -20,12 +20,15 @@ void UMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
     if (bInIsLoading) // --- 로드 ---
     {
+       UE_LOG("[MeshComponent::Serialize] LOADING START");
+
        // 1. 로드 전 기존 동적 인스턴스 모두 정리
        ClearDynamicMaterials();
 
        JSON SlotsArrayJson;
        if (FJsonSerializer::ReadArray(InOutHandle, MaterialSlotsKey, SlotsArrayJson, JSON::Make(JSON::Class::Array), false))
        {
+          UE_LOG("[MeshComponent::Serialize] Found %d material slots in JSON", (int)SlotsArrayJson.size());
           MaterialSlots.resize(SlotsArrayJson.size());
 
           for (int i = 0; i < SlotsArrayJson.size(); ++i)
@@ -40,12 +43,14 @@ void UMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
              // 2. JSON에서 클래스 이름 읽기
              FString ClassName;
              FJsonSerializer::ReadString(SlotJson, "Type", ClassName, "None", false);
+             UE_LOG("[MeshComponent::Serialize] Slot %d: Type = '%s'", i, ClassName.c_str());
 
              UMaterialInterface* LoadedMaterial = nullptr;
 
              // 3. 클래스 이름에 따라 분기
              if (ClassName == UMaterialInstanceDynamic::StaticClass()->Name)
              {
+                UE_LOG("[MeshComponent::Serialize] Loading as MID");
                 // UMID는 UObject이므로 NewObject로 생성 (GUObjectArray에 등록)
                 UMaterialInstanceDynamic* NewMID = NewObject<UMaterialInstanceDynamic>();
 
@@ -58,13 +63,26 @@ void UMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
              }
              else // if(ClassName == UMaterial::StaticClass()->Name 또는 그 외)
              {
+                UE_LOG("[MeshComponent::Serialize] Loading as UMaterial");
                 // UMaterial은 리소스이므로, AssetPath로 리소스 매니저에서 로드합니다.
                 FString AssetPath;
                 FJsonSerializer::ReadString(SlotJson, "AssetPath", AssetPath, "", false);
+                UE_LOG("[MeshComponent::Serialize] AssetPath = '%s'", AssetPath.c_str());
+
                 if (!AssetPath.empty())
                 {
                    // UMaterialInterface 타입으로 로드 시도
                    LoadedMaterial = UResourceManager::GetInstance().Load<UMaterial>(AssetPath);
+
+                   // 프리팹에 저장된 텍스처 경로가 있으면 덮어쓰기
+                   if (LoadedMaterial)
+                   {
+                      UMaterial* Mat = Cast<UMaterial>(LoadedMaterial);
+                      if (Mat)
+                      {
+                         Mat->Serialize(true, SlotJson);
+                      }
+                   }
                 }
                 else
                 {
@@ -75,12 +93,19 @@ void UMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
              MaterialSlots[i] = LoadedMaterial;
           }
        }
+       else
+       {
+          UE_LOG("[MeshComponent::Serialize] No MaterialSlots found in JSON");
+       }
     }
     else // --- 저장 ---
     {
+       UE_LOG("[MeshComponent::Serialize] SAVING - MaterialSlots.Num() = %d", MaterialSlots.Num());
+
        JSON SlotsArrayJson = JSON::Make(JSON::Class::Array);
-       for (UMaterialInterface* Mtl : MaterialSlots)
+       for (int32 SlotIdx = 0; SlotIdx < MaterialSlots.Num(); ++SlotIdx)
        {
+          UMaterialInterface* Mtl = MaterialSlots[SlotIdx];
           JSON SlotJson = JSON::Make(JSON::Class::Object);
 
           if (Mtl == nullptr)
@@ -89,6 +114,42 @@ void UMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
           }
           else
           {
+             // UMaterial이고 텍스처가 있으면 MID로 변환하여 저장
+             UMaterial* BaseMat = Cast<UMaterial>(Mtl);
+             UE_LOG("[MeshComponent::Serialize] Slot %d: Mtl=%p, BaseMat=%p", SlotIdx, Mtl, BaseMat);
+
+             if (BaseMat && !Cast<UMaterialInstanceDynamic>(Mtl))
+             {
+                const FMaterialInfo& Info = BaseMat->GetMaterialInfo();
+                UE_LOG("[MeshComponent::Serialize] MaterialInfo: Diffuse='%s', Normal='%s'",
+                       Info.DiffuseTextureFileName.c_str(), Info.NormalTextureFileName.c_str());
+
+                if (!Info.DiffuseTextureFileName.empty() || !Info.NormalTextureFileName.empty())
+                {
+                   // MID 생성 및 텍스처 오버라이드 복사
+                   UMaterialInstanceDynamic* NewMID = CreateAndSetMaterialInstanceDynamic(SlotIdx);
+                   UE_LOG("[MeshComponent::Serialize] Created MID: %p", NewMID);
+
+                   if (NewMID)
+                   {
+                      // 텍스처 오버라이드 설정
+                      if (!Info.DiffuseTextureFileName.empty())
+                      {
+                         UTexture* DiffuseTex = UResourceManager::GetInstance().Load<UTexture>(Info.DiffuseTextureFileName, true);
+                         NewMID->SetTextureParameterValue(EMaterialTextureSlot::Diffuse, DiffuseTex);
+                         UE_LOG("[MeshComponent::Serialize] Set Diffuse: %s -> %p", Info.DiffuseTextureFileName.c_str(), DiffuseTex);
+                      }
+                      if (!Info.NormalTextureFileName.empty())
+                      {
+                         UTexture* NormalTex = UResourceManager::GetInstance().Load<UTexture>(Info.NormalTextureFileName, false);
+                         NewMID->SetTextureParameterValue(EMaterialTextureSlot::Normal, NormalTex);
+                         UE_LOG("[MeshComponent::Serialize] Set Normal: %s -> %p", Info.NormalTextureFileName.c_str(), NormalTex);
+                      }
+                      Mtl = NewMID;
+                   }
+                }
+             }
+
              // 1. 클래스 이름 저장 (로드 시 팩토리 구분을 위함)
              SlotJson["Type"] = Mtl->GetClass()->Name;
 

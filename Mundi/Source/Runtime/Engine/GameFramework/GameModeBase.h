@@ -7,7 +7,6 @@ class ACharacter;
 class AController;
 class APlayerController;
 
-
 class AGameModeBase : public AActor
 {
 public:
