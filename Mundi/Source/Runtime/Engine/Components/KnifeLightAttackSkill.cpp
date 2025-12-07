@@ -14,7 +14,6 @@ UKnifeLightAttackSkill::UKnifeLightAttackSkill()
 		UE_LOG("[KnifeLightAttackSkill] Failed to load knife1 montage!");
 	}
 }
-
 void UKnifeLightAttackSkill::Activate(AActor* Caster)
 {
 	Super::Activate(Caster);

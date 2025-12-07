@@ -34,7 +34,8 @@
 #include "RenderManager.h"
 #include "WindowsBinWriter.h"
 #include "Source/Runtime/Engine/Animation/AnimNotify_CallFunction.h"
-
+#include "Source/Runtime/Engine/Animation/AnimNotify_ParticleStart.h"
+#include "Source/Runtime/Engine/Animation/AnimNotify_ParticleEnd.h"
 namespace
 {
     using FBoneNameSet = std::unordered_set<FName>;
@@ -3323,7 +3324,36 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                             }
                         }
                     }
+                    if (ImGui::MenuItem("Particle Start Notify"))
+                    {
+                        if (bHasAnimation && NotifySource)
+                        {
+                            float ClickFrame = RightClickFrame;
+                            float TimeSec = ImClamp(ClickFrame * FrameDuration, 0.0f, PlayLength);
 
+                            // Particle Start Notify 추가
+                            UAnimNotify_ParticleStart* NewNotify = NewObject<UAnimNotify_ParticleStart>();
+                            if (NewNotify)
+                            {
+                                NotifySource->AddParticleStartNotify(TimeSec, NewNotify);
+                            }
+                        }
+                    }
+                    if (ImGui::MenuItem("Particle End Notify"))
+                    {
+                        if (bHasAnimation && NotifySource)
+                        {
+                            float ClickFrame = RightClickFrame;
+                            float TimeSec = ImClamp(ClickFrame * FrameDuration, 0.0f, PlayLength);
+
+                            // Particle End Notify 추가
+                            UAnimNotify_ParticleEnd* NewNotify = NewObject<UAnimNotify_ParticleEnd>();
+                            if (NewNotify)
+                            {
+                                NotifySource->AddParticleEndNotify(TimeSec, NewNotify);
+                            }
+                        }
+                    }
                     // 함수 호출 노티파이
                     if (ImGui::MenuItem("Call Func Notify"))
                     {

@@ -45,7 +45,7 @@ void AAngryCoachCharacter::BeginPlay()
 		//AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
 		 
 		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		AKnifeAccessoryActor* KnifeAccessory = Cast< AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		AAccessoryActor* KnifeAccessory = Cast<AAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 
 		if (KnifeAccessory)
 		{

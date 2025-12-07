@@ -291,6 +291,38 @@ void UAnimSequenceBase::AddCallFuncNotify(float Time, UAnimNotify* Notify)
     Notifies.Add(NewEvent);
 }
 
+void UAnimSequenceBase::AddParticleStartNotify(float Time, UAnimNotify* Notify)
+{
+    if (!Notify)
+    {
+        return;
+    }
+
+    FAnimNotifyEvent NewEvent;
+    NewEvent.TriggerTime = Time;
+    NewEvent.Duration = 0.0f;
+    NewEvent.Notify = Notify;
+    NewEvent.NotifyState = nullptr;
+
+    Notifies.Add(NewEvent);
+}
+
+void UAnimSequenceBase::AddParticleEndNotify(float Time, UAnimNotify* Notify)
+{
+    if (!Notify)
+    {
+        return;
+    }
+
+    FAnimNotifyEvent NewEvent;
+    NewEvent.TriggerTime = Time;
+    NewEvent.Duration = 0.0f;
+    NewEvent.Notify = Notify;
+    NewEvent.NotifyState = nullptr;
+
+    Notifies.Add(NewEvent);
+}
+
 bool UAnimSequenceBase::SaveMeta(const FString& MetaPathUTF8) const
 {
     if (MetaPathUTF8.empty())

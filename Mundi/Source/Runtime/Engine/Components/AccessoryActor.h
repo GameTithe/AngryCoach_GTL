@@ -42,6 +42,12 @@ public:
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
+	void PlayTryParticle();
+	void StopTryParticle();
+	
+	void PlayHitParticle();
+	void StopHitParticle();
+
 protected:
 	AAngryCoachCharacter* OwningCharacter = nullptr;
 
