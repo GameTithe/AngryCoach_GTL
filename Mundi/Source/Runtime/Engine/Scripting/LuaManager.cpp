@@ -145,6 +145,9 @@ FLuaManager::FLuaManager()
         }
     );                
     
+    // InputManager 글로벌 변수 등록 (Lua에서 InputManager:IsKeyPressed() 등 호출 가능하게)
+    SharedLib["InputManager"] = &UInputManager::GetInstance();
+
     sol::table MouseButton = Lua->create_table("MouseButton");
     MouseButton["Left"] = EMouseButton::LeftButton;
     MouseButton["Right"] = EMouseButton::RightButton;
