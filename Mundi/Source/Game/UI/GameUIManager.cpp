@@ -565,24 +565,29 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
                     canvas->SetButtonDisabledTexture(widgetName.c_str(), disabledPath.c_str(), D2DContext);
                 }
 
-                // 상태별 틴트 색상
-                FLinearColor normalTint, hoveredTint, pressedTint, disabledTint;
-                if (FJsonSerializer::ReadLinearColor(widgetObj, "normalTint", normalTint, FLinearColor(1, 1, 1, 1), false))
-                {
-                    canvas->SetButtonNormalTint(widgetName.c_str(), normalTint.R, normalTint.G, normalTint.B, normalTint.A);
-                }
-                if (FJsonSerializer::ReadLinearColor(widgetObj, "hoveredTint", hoveredTint, FLinearColor(1.2f, 1.2f, 1.2f, 1), false))
-                {
-                    canvas->SetButtonHoveredTint(widgetName.c_str(), hoveredTint.R, hoveredTint.G, hoveredTint.B, hoveredTint.A);
-                }
-                if (FJsonSerializer::ReadLinearColor(widgetObj, "pressedTint", pressedTint, FLinearColor(0.8f, 0.8f, 0.8f, 1), false))
-                {
-                    canvas->SetButtonPressedTint(widgetName.c_str(), pressedTint.R, pressedTint.G, pressedTint.B, pressedTint.A);
-                }
-                if (FJsonSerializer::ReadLinearColor(widgetObj, "disabledTint", disabledTint, FLinearColor(0.5f, 0.5f, 0.5f, 0.5f), false))
-                {
-                    canvas->SetButtonDisabledTint(widgetName.c_str(), disabledTint.R, disabledTint.G, disabledTint.B, disabledTint.A);
-                }
+                // 상태별 Alpha 값 (새 형식)
+                float normalAlpha = 1.0f, hoveredAlpha = 1.0f, pressedAlpha = 1.0f, disabledAlpha = 0.5f;
+                FJsonSerializer::ReadFloat(widgetObj, "normalAlpha", normalAlpha, 1.0f, false);
+                FJsonSerializer::ReadFloat(widgetObj, "hoveredAlpha", hoveredAlpha, 1.0f, false);
+                FJsonSerializer::ReadFloat(widgetObj, "pressedAlpha", pressedAlpha, 1.0f, false);
+                FJsonSerializer::ReadFloat(widgetObj, "disabledAlpha", disabledAlpha, 0.5f, false);
+
+                // Legacy tint 형식 호환 (alpha만 사용)
+                FLinearColor tempTint;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "normalTint", tempTint, FLinearColor(1, 1, 1, 1), false))
+                    normalAlpha = tempTint.A;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "hoveredTint", tempTint, FLinearColor(1, 1, 1, 1), false))
+                    hoveredAlpha = tempTint.A;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "pressedTint", tempTint, FLinearColor(1, 1, 1, 1), false))
+                    pressedAlpha = tempTint.A;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "disabledTint", tempTint, FLinearColor(0.5f, 0.5f, 0.5f, 0.5f), false))
+                    disabledAlpha = tempTint.A;
+
+                // Alpha 설정 (RGB는 1.0으로 고정)
+                canvas->SetButtonNormalTint(widgetName.c_str(), 1.0f, 1.0f, 1.0f, normalAlpha);
+                canvas->SetButtonHoveredTint(widgetName.c_str(), 1.0f, 1.0f, 1.0f, hoveredAlpha);
+                canvas->SetButtonPressedTint(widgetName.c_str(), 1.0f, 1.0f, 1.0f, pressedAlpha);
+                canvas->SetButtonDisabledTint(widgetName.c_str(), 1.0f, 1.0f, 1.0f, disabledAlpha);
 
                 // 활성화 상태
                 bool bInteractable = true;

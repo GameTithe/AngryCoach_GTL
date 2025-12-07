@@ -71,10 +71,10 @@ struct FUIEditorWidget
     std::string HoveredTexturePath;
     std::string PressedTexturePath;
     std::string DisabledTexturePath;
-    float NormalTint[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    float HoveredTint[4] = { 1.2f, 1.2f, 1.2f, 1.0f };
-    float PressedTint[4] = { 0.8f, 0.8f, 0.8f, 1.0f };
-    float DisabledTint[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
+    float NormalAlpha = 1.0f;       // Normal 상태 투명도
+    float HoveredAlpha = 1.0f;      // Hovered 상태 투명도
+    float PressedAlpha = 1.0f;      // Pressed 상태 투명도
+    float DisabledAlpha = 0.5f;     // Disabled 상태 투명도
     float HoverScale = 1.0f;        // 호버 시 스케일 (1.0 = 없음, 1.1 = 10% 확대)
     float HoverScaleDuration = 0.1f; // 스케일 애니메이션 시간
     bool bInteractable = true;

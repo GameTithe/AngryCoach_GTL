@@ -100,34 +100,11 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
             if (!widget.DisabledTexturePath.empty())
                 widgetObj["disabledTexturePath"] = widget.DisabledTexturePath;
 
-            // Tint colors
-            JSON normalTint = JSON::Make(JSON::Class::Object);
-            normalTint["r"] = widget.NormalTint[0];
-            normalTint["g"] = widget.NormalTint[1];
-            normalTint["b"] = widget.NormalTint[2];
-            normalTint["a"] = widget.NormalTint[3];
-            widgetObj["normalTint"] = normalTint;
-
-            JSON hoveredTint = JSON::Make(JSON::Class::Object);
-            hoveredTint["r"] = widget.HoveredTint[0];
-            hoveredTint["g"] = widget.HoveredTint[1];
-            hoveredTint["b"] = widget.HoveredTint[2];
-            hoveredTint["a"] = widget.HoveredTint[3];
-            widgetObj["hoveredTint"] = hoveredTint;
-
-            JSON pressedTint = JSON::Make(JSON::Class::Object);
-            pressedTint["r"] = widget.PressedTint[0];
-            pressedTint["g"] = widget.PressedTint[1];
-            pressedTint["b"] = widget.PressedTint[2];
-            pressedTint["a"] = widget.PressedTint[3];
-            widgetObj["pressedTint"] = pressedTint;
-
-            JSON disabledTint = JSON::Make(JSON::Class::Object);
-            disabledTint["r"] = widget.DisabledTint[0];
-            disabledTint["g"] = widget.DisabledTint[1];
-            disabledTint["b"] = widget.DisabledTint[2];
-            disabledTint["a"] = widget.DisabledTint[3];
-            widgetObj["disabledTint"] = disabledTint;
+            // State alpha values
+            widgetObj["normalAlpha"] = widget.NormalAlpha;
+            widgetObj["hoveredAlpha"] = widget.HoveredAlpha;
+            widgetObj["pressedAlpha"] = widget.PressedAlpha;
+            widgetObj["disabledAlpha"] = widget.DisabledAlpha;
 
             widgetObj["interactable"] = widget.bInteractable;
 
@@ -300,34 +277,21 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
             if (FJsonSerializer::ReadString(widgetObj, "disabledTexturePath", tempStr, "", false))
                 widget.DisabledTexturePath = tempStr;
 
+            // New alpha format
+            FJsonSerializer::ReadFloat(widgetObj, "normalAlpha", widget.NormalAlpha, 1.0f, false);
+            FJsonSerializer::ReadFloat(widgetObj, "hoveredAlpha", widget.HoveredAlpha, 1.0f, false);
+            FJsonSerializer::ReadFloat(widgetObj, "pressedAlpha", widget.PressedAlpha, 1.0f, false);
+            FJsonSerializer::ReadFloat(widgetObj, "disabledAlpha", widget.DisabledAlpha, 0.5f, false);
+
+            // Legacy tint format 호환 (alpha만 사용)
             if (FJsonSerializer::ReadLinearColor(widgetObj, "normalTint", tempColor, FLinearColor(1, 1, 1, 1), false))
-            {
-                widget.NormalTint[0] = tempColor.R;
-                widget.NormalTint[1] = tempColor.G;
-                widget.NormalTint[2] = tempColor.B;
-                widget.NormalTint[3] = tempColor.A;
-            }
-            if (FJsonSerializer::ReadLinearColor(widgetObj, "hoveredTint", tempColor, FLinearColor(1.2f, 1.2f, 1.2f, 1), false))
-            {
-                widget.HoveredTint[0] = tempColor.R;
-                widget.HoveredTint[1] = tempColor.G;
-                widget.HoveredTint[2] = tempColor.B;
-                widget.HoveredTint[3] = tempColor.A;
-            }
-            if (FJsonSerializer::ReadLinearColor(widgetObj, "pressedTint", tempColor, FLinearColor(0.8f, 0.8f, 0.8f, 1), false))
-            {
-                widget.PressedTint[0] = tempColor.R;
-                widget.PressedTint[1] = tempColor.G;
-                widget.PressedTint[2] = tempColor.B;
-                widget.PressedTint[3] = tempColor.A;
-            }
+                widget.NormalAlpha = tempColor.A;
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "hoveredTint", tempColor, FLinearColor(1, 1, 1, 1), false))
+                widget.HoveredAlpha = tempColor.A;
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "pressedTint", tempColor, FLinearColor(1, 1, 1, 1), false))
+                widget.PressedAlpha = tempColor.A;
             if (FJsonSerializer::ReadLinearColor(widgetObj, "disabledTint", tempColor, FLinearColor(0.5f, 0.5f, 0.5f, 0.5f), false))
-            {
-                widget.DisabledTint[0] = tempColor.R;
-                widget.DisabledTint[1] = tempColor.G;
-                widget.DisabledTint[2] = tempColor.B;
-                widget.DisabledTint[3] = tempColor.A;
-            }
+                widget.DisabledAlpha = tempColor.A;
             FJsonSerializer::ReadBool(widgetObj, "interactable", widget.bInteractable, true, false);
 
             // Hover Scale 효과
@@ -1071,12 +1035,12 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
 
         ImGui::Separator();
 
-        // 상태별 틴트 색상
-        ImGui::Text("Tint Colors");
-        if (ImGui::ColorEdit4("Normal Tint", widget->NormalTint)) bModified = true;
-        if (ImGui::ColorEdit4("Hovered Tint", widget->HoveredTint)) bModified = true;
-        if (ImGui::ColorEdit4("Pressed Tint", widget->PressedTint)) bModified = true;
-        if (ImGui::ColorEdit4("Disabled Tint", widget->DisabledTint)) bModified = true;
+        // 상태별 투명도
+        ImGui::Text("State Alpha");
+        if (ImGui::SliderFloat("Normal Alpha", &widget->NormalAlpha, 0.0f, 1.0f, "%.2f")) bModified = true;
+        if (ImGui::SliderFloat("Hovered Alpha", &widget->HoveredAlpha, 0.0f, 1.0f, "%.2f")) bModified = true;
+        if (ImGui::SliderFloat("Pressed Alpha", &widget->PressedAlpha, 0.0f, 1.0f, "%.2f")) bModified = true;
+        if (ImGui::SliderFloat("Disabled Alpha", &widget->DisabledAlpha, 0.0f, 1.0f, "%.2f")) bModified = true;
 
         ImGui::Separator();
 
@@ -1407,11 +1371,11 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
             Widget.PressedTexturePath.empty() ? Widget.TexturePath : Widget.PressedTexturePath,
             Widget.DisabledTexturePath.empty() ? Widget.TexturePath : Widget.DisabledTexturePath
         };
-        float* tints[4] = {
-            (float*)Widget.NormalTint,
-            (float*)Widget.HoveredTint,
-            (float*)Widget.PressedTint,
-            (float*)Widget.DisabledTint
+        float alphas[4] = {
+            Widget.NormalAlpha,
+            Widget.HoveredAlpha,
+            Widget.PressedAlpha,
+            Widget.DisabledAlpha
         };
 
         // SubUV 계산
@@ -1433,13 +1397,8 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
             ImVec2 cellMin = cells[i][0];
             ImVec2 cellMax = cells[i][1];
 
-            // 틴트 색상 적용
-            ImU32 tintColor = IM_COL32(
-                (int)(tints[i][0] * 255),
-                (int)(tints[i][1] * 255),
-                (int)(tints[i][2] * 255),
-                (int)(tints[i][3] * 255)
-            );
+            // Alpha만 적용 (RGB는 255 고정)
+            ImU32 tintColor = IM_COL32(255, 255, 255, (int)(alphas[i] * 255.0f));
 
             if (!texPaths[i].empty())
             {
