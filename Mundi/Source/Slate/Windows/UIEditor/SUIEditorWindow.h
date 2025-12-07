@@ -223,6 +223,11 @@ private:
     char FGTextureSearchFilter[256] = "";
     char BGTextureSearchFilter[256] = "";
 
+    // Properties 패널 입력 버퍼 (선택 변경 시 동기화 필요)
+    char WidgetNameBuffer[256] = "";
+    char BindingKeyBuffer[256] = "";
+    int32_t LastSelectedWidgetIndex = -1;  // 선택 변경 감지용
+
     // 검색 가능한 텍스처 콤보박스 헬퍼
     bool TextureComboWithSearch(const char* label, std::string& outPath,
                                  const TArray<FString>& texturePaths,

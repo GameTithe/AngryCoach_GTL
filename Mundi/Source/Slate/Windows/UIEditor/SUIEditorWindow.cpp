@@ -913,15 +913,22 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     if (!widget)
     {
         ImGui::TextDisabled("No widget selected");
+        LastSelectedWidgetIndex = -1;
         return;
     }
 
-    // 이름
-    char nameBuf[256];
-    strncpy_s(nameBuf, widget->Name.c_str(), sizeof(nameBuf) - 1);
-    if (ImGui::InputText("Name", nameBuf, sizeof(nameBuf)))
+    // 선택된 위젯이 변경되면 입력 버퍼를 새 위젯 값으로 동기화
+    if (SelectedWidgetIndex != LastSelectedWidgetIndex)
     {
-        widget->Name = nameBuf;
+        strncpy_s(WidgetNameBuffer, widget->Name.c_str(), sizeof(WidgetNameBuffer) - 1);
+        strncpy_s(BindingKeyBuffer, widget->BindingKey.c_str(), sizeof(BindingKeyBuffer) - 1);
+        LastSelectedWidgetIndex = SelectedWidgetIndex;
+    }
+
+    // 이름 (멤버 버퍼 사용)
+    if (ImGui::InputText("Name", WidgetNameBuffer, sizeof(WidgetNameBuffer)))
+    {
+        widget->Name = WidgetNameBuffer;
         bModified = true;
     }
 
@@ -1153,11 +1160,10 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     ImGui::Separator();
     ImGui::Text("Binding");
 
-    char bindBuf[256];
-    strncpy_s(bindBuf, widget->BindingKey.c_str(), sizeof(bindBuf) - 1);
-    if (ImGui::InputText("Binding Key", bindBuf, sizeof(bindBuf)))
+    // Binding Key (멤버 버퍼 사용 - 선택 변경 시 상단에서 동기화됨)
+    if (ImGui::InputText("Binding Key", BindingKeyBuffer, sizeof(BindingKeyBuffer)))
     {
-        widget->BindingKey = bindBuf;
+        widget->BindingKey = BindingKeyBuffer;
         bModified = true;
     }
     ImGui::TextDisabled("e.g., Player.Health");

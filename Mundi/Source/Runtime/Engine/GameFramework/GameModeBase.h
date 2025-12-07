@@ -140,5 +140,6 @@ protected:
 	void CallLuaCallback(const char* FuncName);
 	void CallLuaCallbackWithInt(const char* FuncName, int32 Value);
 	void CallLuaCallbackWithTwoInts(const char* FuncName, int32 Value1, int32 Value2);
+	void CallLuaCallbackWithThreeInts(const char* FuncName, int32 Value1, int32 Value2, int32 Value3);
 	void CallLuaCallbackWithResult(const char* FuncName, EGameResult Result);
 };

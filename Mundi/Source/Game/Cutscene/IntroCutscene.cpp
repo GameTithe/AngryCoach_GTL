@@ -3,6 +3,7 @@
 #include "Source/Game/UI/GameUIManager.h"
 #include "Source/Game/UI/Widgets/UICanvas.h"
 #include "Source/Game/UI/Widgets/UIWidget.h"
+#include "Source/Game/UI/Widgets/TextureWidget.h"
 
 bool UIntroCutscene::Start()
 {
@@ -141,14 +142,43 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 
 	case EIntroPhase::GtlEnter:
 		PlayWidgetEnter("gtl");
+		// SubUV 위젯도 함께 Enter Animation + SubUV 자동 재생 시작
+		PlayWidgetEnter("SubUV");
+		if (Canvas)
+		{
+			if (UUIWidget* SubUVWidget = Canvas->FindWidget("SubUV"))
+			{
+				if (UTextureWidget* TexWidget = dynamic_cast<UTextureWidget*>(SubUVWidget))
+				{
+					TexWidget->StartSubUVAnimation(10.0f, true);  // 10 FPS, 루프
+					UE_LOG("[IntroCutscene] SubUV animation started with gtl\n");
+				}
+			}
+		}
 		break;
 
 	case EIntroPhase::GtlExit:
 		PlayWidgetExit("gtl");
+		// SubUV 위젯도 함께 Exit Animation (UI Editor에서 설정한 애니메이션 사용)
+		PlayWidgetExit("SubUV");
+		UE_LOG("[IntroCutscene] SubUV exit animation started with gtl exit\n");
 		break;
 
 	case EIntroPhase::GtlWait:
 		UE_LOG("[IntroCutscene] GTL wait (1 sec)...\n");
+		// SubUV 위젯 숨기고 애니메이션 정지
+		if (Canvas)
+		{
+			if (UUIWidget* SubUVWidget = Canvas->FindWidget("SubUV"))
+			{
+				if (UTextureWidget* TexWidget = dynamic_cast<UTextureWidget*>(SubUVWidget))
+				{
+					TexWidget->StopSubUVAnimation();
+				}
+			}
+			Canvas->SetWidgetVisible("SubUV", false);
+			UE_LOG("[IntroCutscene] SubUV hidden after gtl exit\n");
+		}
 		break;
 
 	case EIntroPhase::TeamLabelEnter:
@@ -212,6 +242,7 @@ void UIntroCutscene::InitializeWidgets()
 
 	// 모든 위젯 숨기기
 	Canvas->SetWidgetVisible("gtl", false);
+	Canvas->SetWidgetVisible("SubUV", false);  // SubUV 위젯도 숨김
 	Canvas->SetWidgetVisible("team_label", false);
 	Canvas->SetWidgetVisible("mb1", false);
 	Canvas->SetWidgetVisible("mb2", false);

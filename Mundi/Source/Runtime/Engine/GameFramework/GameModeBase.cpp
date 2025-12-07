@@ -327,28 +327,25 @@ void AGameModeBase::EndRound(int32 WinnerIndex)
 	// 라운드 종료 알림
 	GameState->OnRoundEnded.Broadcast(GameState->GetCurrentRound(), WinnerIndex);
 
-	// 매치 승리 조건을 먼저 체크 (Lua 콜백 호출 전에!)
+	// 매치 승리 조건 체크
+	// matchResult: -1 = 아직 매치 승자 없음, 0 = P0 매치 승리, 1 = P1 매치 승리, 2 = 무승부
+	int32 MatchResult = -1;
 	int32 MatchWinner = CheckMatchWinCondition();
 	if (MatchWinner >= 0)
 	{
-		// 게임 종료 - OnRoundEnd 콜백 호출하지 않음 (다음 라운드 시작 방지)
 		UE_LOG("[GameMode] EndRound: Match winner found! Player %d wins the match.\n", MatchWinner);
-		EGameResult Result = (MatchWinner == 0) ? EGameResult::Win : EGameResult::Lose;
-		HandleGameOver(Result);
-		return;
+		MatchResult = MatchWinner;  // 0 또는 1
 	}
 	else if (GameState->GetCurrentRound() >= GameState->GetMaxRounds())
 	{
-		// 최대 라운드 도달 - 무승부 처리
 		UE_LOG("[GameMode] EndRound: Max rounds reached! Game ends in draw.\n");
-		HandleGameOver(EGameResult::Draw);
-		return;
+		MatchResult = 2;  // 무승부
 	}
 
-	// 게임이 끝나지 않았을 때만 OnRoundEnd Lua 콜백 호출
-	// (RoundEndSequence 코루틴에서 GameSet UI 표시 후 다음 라운드 시작)
-	UE_LOG("[GameMode] EndRound: Calling Lua OnRoundEnd callback...\n");
-	CallLuaCallbackWithTwoInts("OnRoundEnd", GameState->GetCurrentRound(), WinnerIndex);
+	// 항상 OnRoundEnd Lua 콜백 호출 (GameSet 표시 후 Lua에서 GameOver 처리)
+	// 3번째 인자로 매치 결과 전달 (-1이면 다음 라운드, 0이상이면 GameOver)
+	UE_LOG("[GameMode] EndRound: Calling Lua OnRoundEnd callback with matchResult=%d...\n", MatchResult);
+	CallLuaCallbackWithThreeInts("OnRoundEnd", GameState->GetCurrentRound(), WinnerIndex, MatchResult);
 	UE_LOG("[GameMode] EndRound: Lua callback returned\n");
 }
 
@@ -677,6 +674,14 @@ void AGameModeBase::CallLuaCallbackWithTwoInts(const char* FuncName, int32 Value
 	if (LuaScript)
 	{
 		LuaScript->CallWithTwoInts(FuncName, Value1, Value2);
+	}
+}
+
+void AGameModeBase::CallLuaCallbackWithThreeInts(const char* FuncName, int32 Value1, int32 Value2, int32 Value3)
+{
+	if (LuaScript)
+	{
+		LuaScript->CallWithThreeInts(FuncName, Value1, Value2, Value3);
 	}
 }
 

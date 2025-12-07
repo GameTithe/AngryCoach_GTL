@@ -32,6 +32,7 @@ public:
 	bool Call(const char* FuncName); // 인자 없이 호출
 	bool CallWithInt(const char* FuncName, int32 Value);
 	bool CallWithTwoInts(const char* FuncName, int32 Value1, int32 Value2);
+	bool CallWithThreeInts(const char* FuncName, int32 Value1, int32 Value2, int32 Value3);
 	bool CallWithFloat(const char* FuncName, float Value);
 
 	// 스크립트 경로 설정 (런타임에서 동적으로 설정 시 사용)
