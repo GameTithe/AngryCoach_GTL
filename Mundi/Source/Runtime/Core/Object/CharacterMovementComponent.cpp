@@ -47,10 +47,12 @@ void UCharacterMovementComponent::TickComponent(float DeltaSeconds)
 
 void UCharacterMovementComponent::DoJump()
 {
-	if (!bIsFalling)
+	// 점프 가능 조건: 사용한 횟수 < 최대 횟수
+	if (CurrentJumpCount < MaxJumpCount)
 	{
-			Velocity.Z = JumpZVelocity;
+		Velocity.Z = JumpZVelocity;
 		bIsFalling = true;
+		CurrentJumpCount++;
 	}
 }
 
@@ -164,6 +166,7 @@ void UCharacterMovementComponent::PhysFalling(float DeltaSecond)
 			// 착지
 			Velocity.Z = 0.0f;
 			bIsFalling = false;
+			CurrentJumpCount = 0;  // 점프 횟수 리셋
 			// SafeMoveUpdatedComponent에서 이미 SkinWidth 적용된 위치로 설정됨
 			// Hit.Location으로 덮어쓰면 경사면에 박힘
 		}
@@ -209,6 +212,7 @@ void UCharacterMovementComponent::PhysFalling(float DeltaSecond)
 			// 바닥에 닿음
 			Velocity.Z = 0.0f;
 			bIsFalling = false;
+			CurrentJumpCount = 0;  // 점프 횟수 리셋
 
 			// 바닥으로 스냅 (SkinWidth 여유를 두고 이동)
 			const float SkinWidth = 0.00125f;

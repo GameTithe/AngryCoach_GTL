@@ -52,11 +52,11 @@ protected:
 	AAngryCoachCharacter* OwningCharacter = nullptr;
 
 public:
-    UFUNCTION()
-    void Equip(AAngryCoachCharacter* OwnerCharacter);
+	UFUNCTION()
+	virtual void Equip(AAngryCoachCharacter* OwnerCharacter);
 
 	UFUNCTION()
-	void Unequip();
+	virtual void Unequip();
 
 	// 스킬 getter
     const TMap<ESkillSlot, USkillBase*>& GetGrantedSkills() const { return GrantedSkills; }

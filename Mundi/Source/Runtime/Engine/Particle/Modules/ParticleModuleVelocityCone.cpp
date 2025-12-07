@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "ParticleModuleVelocityCone.h"
+#include "ParticleModuleRequired.h"
 #include "../ParticleEmitterInstance.h"
 #include "Source/Runtime/Engine/Particle/ParticleHelper.h"
 
@@ -11,23 +12,23 @@ UParticleModuleVelocityCone::UParticleModuleVelocityCone()
     bUpdateModule = false;
 }
 
-void UParticleModuleVelocityCone::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
+void UParticleModuleVelocityCone::SpawnAsync(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase, FParticleSimulationContext& Context)
 {
     float Speed = Velocity.GetValue(Owner->GetRandomFloat());
     float ConeAngleDeg = Angle.GetValue(Owner->GetRandomFloat());
-    
+
     // 각도 클램핑 (0 ~ 180도)
     ConeAngleDeg = FMath::Clamp(ConeAngleDeg, 0.0f, 180.0f);
 
     // 기준 방향 정규화
     FVector Dir = Direction.GetSafeNormal();
     if (Dir.IsZero()) Dir = FVector(0, 0, 1);
-    
+
     float ConeHalfAngleRad = DegreesToRadians(ConeAngleDeg);
-    
+
     // Z값(높이)을 랜덤으로 뽑아야 표면적이 균등해짐.
     float CosAngle = cos(ConeHalfAngleRad);
-    
+
     // 1.0(꼭대기) ~ CosAngle(바닥) 사이의 랜덤 높이
     float Z = FMath::Lerp(CosAngle, 1.0f, Owner->GetRandomFloat());
     // 0 ~ 360도 회전
@@ -40,9 +41,23 @@ void UParticleModuleVelocityCone::Spawn(FParticleEmitterInstance* Owner, int32 O
     LocalDir.X = R * cos(Pi);
     LocalDir.Y = R * sin(Pi);
     LocalDir.Z = Z;
-    
+
     FQuat Rot = FQuat::FindBetweenNormals({0,0,1}, Dir);
-    
-    FVector FinalVelocityDir = Rot.RotateVector(LocalDir);
-    ParticleBase->Velocity += FinalVelocityDir * Speed;
+
+    FVector FinalVelocity = Rot.RotateVector(LocalDir) * Speed;
+
+    // bUseLocalSpace가 false면 컴포넌트 회전을 적용해서 월드 방향으로 변환
+    bool bUseLocalSpace = false;
+    if (Owner->CachedRequiredModule)
+    {
+        bUseLocalSpace = Owner->CachedRequiredModule->bUseLocalSpace;
+    }
+
+    if (!bUseLocalSpace)
+    {
+        // 월드 스페이스: 속도 방향에 컴포넌트 회전 적용
+        FinalVelocity = Context.ComponentWorldMatrix.TransformVector(FinalVelocity);
+    }
+
+    ParticleBase->Velocity += FinalVelocity;
 }
