@@ -9,6 +9,8 @@
 #include "PlayerCameraManager.h"
 #include "AccessoryActor.h"
 #include "Character.h"
+#include "GameModeBase.h"
+#include "GameStateBase.h"
 #include <tuple>
 
 #include "Source/Game/UI/GameUIManager.h"
@@ -756,7 +758,11 @@ FLuaManager::FLuaManager()
 FLuaManager::~FLuaManager()
 {
     ShutdownBeforeLuaClose();
-    
+
+    // Lua 상태 삭제 전에 UI 캔버스들의 Lua 콜백 정리
+    // (버튼 콜백들이 sol::protected_function을 shared_ptr로 가지고 있음)
+    UGameUIManager::Get().RemoveAllCanvases();
+
     if (Lua)
     {
         delete Lua;
@@ -1229,6 +1235,10 @@ void FLuaManager::ExposeUIFunctions()
         {
             if (UGameUIManager::Get().IsValidCanvas(Self)) Self->SetWidgetOpacity(Name, Opacity);
         },
+        "SetWidgetOpacity", [](UUICanvas* Self, const std::string& Name, float Opacity)
+        {
+            if (Self) Self->SetWidgetOpacity(Name, Opacity);
+        },
         "SetForegroundColor", [](UUICanvas* Self, const std::string& Name,
                                  float R, float G, float B, float A)
         {
@@ -1442,10 +1452,36 @@ void FLuaManager::ExposeUIFunctions()
             }
         ),
 
+        // ======== 진동 애니메이션 ========
+
+        // 진동 시작 (강도, 지속시간, 빈도, 감쇠여부)
+        "ShakeWidget", sol::overload(
+            // ShakeWidget(name, intensity)
+            [](UUICanvas* Self, const std::string& Name, float Intensity)
+            {
+                if (Self) Self->ShakeWidget(Name, Intensity, 0.0f, 15.0f, true);
+            },
+            // ShakeWidget(name, intensity, duration)
+            [](UUICanvas* Self, const std::string& Name, float Intensity, float Duration)
+            {
+                if (Self) Self->ShakeWidget(Name, Intensity, Duration, 15.0f, true);
+            },
+            // ShakeWidget(name, intensity, duration, frequency)
+            [](UUICanvas* Self, const std::string& Name, float Intensity, float Duration, float Frequency)
+            {
+                if (Self) Self->ShakeWidget(Name, Intensity, Duration, Frequency, true);
+            },
+            // ShakeWidget(name, intensity, duration, frequency, decay)
+            [](UUICanvas* Self, const std::string& Name, float Intensity, float Duration, float Frequency, bool bDecay)
+            {
+                if (Self) Self->ShakeWidget(Name, Intensity, Duration, Frequency, bDecay);
+            }
+        ),
+
         // 진동 중지
         "StopShake", [](UUICanvas* Self, const std::string& Name)
         {
-            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->StopWidgetShake(Name);
+            if (Self) Self->StopWidgetShake(Name);
         },
 
         // Enter 애니메이션 재생
@@ -1481,7 +1517,7 @@ void FLuaManager::ExposeUIFunctions()
         // 모든 위젯 Exit 애니메이션 재생
         "PlayAllExitAnimations", [](UUICanvas* Self)
         {
-            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->PlayAllExitAnimations();
+            if (Self) Self->PlayAllExitAnimations();
         },
 
         // ======== 버튼 위젯 ========
@@ -1490,7 +1526,7 @@ void FLuaManager::ExposeUIFunctions()
         "CreateButton", [](UUICanvas* Self, const std::string& Name, const std::string& TexturePath,
                           float X, float Y, float W, float H) -> bool
         {
-            if (!UGameUIManager::Get().IsValidCanvas(Self)) return false;
+            if (!Self) return false;
             return Self->CreateButton(Name, TexturePath, X, Y, W, H,
                                       UGameUIManager::Get().GetD2DContext());
         },
@@ -1498,51 +1534,51 @@ void FLuaManager::ExposeUIFunctions()
         // 버튼 활성화/비활성화
         "SetButtonInteractable", [](UUICanvas* Self, const std::string& Name, bool bInteractable)
         {
-            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->SetButtonInteractable(Name, bInteractable);
+            if (Self) Self->SetButtonInteractable(Name, bInteractable);
         },
 
         // 버튼 상태별 텍스처 설정
         "SetButtonHoveredTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
         {
-            if (!UGameUIManager::Get().IsValidCanvas(Self)) return false;
+            if (!Self) return false;
             return Self->SetButtonHoveredTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
         },
         "SetButtonPressedTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
         {
-            if (!UGameUIManager::Get().IsValidCanvas(Self)) return false;
+            if (!Self) return false;
             return Self->SetButtonPressedTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
         },
         "SetButtonDisabledTexture", [](UUICanvas* Self, const std::string& Name, const std::string& Path) -> bool
         {
-            if (!UGameUIManager::Get().IsValidCanvas(Self)) return false;
+            if (!Self) return false;
             return Self->SetButtonDisabledTexture(Name, Path, UGameUIManager::Get().GetD2DContext());
         },
 
         // 버튼 상태별 틴트 설정
         "SetButtonNormalTint", [](UUICanvas* Self, const std::string& Name, float R, float G, float B, float A)
         {
-            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->SetButtonNormalTint(Name, R, G, B, A);
+            if (Self) Self->SetButtonNormalTint(Name, R, G, B, A);
         },
         "SetButtonHoveredTint", [](UUICanvas* Self, const std::string& Name, float R, float G, float B, float A)
         {
-            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->SetButtonHoveredTint(Name, R, G, B, A);
+            if (Self) Self->SetButtonHoveredTint(Name, R, G, B, A);
         },
         "SetButtonPressedTint", [](UUICanvas* Self, const std::string& Name, float R, float G, float B, float A)
         {
-            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->SetButtonPressedTint(Name, R, G, B, A);
+            if (Self) Self->SetButtonPressedTint(Name, R, G, B, A);
         },
         "SetButtonDisabledTint", [](UUICanvas* Self, const std::string& Name, float R, float G, float B, float A)
         {
-            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->SetButtonDisabledTint(Name, R, G, B, A);
+            if (Self) Self->SetButtonDisabledTint(Name, R, G, B, A);
         },
 
         // 버튼 클릭 콜백 설정
         // NOTE: sol::protected_function을 shared_ptr로 래핑하여 람다 캡처 시 수명 문제 해결
         "SetOnClick", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
         {
-            if (!UGameUIManager::Get().IsValidCanvas(Self))
+            if (!Self)
             {
-                UE_LOG("[UI] SetOnClick: Canvas is invalid!\n");
+                UE_LOG("[UI] SetOnClick: Self is null!\n");
                 return;
             }
             auto* Button = dynamic_cast<UButtonWidget*>(Self->FindWidget(Name));
@@ -1579,7 +1615,7 @@ void FLuaManager::ExposeUIFunctions()
         // 버튼 호버 시작 콜백 설정
         "SetOnHoverStart", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
         {
-            if (!UGameUIManager::Get().IsValidCanvas(Self)) return;
+            if (!Self) return;
             if (auto* Button = dynamic_cast<UButtonWidget*>(Self->FindWidget(Name)))
             {
                 auto CallbackPtr = std::make_shared<sol::protected_function>(Callback);
@@ -1601,7 +1637,7 @@ void FLuaManager::ExposeUIFunctions()
         // 버튼 호버 종료 콜백 설정
         "SetOnHoverEnd", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
         {
-            if (!UGameUIManager::Get().IsValidCanvas(Self)) return;
+            if (!Self) return;
             if (auto* Button = dynamic_cast<UButtonWidget*>(Self->FindWidget(Name)))
             {
                 auto CallbackPtr = std::make_shared<sol::protected_function>(Callback);
