@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "AccessoryHeavyAttackSkill.h"
 
 UAccessoryHeavyAttackSkill::UAccessoryHeavyAttackSkill()
@@ -10,5 +10,5 @@ void UAccessoryHeavyAttackSkill::Activate(AActor* Caster)
 {
 	Super::Activate(Caster);
 
-	UE_LOG("[Skill] Accessory Heavy Attack!");
+	UE_LOG("[Skill] Accessory Heavy Attack!"); 
 }

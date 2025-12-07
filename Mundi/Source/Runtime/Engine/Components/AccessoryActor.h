@@ -52,13 +52,17 @@ protected:
 	AAngryCoachCharacter* OwningCharacter = nullptr;
 
 public:
-	UFUNCTION()
-	void Equip(AAngryCoachCharacter* OwnerCharacter);
+    UFUNCTION()
+    void Equip(AAngryCoachCharacter* OwnerCharacter);
 
 	UFUNCTION()
 	void Unequip();
 
 	// 스킬 getter
-	const TMap<ESkillSlot, USkillBase*>& GetGrantedSkills() const { return GrantedSkills; }
-	AAngryCoachCharacter* GetOwningCharacter() const { return OwningCharacter; }
+    const TMap<ESkillSlot, USkillBase*>& GetGrantedSkills() const { return GrantedSkills; }
+    AAngryCoachCharacter* GetOwningCharacter() const { return OwningCharacter; }
+
+private:
+    // Runtime state guard to avoid duplicate Play notifications from montage
+    bool bTryParticleActive = false;
 };

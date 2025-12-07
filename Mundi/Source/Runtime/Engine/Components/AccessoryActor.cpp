@@ -23,10 +23,12 @@ AAccessoryActor::AAccessoryActor()
 
 	//AccessoryMesh->SetupAttachment(SceneRoot);
 
-	TryAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("TryAttac;article");
+	TryAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("TryAttackParticle");
+	TryAttackParticle->ObjectName = FName("TryAttackParticle");
 	TryAttackParticle->SetupAttachment(RootComponent);
 
 	HitAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("HitAttackParticle");
+	HitAttackParticle->ObjectName = FName("HitAttackParticle");
 	HitAttackParticle->SetupAttachment(RootComponent);
 
 	// 악세서리 스킬 생성 및 등록
@@ -104,7 +106,7 @@ void AAccessoryActor::StopTryParticle()
 {
 	if (TryAttackParticle)
 	{
-		TryAttackParticle->DeactivateSystem();
+		TryAttackParticle->DeactivateSystem();  
 		UE_LOG("Stop Try Particle");
 	}
 	else

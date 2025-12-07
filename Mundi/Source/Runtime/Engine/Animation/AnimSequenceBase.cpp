@@ -4,6 +4,9 @@
 #include "AnimSequence.h"
 #include "AnimationRuntime.h"
 #include "AnimNotify_PlaySound.h"
+#include "AnimNotify_ParticleStart.h"
+#include "AnimNotify_ParticleEnd.h"
+#include "AnimNotify_CallFunction.h"
 
 #include "AnimTypes.h"
 #include "JsonSerializer.h"
@@ -11,7 +14,6 @@
 #include "Source/Runtime/AssetManagement/ResourceManager.h"
 #include "Source/Runtime/Engine/Audio/Sound.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
-#include "AnimNotify_PlaySound.h"
 #include <filesystem>
 
 
@@ -61,6 +63,7 @@ TArray<FAnimNotifyEvent>& UAnimSequenceBase::GetAnimNotifyEvents()
         const FString MetaPathUtf8 = NormalizePath(GDataDir + "/" + FileName + ".anim.json");
         std::filesystem::path MetaPath(UTF8ToWide(MetaPathUtf8));
         std::error_code ec;
+
 
         // UE_LOG("GetAnimNotifyEvents - FilePath: %s, MetaPath: %s, Exists: %d",
         //     Src.c_str(), MetaPathUtf8.c_str(), std::filesystem::exists(MetaPath, ec) ? 1 : 0);
@@ -379,6 +382,11 @@ bool UAnimSequenceBase::SaveMeta(const FString& MetaPathUTF8) const
             FString Path = (PS && PS->Sound) ? PS->Sound->GetFilePath() : "";
             Data["SoundPath"] = Path.c_str();
         }
+        else if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_CallFunction>())
+        {
+            const UAnimNotify_CallFunction* CF = static_cast<const UAnimNotify_CallFunction*>(Evt.Notify);
+            Data["FunctionName"] = CF->FunctionName.ToString().c_str();
+        }
         Item["Data"] = Data;
 
         NotifyArray.append(Item);
@@ -469,6 +477,29 @@ bool UAnimSequenceBase::LoadMeta(const FString& MetaPathUTF8)
                 }
             }
             Evt.Notify = PS;
+            Evt.NotifyState = nullptr;
+        }
+        else if (ClassStr == "UAnimNotify_ParticleStart" || ClassStr == "ParticleStart")
+        {
+            UAnimNotify_ParticleStart* PStart = NewObject<UAnimNotify_ParticleStart>();
+            Evt.Notify = PStart;
+            Evt.NotifyState = nullptr;
+        }
+        else if (ClassStr == "UAnimNotify_ParticleEnd" || ClassStr == "ParticleEnd")
+        {
+            UAnimNotify_ParticleEnd* PEnd = NewObject<UAnimNotify_ParticleEnd>();
+            Evt.Notify = PEnd;
+            Evt.NotifyState = nullptr;
+        }
+        else if (ClassStr == "UAnimNotify_CallFunction" || ClassStr == "CallFunction")
+        {
+            UAnimNotify_CallFunction* CF = NewObject<UAnimNotify_CallFunction>();
+            if (CF && DataPtr && DataPtr->hasKey("FunctionName"))
+            {
+                FString FuncName = DataPtr->at("FunctionName").ToString();
+                CF->FunctionName = FName(FuncName);
+            }
+            Evt.Notify = CF;
             Evt.NotifyState = nullptr;
         }
         else

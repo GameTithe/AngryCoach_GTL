@@ -45,7 +45,7 @@ void AAngryCoachCharacter::BeginPlay()
 		//AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
 		 
 		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		AAccessoryActor* KnifeAccessory = Cast<AAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 
 		if (KnifeAccessory)
 		{
@@ -115,9 +115,16 @@ void AAngryCoachCharacter::DuplicateSubObjects()
 // ===== 몽타주 =====
 void AAngryCoachCharacter::PlayMontage(UAnimMontage* Montage)
 {
+	UE_LOG("[AAngryCoachCharacter::PlayMontage] Called!");
+
 	if (!Montage)
 	{
 		UE_LOG("[PlayMontage] Montage is null!");
+		return;
+	}
+	if (IsPlayingMontage())
+	{
+		UE_LOG("[PlayMontage] Montage is already playing!");
 		return;
 	}
 
@@ -225,7 +232,7 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 		}
 	case EAttackInput::Skill:
 		{
-			Slot = ESkillSlot::Speical;
+			Slot = ESkillSlot::Specical;
 			/*
 			 * TODO
 			 * Skil별 데미지 적용

@@ -314,6 +314,7 @@
     <ClCompile Include="Source\Runtime\Engine\Components\KnifeAccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\KnifeHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\KnifeLightAttackSkill.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\KnifeSpecialAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\PunchAccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\PunchHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\PunchLightAttackSkill.cpp" />
@@ -768,6 +769,7 @@
     <ClCompile Include="Generated\AKnifeAccessoryActor.generated.cpp" />
     <ClCompile Include="Generated\UKnifeHeavyAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UKnifeLightAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UKnifeSpecialAttackSkill.generated.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
@@ -1006,6 +1008,7 @@
     <ClInclude Include="Source\Runtime\Engine\Components\KnifeAccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\KnifeHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\KnifeLightAttackSkill.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\KnifeSpecialAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\PunchAccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\PunchHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\PunchLightAttackSkill.h" />
@@ -1325,6 +1328,7 @@
     <ClInclude Include="Generated\AKnifeAccessoryActor.generated.h" />
     <ClInclude Include="Generated\UKnifeHeavyAttackSkill.generated.h" />
     <ClInclude Include="Generated\UKnifeLightAttackSkill.generated.h" />
+    <ClInclude Include="Generated\UKnifeSpecialAttackSkill.generated.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />

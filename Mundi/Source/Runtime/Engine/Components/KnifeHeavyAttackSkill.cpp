@@ -9,7 +9,7 @@ UKnifeHeavyAttackSkill::UKnifeHeavyAttackSkill()
 {
 	ObjectName = "KnifeHeavyAttack";
 	
-	Montage = RESOURCE.Load<UAnimMontage>("Data/Montages/Knife2.montage.json");
+	Montage = RESOURCE.Load<UAnimMontage>("Data/Montages/KnifeHeavy.montage.json");
 	if (!Montage)
 	{
 		UE_LOG("[KnifeHeavyAttackSkill] Failed to load knife2 montage!");
@@ -18,7 +18,7 @@ UKnifeHeavyAttackSkill::UKnifeHeavyAttackSkill()
 
 void UKnifeHeavyAttackSkill::Activate(AActor* Caster)
 {
-	Super::Activate(Caster);
+	// Super::Activate(Caster);
 
 	float DamageMultiplier = 1.0f;
 	float Range = 150.0f;
