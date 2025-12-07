@@ -465,6 +465,21 @@ FLuaManager::FLuaManager()
         }
     );
 
+    SharedLib.set_function("GetRoundDuration",
+        []() -> float
+        {
+            if (!GWorld) return 0.0f;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                if (auto* GameState = GameMode->GetGameState())
+                {
+                    return GameState->GetRoundDuration();
+                }
+            }
+            return 0.0f;
+        }
+    );
+
     // 라운드 타이머 리셋 (ReadyGo 시퀀스 후 호출)
     SharedLib.set_function("ResetRoundTimer",
         []()
