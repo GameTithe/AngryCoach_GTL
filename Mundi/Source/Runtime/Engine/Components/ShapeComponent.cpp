@@ -88,11 +88,9 @@ void UShapeComponent::TickComponent(float DeltaSeconds)
                 FHitResult HitResult;
                 if (Collision::ComputePenetration(this, Other, HitResult))
                 {
+                    // ImpactPoint, ImpactNormal, bHit, PenetrationDepth는 ComputePenetration에서 채워줌
                     HitResult.HitComponent = Other;
-                    HitResult.HitActor = Other->GetOwner();
-                    HitResult.bBlockingHit = true;
-                    HitResult.ImpactPoint = this->GetWorldLocation();
-                    HitResult.ImpactNormal = this->GetWorldTransform().Rotation.GetForwardVector();
+                    HitResult.HitActor = Other->GetOwner();                    
                     
                     // 부모의 Hit 큐에 등록
                     PendingHits.Add(HitResult);
