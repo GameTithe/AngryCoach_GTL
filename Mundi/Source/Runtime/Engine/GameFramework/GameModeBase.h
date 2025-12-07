@@ -11,7 +11,6 @@ class AGameStateBase;
 class ULuaScriptComponent;
 class UIntroCutscene;
 
-
 class AGameModeBase : public AActor
 {
 public:

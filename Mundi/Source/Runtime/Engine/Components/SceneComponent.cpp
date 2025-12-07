@@ -285,10 +285,16 @@ void USceneComponent::SetLocalLocationAndRotation(const FVector& L, const FQuat&
 
 FMatrix USceneComponent::GetWorldMatrix() const
 {
-    if (bIsTransformDirty)
+    // 소켓에 부착된 경우 본 애니메이션으로 소켓이 계속 움직이므로 캐시 사용 불가
+    bool bAttachedToSocket = AttachParent && !AttachSocketName.ToString().empty();
+
+    if (bIsTransformDirty || bAttachedToSocket)
     {
         CachedWorldMatrix = GetWorldTransform().ToMatrix();
-        bIsTransformDirty = false;
+        if (!bAttachedToSocket)
+        {
+            bIsTransformDirty = false;
+        }
     }
     return CachedWorldMatrix;
 }
@@ -298,8 +304,8 @@ FMatrix USceneComponent::GetWorldMatrix() const
 // ──────────────────────────────
 void USceneComponent::SetupAttachment(USceneComponent* InParent, EAttachmentRule Rule)
 {
+    //if (!AttachParent) return;
     if (AttachParent == InParent) return;
-
     const FTransform OldWorld = GetWorldTransform();
 
     // 기존 부모에서 제거

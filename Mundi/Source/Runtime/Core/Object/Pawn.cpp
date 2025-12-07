@@ -1,5 +1,8 @@
 ﻿#include "pch.h"
 #include "Pawn.h"
+
+#include <types.hpp>
+
 #include "SkeletalMeshComponent.h"
 #include "PawnMovementComponent.h"
 IMPLEMENT_CLASS(APawn)
@@ -51,12 +54,39 @@ void APawn::AddMovementInput(FVector Direction, float Scale)
 	InternalMovementInputVector += Direction * Scale;
 }
 
+float APawn::TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator)
+{
+	// hit actor랑 damaged actor 가 같아야함
+	UE_LOG("Damage Amount : %f, Hit Actor : %p, Damaged Actor : %p, Intiagtor : %p", DamageAmount, HitResult.HitActor, this, Instigator);
+	return DamageAmount;
+}
+
 FVector APawn::ConsumeMovementInputVector()
 {
 	FVector Ret = InternalMovementInputVector;
 	InternalMovementInputVector = FVector(0, 0, 0);
 	
 	return Ret;
+}
+
+void APawn::AttackBegin()
+{
+}
+
+void APawn::AttackEnd()
+{
+}
+
+void APawn::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+}
+
+void APawn::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+}
+
+void APawn::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
 }
 
 APawn::~APawn()

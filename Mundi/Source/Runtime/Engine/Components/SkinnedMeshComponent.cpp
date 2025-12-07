@@ -66,7 +66,26 @@ void USkinnedMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle
 
    if (bInIsLoading)
    {
+      // Super::Serialize에서 로드한 MaterialSlots (MID 포함)를 백업
+      TArray<UMaterialInterface*> LoadedMaterials = MaterialSlots;
+      TArray<UMaterialInstanceDynamic*> LoadedMIDs = DynamicMaterialInstances;
+
+      // SetSkeletalMesh가 ClearDynamicMaterials에서 MID를 삭제하지 않도록 비움
+      DynamicMaterialInstances.Empty();
+      MaterialSlots.Empty();
+
+      // SetSkeletalMesh는 MaterialSlots를 덮어씀
       SetSkeletalMesh(SkeletalMesh->GetPathFileName());
+
+      // 백업한 머티리얼 복원
+      for (int32 i = 0; i < LoadedMaterials.Num() && i < MaterialSlots.Num(); ++i)
+      {
+         if (LoadedMaterials[i] != nullptr)
+         {
+            MaterialSlots[i] = LoadedMaterials[i];
+         }
+      }
+      DynamicMaterialInstances = LoadedMIDs;
    }
    // @TODO - UStaticMeshComponent처럼 프로퍼티 기반 직렬화 로직 추가
 }

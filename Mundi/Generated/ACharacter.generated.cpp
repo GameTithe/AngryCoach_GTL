@@ -34,7 +34,7 @@ const bool ACharacter::bPropertiesRegistered = []() {
 // ===== Property Reflection =====
 
 BEGIN_PROPERTIES(ACharacter)
-    MARK_AS_SPAWNABLE("캐릭터", "캐릭터 액터")
+    MARK_AS_SPAWNABLE("캐릭터", "캐릭터 액터 (프레임워크)")
 END_PROPERTIES()
 
 

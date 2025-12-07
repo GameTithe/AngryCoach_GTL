@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Controller.h"
-#include "APlayerController.generated.h"	
+#include "APlayerController.generated.h"
 
 class APlayerController : public AController
 {
@@ -23,6 +23,5 @@ protected:
 
 private:
 	float Sensitivity = 0.1;
-
 
 };

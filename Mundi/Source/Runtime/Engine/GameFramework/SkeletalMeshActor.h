@@ -47,6 +47,8 @@ public:
 
     // Position the anchor
     void RepositionAnchorToBone(int32 BoneIndex);
+    void RepositionAnchorToSocket(int32 SocketIndex);
+    void RepositionAnchorToPreviewMesh(class UStaticMeshComponent* InPreviewMesh);
 
     // Bone picking with ray
     // Returns bone index if hit, -1 otherwise

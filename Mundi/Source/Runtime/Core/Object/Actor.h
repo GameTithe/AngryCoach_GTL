@@ -7,6 +7,7 @@
 #include "Delegates.h"
 #include "AActor.generated.h"
 
+struct FHitResult;
 class UWorld;
 class USceneComponent;
 class UPrimitiveComponent;
@@ -172,6 +173,8 @@ public:
     void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FTriggerHit* Trigger);
     void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FTriggerHit* Trigger);
     void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FContactHit* Contact);
+
+    void NotifyTest();
      
     bool IsOverlappingActor(const AActor* Other) const;
 
@@ -189,6 +192,12 @@ public:
             return LuaGameObject;
         return nullptr;
     }
+
+    virtual void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult);
+    virtual void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult);
+    virtual void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult);
+
+    virtual float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator);
 
 public:
     UWorld* World = nullptr;

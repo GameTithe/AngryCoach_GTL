@@ -2,8 +2,9 @@
 
 #include "SceneComponent.h"
 #include "Material.h"
+
+#include "DamageTypes.h"
 #include "UPrimitiveComponent.generated.h"
-#include "Collision.h"
 
 struct FBodyInstance;
 struct FSceneCompData;
@@ -79,8 +80,11 @@ public:
     void DuplicateSubObjects() override;
 
     // Overlap event generation toggle API
-    void SetGenerateOverlapEvents(bool bEnable) { bEnable ? bGenerateOverlapEvents = true : bGenerateOverlapEvents = false; }
+    void SetGenerateOverlapEvents(bool bEnable) { bGenerateOverlapEvents = bEnable; }
     bool GetGenerateOverlapEvents() const { return bGenerateOverlapEvents; }
+
+    void SetBlockComponent(bool bEnable) { bBlockComponent = bEnable; }
+    bool GetBlockComponent() const { return bBlockComponent; }
 
     // ───── Cartoon Rendering ────────────────────────────
     void SetUseCartoonShading(bool bInUseCartoon) { bUseCartoonShading = bInUseCartoon; }
@@ -100,7 +104,6 @@ public:
 
     // ───── 직렬화 ────────────────────────────
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
-
 
     virtual void OnCreatePhysicsState();
 

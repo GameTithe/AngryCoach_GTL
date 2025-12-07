@@ -1,34 +1,57 @@
 ﻿#include "pch.h"
 #include "Character.h"
+
+#include "PrimitiveComponent.h"
+#include "BoxComponent.h"
 #include "CapsuleComponent.h"
 #include "SkeletalMeshComponent.h"
 #include "CharacterMovementComponent.h" 
+#include "SkillComponent.h"
+#include "AccessoryActor.h"
+#include "InputManager.h"
 #include "ObjectMacros.h" 
+#include "World.h"
+#include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "Source/Runtime/Engine/Components/AccessoryActor.h"
 ACharacter::ACharacter()
 {
 	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>("CapsuleComponent");
-	//CapsuleComponent->SetSize();
+	CapsuleComponent->SetTag("CharacterCollider");
 
 	SetRootComponent(CapsuleComponent);
+	CapsuleComponent->SetBlockComponent(false);
 
 	if (SkeletalMeshComp)
 	{
 		SkeletalMeshComp->SetupAttachment(CapsuleComponent);
-
-		//SkeletalMeshComp->SetRelativeLocation(FVector());
-		//SkeletalMeshComp->SetRelativeScale(FVector());
+		SkeletalMeshComp->SetupAttachment(CapsuleComponent);
+	}
+	
+	FistComponent = CreateDefaultSubobject<UCapsuleComponent>("FistComponent");
+	if (FistComponent)
+	{
+		FistComponent->SetupAttachment(CapsuleComponent);
+		FistComponent->SetBlockComponent(false);
+		FistComponent->SetTag("Fist");
+	}
+	
+	KickComponent = CreateDefaultSubobject<UCapsuleComponent>("KickComponent");
+	if (KickComponent)
+	{
+		KickComponent->SetupAttachment(CapsuleComponent);
+		KickComponent->SetBlockComponent(false);
+		FistComponent->SetTag("Kick");
 	}
 	 
 	CharacterMovement = CreateDefaultSubobject<UCharacterMovementComponent>("CharacterMovement");
 	if (CharacterMovement)
 	{
 		CharacterMovement->SetUpdatedComponent(CapsuleComponent);
-	} 
+	}
 }
 
 ACharacter::~ACharacter()
 {
-
 }
 
 void ACharacter::Tick(float DeltaSecond)
@@ -38,49 +61,124 @@ void ACharacter::Tick(float DeltaSecond)
 
 void ACharacter::BeginPlay()
 {
-    Super::BeginPlay();
-}
+	Super::BeginPlay();
 
+	if (FistComponent)
+	{
+		FistComponent->OnComponentHit.AddDynamic(this, &ACharacter::OnHit);
+		FistComponent->OnComponentBeginOverlap.AddDynamic(this, &ACharacter::OnBeginOverlap);
+		FistComponent->OnComponentEndOverlap.AddDynamic(this, &ACharacter::OnEndOverlap);
+	}
+
+	if (KickComponent)
+	{
+		KickComponent->OnComponentHit.AddDynamic(this, &ACharacter::OnHit);
+		KickComponent->OnComponentBeginOverlap.AddDynamic(this, &ACharacter::OnBeginOverlap);
+		KickComponent->OnComponentEndOverlap.AddDynamic(this, &ACharacter::OnEndOverlap);
+	}
+
+	// Hardcode: equip FlowKnife prefab on PIE start (moved from Lua to C++)
+	if (GWorld && GWorld->bPie)
+	{
+		FWideString KnifePath = UTF8ToWide("Data/Prefabs/FlowKnife.prefab");
+		AActor* Spawned = GWorld->SpawnPrefabActor(KnifePath);
+		if (!Spawned)
+		{
+			return;
+		}
+	}
+}
 void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
-    Super::Serialize(bInIsLoading, InOutHandle);
+	Super::Serialize(bInIsLoading, InOutHandle);
 
     if (bInIsLoading)
     {
         // Rebind important component pointers after load (prefab/scene)
         CapsuleComponent = nullptr;
         CharacterMovement = nullptr;
+    	FistComponent = nullptr;
+    	KickComponent = nullptr;
+        SkillComponent = nullptr;
+        CurrentAccessory = nullptr;
+        SkeletalMeshComp = nullptr;  // APawn 멤버 - 재바인딩 필요
 
         for (UActorComponent* Comp : GetOwnedComponents())
         {
+        	if (!Comp)
+        	{
+        		continue;
+        	}
+
+        	FString CompTag = Comp->GetTag();
+
             if (auto* Cap = Cast<UCapsuleComponent>(Comp))
             {
-                CapsuleComponent = Cap;
+            	if (CompTag == FString("CharacterCollider"))
+            	{
+            		CapsuleComponent = Cap;
+            	}
             }
-            else if (auto* Move = Cast<UCharacterMovementComponent>(Comp))
+
+            if (auto* Move = Cast<UCharacterMovementComponent>(Comp))
             {
                 CharacterMovement = Move;
             }
+
+            if (auto* Skill = Cast<USkillComponent>(Comp))
+            {
+                SkillComponent = Skill;
+            }
+
+            if (auto* SkelMesh = Cast<USkeletalMeshComponent>(Comp))
+            {
+                SkeletalMeshComp = SkelMesh;  // APawn 멤버 재바인딩
+            }
+
+        	if (auto* Shape = Cast<UShapeComponent>(Comp))
+        	{
+        		if (CompTag == FString("Fist"))
+        		{
+        			FistComponent = Shape;
+        		}
+        		if (CompTag == FString("Kick"))
+        		{
+        			KickComponent = Shape;
+        		}
+        		Shape->SetBlockComponent(false);
+        	}
         }
 
-        if (CharacterMovement)
-        {
-            USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
-                                                        : GetRootComponent();
-            CharacterMovement->SetUpdatedComponent(Updated);
-        }
-    }
+		if (CharacterMovement)
+		{
+			USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
+			                                            : GetRootComponent();
+			CharacterMovement->SetUpdatedComponent(Updated);
+		}
+	}
 }
 
 void ACharacter::DuplicateSubObjects()
-{ 
-    Super::DuplicateSubObjects();
-     
+{
+	Super::DuplicateSubObjects();
+
     CapsuleComponent = nullptr;
     CharacterMovement = nullptr;
+    SkillComponent = nullptr;
+    CurrentAccessory = nullptr;
+	FistComponent = nullptr;
+	KickComponent = nullptr;
+	SkeletalMeshComp = nullptr;  // APawn 멤버 - 재바인딩 필요
 
     for (UActorComponent* Comp : GetOwnedComponents())
     {
+    	if (!Comp)
+    	{
+    		continue;
+    	}
+
+    	FName CompName = Comp->GetName();
+
         if (auto* Cap = Cast<UCapsuleComponent>(Comp))
         {
             CapsuleComponent = Cap;
@@ -89,15 +187,34 @@ void ACharacter::DuplicateSubObjects()
         {
             CharacterMovement = Move;
         }
+        else if (auto* Skill = Cast<USkillComponent>(Comp))
+        {
+            SkillComponent = Skill;
+        }
+        else if (auto* SkelMesh = Cast<USkeletalMeshComponent>(Comp))
+        {
+            SkeletalMeshComp = SkelMesh;  // APawn 멤버 재바인딩
+        }
+        else if (auto* Shape = Cast<UShapeComponent>(Comp))
+        {
+        	if (CompName == FName("FistComponent"))
+        	{
+        		FistComponent = Shape;
+        	}
+        	else if (CompName == FName("KickComponent"))
+        	{
+        		KickComponent = Shape;
+        	}
+        	Shape->SetBlockComponent(false);
+        }
     }
 
-    // Ensure movement component tracks the correct updated component
-    if (CharacterMovement)
-    {
-        USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
-                                                    : GetRootComponent();
-        CharacterMovement->SetUpdatedComponent(Updated);
-    }
+	if (CharacterMovement)
+	{
+		USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
+		                                            : GetRootComponent();
+		CharacterMovement->SetUpdatedComponent(Updated);
+	}
 }
 
 void ACharacter::Jump()
@@ -112,8 +229,48 @@ void ACharacter::StopJumping()
 {
 	if (CharacterMovement)
 	{
-		// 점프 scale을 조절할 때 사용,
-		// 지금은 비어있음
-		CharacterMovement->StopJump(); 
+		CharacterMovement->StopJump();
+	}
+}
+
+float ACharacter::TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator)
+{
+	return Super::TakeDamage(DamageAmount, HitResult, Instigator);
+}
+
+void ACharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+	Super::OnBeginOverlap(MyComp, OtherComp, HitResult);
+	UE_LOG("OnBeginOverlap");
+}
+
+void ACharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+	Super::OnEndOverlap(MyComp, OtherComp, HitResult);
+	UE_LOG("OnEndOverlap");
+}
+
+void ACharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+	Super::OnHit(MyComp, OtherComp, HitResult);
+	UE_LOG("OnHit");
+}
+
+void ACharacter::AttackBegin()
+{
+	Super::AttackBegin();
+}
+
+void ACharacter::AttackEnd()
+{
+	Super::AttackEnd();
+}
+
+void ACharacter::Attack()
+{
+	if (FistComponent)
+	{
+		FistComponent->SetBlockComponent(true);
+		FistComponent->SetGenerateOverlapEvents(true);
 	}
 }
