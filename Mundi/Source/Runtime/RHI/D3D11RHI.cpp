@@ -527,8 +527,10 @@ void D3D11RHI::DrawFullScreenQuad()
 
 void D3D11RHI::Present()
 {
-    // Draw any Direct2D overlays before present
+#ifdef _EDITOR
+    // Draw any Direct2D overlays before present (Editor only)
     UStatsOverlayD2D::Get().Draw();
+#endif
 
 #ifndef _EDITOR
     // Game mode: Render Game UI here (no ImGui to worry about)

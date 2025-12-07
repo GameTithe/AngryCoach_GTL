@@ -85,7 +85,8 @@ void UInputManager::Update()
 
             // 커서 잠금 모드: 무한 드래그 처리
             // ImGui가 마우스를 사용 중이면 커서 잠금 모드를 비활성화
-            if (bIsCursorLocked && !ImGui::GetIO().WantCaptureMouse)
+            bool bImGuiWantsMouse = (ImGui::GetCurrentContext() != nullptr) && ImGui::GetIO().WantCaptureMouse;
+            if (bIsCursorLocked && !bImGuiWantsMouse)
             {
                 MousePosition.X = static_cast<float>(CursorPos.x);
                 MousePosition.Y = static_cast<float>(CursorPos.y);

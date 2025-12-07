@@ -85,6 +85,13 @@ public:
     UUICanvas* FindCanvas(const std::string& Name);
 
     /**
+     * @brief 캔버스 포인터가 유효한지 확인
+     * @param Canvas 확인할 캔버스 포인터
+     * @return Canvases 맵에 존재하면 true
+     */
+    bool IsValidCanvas(UUICanvas* Canvas) const;
+
+    /**
      * @brief 캔버스 삭제
      */
     void RemoveCanvas(const std::string& Name);

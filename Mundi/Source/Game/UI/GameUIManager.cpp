@@ -47,7 +47,9 @@ void UGameUIManager::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InC
     }
 
     CreateD2DResources();
-    bInitialized = true;
+
+    // D2DContext가 제대로 생성되었을 때만 초기화 완료
+    bInitialized = (D2DContext != nullptr);
 }
 
 void UGameUIManager::CreateD2DResources()
@@ -339,6 +341,13 @@ void UGameUIManager::Render()
 
 UUICanvas* UGameUIManager::CreateCanvas(const std::string& Name, int32_t ZOrder)
 {
+    // 초기화되지 않았으면 실패
+    if (!bInitialized)
+    {
+        UE_LOG("[UI] CreateCanvas failed: GameUIManager not initialized!\n");
+        return nullptr;
+    }
+
     // 이미 존재하면 실패
     if (Canvases.find(Name) != Canvases.end())
         return nullptr;
@@ -360,6 +369,20 @@ UUICanvas* UGameUIManager::FindCanvas(const std::string& Name)
     if (it != Canvases.end())
         return it->second.get();
     return nullptr;
+}
+
+bool UGameUIManager::IsValidCanvas(UUICanvas* Canvas) const
+{
+    if (!Canvas)
+        return false;
+
+    // Canvases 맵에서 해당 포인터가 존재하는지 확인
+    for (const auto& Pair : Canvases)
+    {
+        if (Pair.second.get() == Canvas)
+            return true;
+    }
+    return false;
 }
 
 void UGameUIManager::RemoveCanvas(const std::string& Name)
@@ -396,6 +419,13 @@ void UGameUIManager::SetCanvasZOrder(const std::string& Name, int32_t Z)
 
 UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
 {
+    // 초기화되지 않았으면 실패
+    if (!bInitialized)
+    {
+        UE_LOG("[UI] LoadUIAsset failed: GameUIManager not initialized! File: %s\n", FilePath.c_str());
+        return nullptr;
+    }
+
     // JSON 파일 로드
     std::wstring widePath(FilePath.begin(), FilePath.end());
     JSON doc;

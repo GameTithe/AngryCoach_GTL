@@ -39,11 +39,17 @@ bool UUICanvas::CreateTextureWidget(const std::string& WidgetName, const std::st
                                     ID2D1DeviceContext* D2DContext)
 {
     if (!D2DContext)
+    {
+        UE_LOG("[UI] CreateTextureWidget '%s' failed: D2DContext is null\n", WidgetName.c_str());
         return false;
+    }
 
     // 이미 존재하면 실패
     if (Widgets.find(WidgetName) != Widgets.end())
+    {
+        UE_LOG("[UI] CreateTextureWidget '%s' failed: widget already exists\n", WidgetName.c_str());
         return false;
+    }
 
     auto Widget = std::make_unique<UTextureWidget>();
     Widget->Name = WidgetName;
@@ -56,12 +62,15 @@ bool UUICanvas::CreateTextureWidget(const std::string& WidgetName, const std::st
     std::wstring WidePath(TexturePath.begin(), TexturePath.end());
     if (!Widget->LoadFromFile(WidePath.c_str(), D2DContext))
     {
+        UE_LOG("[UI] CreateTextureWidget '%s' failed: LoadFromFile failed for '%s'\n",
+               WidgetName.c_str(), TexturePath.c_str());
         return false;
     }
 
     Widgets[WidgetName] = std::move(Widget);
     bWidgetsSortDirty = true;
 
+    UE_LOG("[UI] CreateTextureWidget '%s' success: %s\n", WidgetName.c_str(), TexturePath.c_str());
     return true;
 }
 

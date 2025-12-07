@@ -65,11 +65,17 @@ void UTextureWidget::ShutdownWICFactory()
 bool UTextureWidget::LoadFromFile(const wchar_t* Path, ID2D1DeviceContext* Context)
 {
     if (!Path || !Context)
+    {
+        UE_LOG("[UI] TextureWidget::LoadFromFile failed: Path=%p, Context=%p\n", Path, Context);
         return false;
+    }
 
     // WIC 팩토리 초기화
     if (!InitWICFactory())
+    {
+        UE_LOG("[UI] TextureWidget::LoadFromFile failed: WIC Factory init failed\n");
         return false;
+    }
 
     // 기존 텍스처 해제
     ReleaseTexture();
@@ -87,7 +93,10 @@ bool UTextureWidget::LoadFromFile(const wchar_t* Path, ID2D1DeviceContext* Conte
     );
 
     if (FAILED(hr))
+    {
+        UE_LOG("[UI] TextureWidget::LoadFromFile failed: CreateDecoderFromFilename hr=0x%08X, Path=%ls\n", hr, Path);
         return false;
+    }
 
     // 프레임 가져오기
     IWICBitmapFrameDecode* Frame = nullptr;
