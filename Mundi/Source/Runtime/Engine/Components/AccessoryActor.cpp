@@ -106,7 +106,7 @@ void AAccessoryActor::StopTryParticle()
 {
 	if (TryAttackParticle)
 	{
-		TryAttackParticle->DeactivateSystem();  
+		TryAttackParticle->StopSpawning();  // 새 파티클 생성 중지, 기존 파티클은 자연스럽게 소멸
 		UE_LOG("Stop Try Particle");
 	}
 	else
@@ -132,7 +132,7 @@ void AAccessoryActor::StopHitParticle()
 {
 	if (HitAttackParticle)
 	{
-		HitAttackParticle->DeactivateSystem();
+		HitAttackParticle->StopSpawning();  // 새 파티클 생성 중지, 기존 파티클은 자연스럽게 소멸
 		UE_LOG("Stop Hit Particle");
 	}
 	else
