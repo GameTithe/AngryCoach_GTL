@@ -14,18 +14,22 @@ AAccessoryActor::AAccessoryActor()
 	ObjectName = "Accessory";
 
 	// SceneComponent를 RootComponent로 생성
-	SceneRoot = CreateDefaultSubobject<USceneComponent>("SceneRoot");
-	RootComponent = SceneRoot;
+	//SceneRoot = CreateDefaultSubobject<USceneComponent>("SceneRoot");
+	//RootComponent = SceneRoot;
 
 	// Mesh와 Particle들을 SceneRoot의 자식으로 attach
 	AccessoryMesh = CreateDefaultSubobject<UStaticMeshComponent>("AccessoryMesh");
-	AccessoryMesh->SetupAttachment(SceneRoot);
+	RootComponent = AccessoryMesh;
+
+	//AccessoryMesh->SetupAttachment(SceneRoot);
 
 	TryAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("TryAttackParticle");
-	TryAttackParticle->SetupAttachment(SceneRoot);
+	TryAttackParticle->ObjectName = FName("TryAttackParticle");
+	TryAttackParticle->SetupAttachment(RootComponent);
 
 	HitAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("HitAttackParticle");
-	HitAttackParticle->SetupAttachment(SceneRoot);
+	HitAttackParticle->ObjectName = FName("HitAttackParticle");
+	HitAttackParticle->SetupAttachment(RootComponent);
 
 	// 악세서리 스킬 생성 및 등록
 	UAccessoryLightAttackSkill* LightSkill = NewObject<UAccessoryLightAttackSkill>();
@@ -92,6 +96,58 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		UAccessoryHeavyAttackSkill* HeavySkill = NewObject<UAccessoryHeavyAttackSkill>();
 		GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 		GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
+	}
+}
+
+void AAccessoryActor::PlayTryParticle()
+{
+	if (TryAttackParticle)
+	{
+		TryAttackParticle->ActivateSystem();
+		UE_LOG("Play Try Particle");
+	}
+	else
+	{
+		UE_LOG("Error Load Try Particle");
+	}
+}
+
+void AAccessoryActor::StopTryParticle()
+{
+	if (TryAttackParticle)
+	{
+		TryAttackParticle->DeactivateSystem();  
+		UE_LOG("Stop Try Particle");
+	}
+	else
+	{
+		UE_LOG("Error Stop Try Particle");
+	}
+}
+
+void AAccessoryActor::PlayHitParticle()
+{
+	if (HitAttackParticle)
+	{
+		HitAttackParticle->ActivateSystem();
+		UE_LOG("Play Hit Particle");
+	}
+	else
+	{
+		UE_LOG("Error Play Hit Particle");
+	}
+}
+
+void AAccessoryActor::StopHitParticle()
+{
+	if (HitAttackParticle)
+	{
+		HitAttackParticle->DeactivateSystem();
+		UE_LOG("Stop Hit Particle");
+	}
+	else
+	{
+		UE_LOG("Error Stop Hit Particle");
 	}
 }
 
@@ -162,7 +218,7 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	// 1. 캐릭터의 Mesh 소켓에 부착
 	USkeletalMeshComponent* CharacterMesh = OwnerCharacter->GetMesh();
 	if (CharacterMesh && AccessoryMesh && AttachSocketName.IsValid())
-	{
+	{ 
 		AccessoryMesh->SetupAttachment(CharacterMesh, AttachSocketName);
 		AccessoryMesh->RegisterComponent(OwnerCharacter->GetWorld());
 
@@ -175,10 +231,7 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 			SocketWorldScale.Z != 0.0f ? 1.0f / SocketWorldScale.Z : 1.0f
 		);
 		AccessoryMesh->SetRelativeScale(RelativeScaleForWorldOne);
-
-		UE_LOG("[AccessoryActor] Attached mesh to socket: %s (scale: %.2f, %.2f, %.2f)",
-			AttachSocketName.ToString().c_str(),
-			RelativeScaleForWorldOne.X, RelativeScaleForWorldOne.Y, RelativeScaleForWorldOne.Z);
+		 
 	}
 
 	// 2. 캐릭터의 스킬 컴포넌트 찾기 및 스킬 등록

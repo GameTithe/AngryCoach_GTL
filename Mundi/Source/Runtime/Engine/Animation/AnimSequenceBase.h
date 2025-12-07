@@ -35,6 +35,8 @@ public:
     const TArray<FAnimNotifyEvent>& GetAnimNotifyEvents() const;
     void AddPlaySoundNotify(float Time, UAnimNotify* Notify, float Duration = 0.0f);
     void AddCallFuncNotify(float Time, UAnimNotify* Notify);
+    void AddParticleStartNotify(float Time, UAnimNotify* Notify);
+    void AddParticleEndNotify(float Time, UAnimNotify* Notify); 
 
     // Save/Load notify metadata as a sidecar JSON (e.g., .anim.json)
     bool SaveMeta(const FString& MetaPathUTF8) const;

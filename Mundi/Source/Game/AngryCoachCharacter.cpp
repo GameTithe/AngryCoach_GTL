@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "AngryCoachCharacter.h"
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
@@ -46,7 +46,11 @@ void AAngryCoachCharacter::BeginPlay()
 		// 	PunchAccessory->GetRootComponent()->SetOwner(this);
 		// }
 
-		AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
+		//AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
+		 
+		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+
 		if (KnifeAccessory)
 		{
 			EquipAccessory(KnifeAccessory);
@@ -117,9 +121,16 @@ void AAngryCoachCharacter::DuplicateSubObjects()
 // ===== 몽타주 =====
 void AAngryCoachCharacter::PlayMontage(UAnimMontage* Montage)
 {
+	UE_LOG("[AAngryCoachCharacter::PlayMontage] Called!");
+
 	if (!Montage)
 	{
 		UE_LOG("[PlayMontage] Montage is null!");
+		return;
+	}
+	if (IsPlayingMontage())
+	{
+		UE_LOG("[PlayMontage] Montage is already playing!");
 		return;
 	}
 
@@ -244,7 +255,7 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 		}
 	case EAttackInput::Skill:
 		{
-			Slot = ESkillSlot::Speical;
+			Slot = ESkillSlot::Specical;
 			/*
 			 * TODO
 			 * Skil별 데미지 적용

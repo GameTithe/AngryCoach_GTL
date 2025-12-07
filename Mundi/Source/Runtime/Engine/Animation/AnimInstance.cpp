@@ -930,9 +930,6 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
     // 노티파이 트리거 (시간 진행 전에)
     TriggerMontageNotifies(DeltaTime);
 
-    // 이전 시간 저장
-    PreviousMontagePlayTime = MontageState->Position;
-
     // 현재 섹션 시퀀스 가져오기
     UAnimSequence* CurrentSeq = M->GetSectionSequence(MontageState->CurrentSectionIndex);
 
@@ -946,6 +943,9 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
 
     // 시간 진행
     MontageState->Position += DeltaTime * EffectivePlayRate;
+
+    // 다음 프레임을 위해 이전 시간 저장 (Position 업데이트 후!)
+    PreviousMontagePlayTime = MontageState->Position;
     float Length = CurrentSeq ? CurrentSeq->GetPlayLength() : M->GetPlayLength();
 
     // 섹션 블렌딩 진행
@@ -1014,6 +1014,10 @@ void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
     // 몽타주 자체 노티파이 수집 (UAnimSequenceBase 상속)
     TArray<FPendingAnimNotify> PendingNotifies;
     float DeltaMove = DeltaSeconds * MontageState->PlayRate;
+
+    UE_LOG("[TriggerMontageNotifies] Prev=%.4f, DeltaMove=%.4f, CurrentPos=%.4f",
+        PreviousMontagePlayTime, DeltaMove, MontageState->Position);
+
     Montage->GetAnimNotify(PreviousMontagePlayTime, DeltaMove, PendingNotifies);
 
     if (PendingNotifies.Num() == 0)
@@ -1028,8 +1032,8 @@ void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
     {
         const FAnimNotifyEvent& Event = *Pending.Event;
 
-        //UE_LOG("Montage Notify Triggered: %s at %.2f",
-        //    Event.NotifyName.ToString().c_str(), Event.TriggerTime);
+        UE_LOG("[TriggerMontageNotifies] Montage Notify Triggered: %s at %.4f",
+            Event.NotifyName.ToString().c_str(), Event.TriggerTime);
 
         if (OwningComponent)
         {

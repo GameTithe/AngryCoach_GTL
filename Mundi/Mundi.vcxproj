@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_StandAlone|x64">
@@ -300,6 +300,8 @@
     <ClCompile Include="Source\Runtime\Core\Object\MyCar.cpp" />
     <ClCompile Include="Source\Editor\FBX\BlendSpace\BlendSpace2D.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimNotify_CallFunction.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\AnimNotify_ParticleEnd.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Animation\AnimNotify_ParticleStart.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\AccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\AccessoryHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\AccessoryLightAttackSkill.cpp" />
@@ -312,6 +314,7 @@
     <ClCompile Include="Source\Runtime\Engine\Components\KnifeAccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\KnifeHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\KnifeLightAttackSkill.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\KnifeSpecialAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\PunchAccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\PunchHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\PunchLightAttackSkill.cpp" />
@@ -745,7 +748,7 @@
     <ClCompile Include="Generated\USpringArmComponent.generated.cpp" />
     <ClCompile Include="Generated\UClothComponent.generated.cpp" />
     <ClCompile Include="Generated\AAngryCoachGameMode.generated.cpp" />
-     <ClCompile Include="Generated\AAngryCoachPlayerController.generated.cpp" />
+    <ClCompile Include="Generated\AAngryCoachPlayerController.generated.cpp" />
     <ClCompile Include="Generated\AAccessoryActor.generated.cpp" />
     <ClCompile Include="Generated\APunchAccessoryActor.generated.cpp" />
     <ClCompile Include="Generated\USkillBase.generated.cpp" />
@@ -756,7 +759,18 @@
     <ClCompile Include="Generated\UAccessoryLightAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UDefaultHeavyAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UDefaultLightAttackSkill.generated.cpp" />
-  <ClCompile Include="Generated\AAngryCoachCharacter.generated.cpp" /><ClCompile Include="Generated\ACloakAccessoryActor.generated.cpp" /><ClCompile Include="Generated\UCloakHeavyAttackSkill.generated.cpp" /><ClCompile Include="Generated\UCloakLightAttackSkill.generated.cpp" /><ClCompile Include="Generated\AGorillaAccessoryActor.generated.cpp" /><ClCompile Include="Generated\UGorillaHeavyAttackSkill.generated.cpp" /><ClCompile Include="Generated\UGorillaLightAttackSkill.generated.cpp" /><ClCompile Include="Generated\AKnifeAccessoryActor.generated.cpp" /><ClCompile Include="Generated\UKnifeHeavyAttackSkill.generated.cpp" /><ClCompile Include="Generated\UKnifeLightAttackSkill.generated.cpp" /></ItemGroup>
+    <ClCompile Include="Generated\AAngryCoachCharacter.generated.cpp" />
+    <ClCompile Include="Generated\ACloakAccessoryActor.generated.cpp" />
+    <ClCompile Include="Generated\UCloakHeavyAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UCloakLightAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\AGorillaAccessoryActor.generated.cpp" />
+    <ClCompile Include="Generated\UGorillaHeavyAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UGorillaLightAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\AKnifeAccessoryActor.generated.cpp" />
+    <ClCompile Include="Generated\UKnifeHeavyAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UKnifeLightAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UKnifeSpecialAttackSkill.generated.cpp" />
+  </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -972,6 +986,7 @@
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotifyState.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotifyState_Trail.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotify_CallFunction.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotify_ParticleEnd.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotify_PlaySound.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimMontage.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimSequence.h" />
@@ -979,6 +994,7 @@
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimSingleNodeInstance.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimTypes.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\Team2AnimInstance.h" />
+    <ClInclude Include="Source\Runtime\Engine\Animation\AnimNotify_ParticleStart.h" />
     <ClInclude Include="Source\Runtime\Engine\Audio\Sound.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\AccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\AccessoryHeavyAttackSkill.h" />
@@ -992,6 +1008,7 @@
     <ClInclude Include="Source\Runtime\Engine\Components\KnifeAccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\KnifeHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\KnifeLightAttackSkill.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\KnifeSpecialAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\PunchAccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\PunchHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\PunchLightAttackSkill.h" />
@@ -1301,7 +1318,18 @@
     <ClInclude Include="Generated\UAccessoryLightAttackSkill.generated.h" />
     <ClInclude Include="Generated\UDefaultHeavyAttackSkill.generated.h" />
     <ClInclude Include="Generated\UDefaultLightAttackSkill.generated.h" />
-  <ClInclude Include="Generated\AAngryCoachCharacter.generated.h" /><ClInclude Include="Generated\ACloakAccessoryActor.generated.h" /><ClInclude Include="Generated\UCloakHeavyAttackSkill.generated.h" /><ClInclude Include="Generated\UCloakLightAttackSkill.generated.h" /><ClInclude Include="Generated\AGorillaAccessoryActor.generated.h" /><ClInclude Include="Generated\UGorillaHeavyAttackSkill.generated.h" /><ClInclude Include="Generated\UGorillaLightAttackSkill.generated.h" /><ClInclude Include="Generated\AKnifeAccessoryActor.generated.h" /><ClInclude Include="Generated\UKnifeHeavyAttackSkill.generated.h" /><ClInclude Include="Generated\UKnifeLightAttackSkill.generated.h" /></ItemGroup>
+    <ClInclude Include="Generated\AAngryCoachCharacter.generated.h" />
+    <ClInclude Include="Generated\ACloakAccessoryActor.generated.h" />
+    <ClInclude Include="Generated\UCloakHeavyAttackSkill.generated.h" />
+    <ClInclude Include="Generated\UCloakLightAttackSkill.generated.h" />
+    <ClInclude Include="Generated\AGorillaAccessoryActor.generated.h" />
+    <ClInclude Include="Generated\UGorillaHeavyAttackSkill.generated.h" />
+    <ClInclude Include="Generated\UGorillaLightAttackSkill.generated.h" />
+    <ClInclude Include="Generated\AKnifeAccessoryActor.generated.h" />
+    <ClInclude Include="Generated\UKnifeHeavyAttackSkill.generated.h" />
+    <ClInclude Include="Generated\UKnifeLightAttackSkill.generated.h" />
+    <ClInclude Include="Generated\UKnifeSpecialAttackSkill.generated.h" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />

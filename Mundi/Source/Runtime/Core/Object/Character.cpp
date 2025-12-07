@@ -49,15 +49,15 @@ void ACharacter::BeginPlay()
 	Super::BeginPlay();
 
 	// Hardcode: equip FlowKnife prefab on PIE start (moved from Lua to C++)
-	if (GWorld && GWorld->bPie)
-	{
-		FWideString KnifePath = UTF8ToWide("Data/Prefabs/FlowKnife.prefab");
-		AActor* Spawned = GWorld->SpawnPrefabActor(KnifePath);
-		if (!Spawned)
-		{
-			return;
-		}
-	}
+	//if (GWorld && GWorld->bPie)
+	//{
+	//	FWideString KnifePath = UTF8ToWide("Data/Prefabs/FlowKnife.prefab");
+	//	AActor* Spawned = GWorld->SpawnPrefabActor(KnifePath);
+	//	if (!Spawned)
+	//	{
+	//		return;
+	//	}
+	//}
 }
 void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {

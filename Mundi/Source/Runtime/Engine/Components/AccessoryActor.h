@@ -44,17 +44,27 @@ public:
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
+	void PlayTryParticle();
+	void StopTryParticle();
+	
+	void PlayHitParticle();
+	void StopHitParticle();
+
 protected:
 	AAngryCoachCharacter* OwningCharacter = nullptr;
 
 public:
 	UFUNCTION()
-	void Equip(AAngryCoachCharacter* OwnerCharacter);
+	virtual void Equip(AAngryCoachCharacter* OwnerCharacter);
 
 	UFUNCTION()
-	void Unequip();
+	virtual void Unequip();
 
 	// 스킬 getter
-	const TMap<ESkillSlot, USkillBase*>& GetGrantedSkills() const { return GrantedSkills; }
-	AAngryCoachCharacter* GetOwningCharacter() const { return OwningCharacter; }
+    const TMap<ESkillSlot, USkillBase*>& GetGrantedSkills() const { return GrantedSkills; }
+    AAngryCoachCharacter* GetOwningCharacter() const { return OwningCharacter; }
+
+private:
+    // Runtime state guard to avoid duplicate Play notifications from montage
+    bool bTryParticleActive = false;
 };
