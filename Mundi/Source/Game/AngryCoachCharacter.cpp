@@ -306,6 +306,20 @@ void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponen
 	UE_LOG("OnHit");
 }
 
+float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator)
+{
+	if (CurrentHealth <= 0.0f)
+	{
+		return 0.0f;
+	}
+	
+	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
+	float ActualDamage = DamageAmount;
+	CurrentHealth -= ActualDamage;
+	
+	return ActualDamage;
+}
+
 void AAngryCoachCharacter::DelegateBindToCachedShape()
 {
 	CachedAttackShape->OnComponentHit.AddDynamic(this, &AAngryCoachCharacter::OnHit);
