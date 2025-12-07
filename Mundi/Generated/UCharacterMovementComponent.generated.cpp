@@ -35,8 +35,8 @@ const bool UCharacterMovementComponent::bPropertiesRegistered = []() {
 
 BEGIN_PROPERTIES(UCharacterMovementComponent)
     MARK_AS_COMPONENT("UCharacterMovementComponent", "Auto-generated UCharacterMovementComponent")
+    ADD_PROPERTY(float, MaxIteration, "[컴포넌트]", true)
 END_PROPERTIES()
-
 
 // ===== Lua Binding =====
 

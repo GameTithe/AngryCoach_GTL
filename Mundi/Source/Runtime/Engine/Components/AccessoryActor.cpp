@@ -51,6 +51,7 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		TryAttackParticle = nullptr;
 		HitAttackParticle = nullptr;
 		OwningCharacter = nullptr;
+		AttackShape = nullptr;
 
 		for (UActorComponent* Comp : GetOwnedComponents())
 		{
@@ -59,6 +60,15 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				if (Scene == GetRootComponent())
 				{
 					SceneRoot = Scene;
+				}
+			}
+
+			if (auto* Shape = Cast<UShapeComponent>(Comp))
+			{
+				FString Tag = Shape->GetTag();
+				if (Shape->ObjectName == FName("Attack"))					
+				{
+					AttackShape = Shape;
 				}
 			}
 
@@ -139,6 +149,17 @@ void AAccessoryActor::StopHitParticle()
 	{
 		UE_LOG("Error Stop Hit Particle");
 	}
+}
+
+void AAccessoryActor::SetAttackShapeNameAndAttach(const FName& Name)
+{
+	if (!RootComponent || !AttackShape)
+	{
+		return;
+	}
+
+	AttackShape->SetupAttachment(RootComponent);
+	AttackShape->ObjectName = Name;
 }
 
 void AAccessoryActor::DuplicateSubObjects()
@@ -229,6 +250,12 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	if (SkillComp && !GrantedSkills.empty())
 	{
 		SkillComp->OverrideSkills(GrantedSkills, this);
+	}
+
+	// 3. Attack Shape을 캐릭터에 캐싱
+	if (AttackShape)
+	{
+		OwnerCharacter->SetAttackShape(AttackShape);
 	}
 }
 

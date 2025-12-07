@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "AnimNotify_CallFunction.h"
 #include "Actor.h"
+#include "Pawn.h"
 #include "SkeletalMeshComponent.h"
 
 IMPLEMENT_CLASS(UAnimNotify_CallFunction)
@@ -14,7 +15,10 @@ void UAnimNotify_CallFunction::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
 
     if (FunctionName.IsValid())
     {
-        Owner->ProcessEvent(FunctionName);
+        if (APawn* Pawn = Cast<APawn>(Owner))
+        {
+            Pawn->AttackBegin();
+        }
     }
     
 }
