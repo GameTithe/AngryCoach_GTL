@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "AngryCoachCharacter.h"
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
@@ -42,7 +42,13 @@ void AAngryCoachCharacter::BeginPlay()
 		// 	}
 		// }
 
-		AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
+		//AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
+		 
+		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		AKnifeAccessoryActor* KnifeAccessory = Cast< AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		KnifeAccessory->GetRootComponent()->SetupAttachment(GetMesh(), FName("RightWeapon"));
+
+
 		if (KnifeAccessory)
 		{
 			EquipAccessory(KnifeAccessory);
