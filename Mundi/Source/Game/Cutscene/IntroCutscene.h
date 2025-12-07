@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 
@@ -26,6 +26,7 @@ enum class EIntroPhase : uint8_t
 	TeamLabelExit,     // team_label Exit
 	TeamLabelWait,     // 1초 대기
 	MembersEnter,      // mb1~4 Enter (동시)
+	MembersWait,       // Enter 후 대기
 	MembersExit,       // mb1~4 Exit (동시)
 	Finished           // 완료
 };
@@ -100,7 +101,8 @@ private:
 	void* Owner = nullptr;
 
 	// === 대기 시간 설정 (초) ===
-	static constexpr float WAIT_DURATION = 1.0f;  // 각 단계 사이 대기 시간
+	static constexpr float WAIT_DURATION = 1.0f;          // 기본 대기 시간
+	static constexpr float MEMBERS_WAIT_DURATION = 1.0f;  // Members Enter 후 대기 시간
 
 	// === 내부 함수 ===
 

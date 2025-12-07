@@ -137,6 +137,11 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
                 widgetObj["hoverScale"] = widget.HoverScale;
                 widgetObj["hoverScaleDuration"] = widget.HoverScaleDuration;
             }
+
+            // SubUV 설정 (Button도 TextureWidget 상속)
+            widgetObj["subUV_NX"] = widget.SubUV_NX;
+            widgetObj["subUV_NY"] = widget.SubUV_NY;
+            widgetObj["subUV_Frame"] = widget.SubUV_Frame;
         }
 
         // Binding
@@ -1085,6 +1090,15 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
         ImGui::Separator();
 
         if (ImGui::Checkbox("Interactable", &widget->bInteractable)) bModified = true;
+
+        ImGui::Separator();
+
+        // SubUV (Button도 TextureWidget 상속)
+        ImGui::Text("SubUV");
+        if (ImGui::DragInt("Columns (NX)", &widget->SubUV_NX, 1, 1, 16)) bModified = true;
+        if (ImGui::DragInt("Rows (NY)", &widget->SubUV_NY, 1, 1, 16)) bModified = true;
+        int maxFrame = widget->SubUV_NX * widget->SubUV_NY - 1;
+        if (ImGui::DragInt("Frame", &widget->SubUV_Frame, 1, 0, maxFrame)) bModified = true;
     }
 
     // === Animation 설정 ===
@@ -1394,6 +1408,20 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
             (float*)Widget.DisabledTint
         };
 
+        // SubUV 계산
+        float uMin = 0.0f, vMin = 0.0f, uMax = 1.0f, vMax = 1.0f;
+        if (Widget.SubUV_NX > 1 || Widget.SubUV_NY > 1)
+        {
+            int frameX = Widget.SubUV_Frame % Widget.SubUV_NX;
+            int frameY = Widget.SubUV_Frame / Widget.SubUV_NX;
+            float cellW = 1.0f / Widget.SubUV_NX;
+            float cellH = 1.0f / Widget.SubUV_NY;
+            uMin = frameX * cellW;
+            vMin = frameY * cellH;
+            uMax = uMin + cellW;
+            vMax = vMin + cellH;
+        }
+
         for (int i = 0; i < 4; i++)
         {
             ImVec2 cellMin = cells[i][0];
@@ -1413,7 +1441,7 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
                 if (tex && tex->GetShaderResourceView())
                 {
                     DrawList->AddImage((ImTextureID)tex->GetShaderResourceView(), cellMin, cellMax,
-                                       ImVec2(0, 0), ImVec2(1, 1), tintColor);
+                                       ImVec2(uMin, vMin), ImVec2(uMax, vMax), tintColor);
                 }
                 else
                 {

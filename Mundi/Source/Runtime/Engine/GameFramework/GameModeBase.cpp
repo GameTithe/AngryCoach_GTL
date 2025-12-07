@@ -122,6 +122,29 @@ void AGameModeBase::EndMatch()
 	CallLuaCallback("OnMatchEnd");
 }
 
+void AGameModeBase::RestartMatch()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	UE_LOG("[GameMode] RestartMatch - Resetting game state and starting new match\n");
+
+	// GameState 초기화 (라운드, 승리 횟수 등)
+	GameState->ResetGameState();
+	GameState->SetGameState(EGameState::InProgress);
+
+	// 첫 번째 라운드 준비
+	GameState->AdvanceToNextRound();
+
+	// Lua 콜백: OnMatchRestart
+	CallLuaCallback("OnMatchRestart");
+
+	// 캐릭터 선택으로 바로 이동 (Intro 스킵)
+	StartCharacterSelect();
+}
+
 void AGameModeBase::StartIntro()
 {
 	if (!GameState)

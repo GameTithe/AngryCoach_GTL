@@ -95,6 +95,13 @@ void UIntroCutscene::Update(float DeltaTime)
 	case EIntroPhase::MembersEnter:
 		if (AreMembersAnimationDone())
 		{
+			TransitionTo(EIntroPhase::MembersWait);
+		}
+		break;
+
+	case EIntroPhase::MembersWait:
+		if (PhaseTime >= MEMBERS_WAIT_DURATION)
+		{
 			TransitionTo(EIntroPhase::MembersExit);
 		}
 		break;
@@ -162,6 +169,10 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 		PlayWidgetEnter("mb2");
 		PlayWidgetEnter("mb3");
 		PlayWidgetEnter("mb4");
+		break;
+
+	case EIntroPhase::MembersWait:
+		UE_LOG("[IntroCutscene] Members wait (%.1f sec)...\n", MEMBERS_WAIT_DURATION);
 		break;
 
 	case EIntroPhase::MembersExit:

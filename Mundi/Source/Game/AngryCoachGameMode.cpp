@@ -20,8 +20,7 @@ AAngryCoachGameMode::~AAngryCoachGameMode()
 
 void AAngryCoachGameMode::StartPlay()
 {
-	Login();
-	PostLogin(AngryCoachController);
+	Super::StartPlay();
 }
 
 APlayerController* AAngryCoachGameMode::Login()

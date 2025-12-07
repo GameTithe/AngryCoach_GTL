@@ -39,6 +39,7 @@ public:
 	// 매치 시작/종료
 	virtual void StartMatch();
 	virtual void EndMatch();
+	virtual void RestartMatch();  // 매치 재시작 (GameOver 후 캐릭터 선택으로)
 
 	// 인트로 컷신 시작/종료 (최초 1회)
 	virtual void StartIntro();

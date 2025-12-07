@@ -517,6 +517,17 @@ FLuaManager::FLuaManager()
         }
     );
 
+    SharedLib.set_function("RestartMatch",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->RestartMatch();
+            }
+        }
+    );
+
     SharedLib.set_function("EndIntro",
         []()
         {
@@ -557,6 +568,28 @@ FLuaManager::FLuaManager()
             if (auto* GameMode = GWorld->GetGameMode())
             {
                 GameMode->EndCharacterSelect();
+            }
+        }
+    );
+
+    SharedLib.set_function("SetRoundsToWin",
+        [](int32 RoundsToWin)
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->SetRoundsToWin(RoundsToWin);
+            }
+        }
+    );
+
+    SharedLib.set_function("SetMaxRounds",
+        [](int32 MaxRounds)
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->SetMaxRounds(MaxRounds);
             }
         }
     );
@@ -1446,16 +1479,38 @@ void FLuaManager::ExposeUIFunctions()
         // NOTE: sol::protected_function을 shared_ptr로 래핑하여 람다 캡처 시 수명 문제 해결
         "SetOnClick", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
         {
-            if (!Self) return;
+            if (!Self)
+            {
+                UE_LOG("[UI] SetOnClick: Self is null!\n");
+                return;
+            }
             auto* Button = dynamic_cast<UButtonWidget*>(Self->FindWidget(Name));
-            if (!Button || !Callback.valid()) return;
+            if (!Button)
+            {
+                UE_LOG("[UI] SetOnClick: Button '%s' not found!\n", Name.c_str());
+                return;
+            }
+            if (!Callback.valid())
+            {
+                UE_LOG("[UI] SetOnClick: Callback is not valid!\n");
+                return;
+            }
+
+            UE_LOG("[UI] SetOnClick: Successfully set callback for button '%s'\n", Name.c_str());
 
             auto CallbackPtr = std::make_shared<sol::protected_function>(Callback);
-            Button->OnClick = [CallbackPtr]()
+            auto ButtonName = Name;  // 로깅용 복사
+            Button->OnClick = [CallbackPtr, ButtonName]()
             {
+                UE_LOG("[UI] Button '%s' OnClick triggered!\n", ButtonName.c_str());
                 if (CallbackPtr && CallbackPtr->valid())
                 {
-                    (*CallbackPtr)();
+                    sol::protected_function_result result = (*CallbackPtr)();
+                    if (!result.valid())
+                    {
+                        sol::error err = result;
+                        UE_LOG("[UI] Button '%s' OnClick error: %s\n", ButtonName.c_str(), err.what());
+                    }
                 }
             };
         },

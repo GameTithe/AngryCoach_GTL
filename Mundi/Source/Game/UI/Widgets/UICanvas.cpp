@@ -594,6 +594,7 @@ bool UUICanvas::ProcessMouseInput(float MouseX, float MouseY, bool bLeftDown, bo
     // 마우스 버튼 눌림 처리
     if (bLeftPressed && CurrentHovered)
     {
+        UE_LOG("[UICanvas] '%s': Mouse pressed on button '%s'\n", Name.c_str(), CurrentHovered->Name.c_str());
         CurrentHovered->OnMouseDown();
         PressedButton = CurrentHovered;
         return true;  // 입력 소비
@@ -602,7 +603,9 @@ bool UUICanvas::ProcessMouseInput(float MouseX, float MouseY, bool bLeftDown, bo
     // 마우스 버튼 뗌 처리
     if (bLeftReleased && PressedButton)
     {
+        UE_LOG("[UICanvas] '%s': Mouse released on button '%s'\n", Name.c_str(), PressedButton->Name.c_str());
         bool bClicked = PressedButton->OnMouseUp();
+        UE_LOG("[UICanvas] '%s': Button click result: %s\n", Name.c_str(), bClicked ? "true" : "false");
         PressedButton = nullptr;
         return bClicked;  // 클릭 성공하면 입력 소비
     }

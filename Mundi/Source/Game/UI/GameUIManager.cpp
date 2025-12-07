@@ -594,6 +594,16 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
                 FJsonSerializer::ReadFloat(widgetObj, "hoverScale", hoverScale, 1.0f, false);
                 FJsonSerializer::ReadFloat(widgetObj, "hoverScaleDuration", hoverScaleDuration, 0.1f, false);
                 canvas->SetButtonHoverScale(widgetName.c_str(), hoverScale, hoverScaleDuration);
+
+                // SubUV 설정 (Button도 TextureWidget을 상속받으므로 지원)
+                int32 nx = 1, ny = 1, frame = 0;
+                FJsonSerializer::ReadInt32(widgetObj, "subUV_NX", nx, 1, false);
+                FJsonSerializer::ReadInt32(widgetObj, "subUV_NY", ny, 1, false);
+                FJsonSerializer::ReadInt32(widgetObj, "subUV_Frame", frame, 0, false);
+                if (nx > 1 || ny > 1)
+                {
+                    canvas->SetTextureSubUV(widgetName.c_str(), frame, nx, ny);
+                }
             }
         }
 
