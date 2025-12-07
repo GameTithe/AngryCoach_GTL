@@ -49,6 +49,10 @@ public:
 	virtual void StartStartPage();
 	virtual void EndStartPage();  // Lua에서 스타트 버튼 클릭 시 호출
 
+	// 튜토리얼 화면 시작/종료
+	virtual void StartTutorial();
+	virtual void EndTutorial();  // Lua에서 튜토리얼 종료 시 호출
+
 	// 캐릭터 선택 시작/종료
 	virtual void StartCharacterSelect();
 	virtual void EndCharacterSelect();  // Lua에서 선택 완료 시 호출

@@ -565,6 +565,28 @@ FLuaManager::FLuaManager()
         }
     );
 
+    SharedLib.set_function("StartTutorial",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->StartTutorial();
+            }
+        }
+    );
+
+    SharedLib.set_function("EndTutorial",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = GWorld->GetGameMode())
+            {
+                GameMode->EndTutorial();
+            }
+        }
+    );
+
     SharedLib.set_function("StartCharacterSelect",
         []()
         {

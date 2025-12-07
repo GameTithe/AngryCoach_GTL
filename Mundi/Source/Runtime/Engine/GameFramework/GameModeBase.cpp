@@ -233,6 +233,36 @@ void AGameModeBase::EndStartPage()
 	StartCharacterSelect();
 }
 
+void AGameModeBase::StartTutorial()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	GameState->SetRoundState(ERoundState::Tutorial);
+
+	// 튜토리얼 중에는 게임플레이 입력 비활성화
+	UInputManager::GetInstance().SetGameplayInputEnabled(false);
+
+	// Lua 콜백: OnTutorialStart
+	CallLuaCallback("OnTutorialStart");
+}
+
+void AGameModeBase::EndTutorial()
+{
+	if (!GameState)
+	{
+		return;
+	}
+
+	// Lua 콜백: OnTutorialEnd
+	CallLuaCallback("OnTutorialEnd");
+
+	// 튜토리얼 완료 → StartPage로 복귀
+	StartStartPage();
+}
+
 void AGameModeBase::StartCharacterSelect()
 {
 	if (!GameState)
