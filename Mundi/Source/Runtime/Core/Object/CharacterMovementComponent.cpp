@@ -15,7 +15,7 @@ UCharacterMovementComponent::UCharacterMovementComponent()
 	JumpZVelocity = 4.0;
 
 	BrackingDeceleration = 20.0f; // 입력이 없을 때 감속도
-	GroundFriction = 8.0f; //바닥 마찰 계수 
+	GroundFriction = 8.0f; //바닥 마찰 계수
 }
 
 UCharacterMovementComponent::~UCharacterMovementComponent()
