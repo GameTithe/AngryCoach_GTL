@@ -315,9 +315,25 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	
 	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
 	float ActualDamage = DamageAmount;
-	CurrentHealth -= ActualDamage;
+
+	// 오버킬 처리
+	// 남은 체력보다 데미지가 크면 남은 체력이 실질적인 데미지
+	ActualDamage = FMath::Min(ActualDamage, CurrentHealth);
+	CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
 	
 	return ActualDamage;
+}
+
+float AAngryCoachCharacter::GetHealthPercent() const
+{
+	if (MaxHealth <= KINDA_SMALL_NUMBER)
+	{
+		UE_LOG("최대 체력이 0 이하입니다.");
+		return 0.0f;
+	}
+	
+	float HeathPercent = CurrentHealth / MaxHealth;
+	return HeathPercent;
 }
 
 void AAngryCoachCharacter::DelegateBindToCachedShape()

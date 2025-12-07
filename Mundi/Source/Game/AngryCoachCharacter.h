@@ -52,6 +52,7 @@ public:
 	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 
 	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
+	float GetHealthPercent() const;
 
 private:
 	// 델리게이트 바인딩 헬퍼 함수
