@@ -1,8 +1,9 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "KnifeLightAttackSkill.h"
 #include "KnifeAccessoryActor.h"
 #include "AngryCoachCharacter.h"
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
+#include "CharacterMovementComponent.h"
 
 UKnifeLightAttackSkill::UKnifeLightAttackSkill()
 {
@@ -11,10 +12,6 @@ UKnifeLightAttackSkill::UKnifeLightAttackSkill()
 	if (!Montage)
 	{
 		UE_LOG("[KnifeLightAttackSkill] Failed to load knife1 montage!");
-	}
-	else
-	{
-		UE_LOG("[KnifeLightAttackSkill] Montage loaded successfully");
 	}
 }
 
@@ -27,19 +24,13 @@ void UKnifeLightAttackSkill::Activate(AActor* Caster)
 	{
 		DamageMultiplier = KnifeAccessory->KnifeDamageMultiplier;
 	}
-
-	UE_LOG("[Skill] Knife Light Attack! (Damage x%.2f)", DamageMultiplier);
-
+	 
 	// 애니메이션 재생
 	if (AAngryCoachCharacter* Character = Cast<AAngryCoachCharacter>(Caster))
 	{
-		if (Montage)
+		if (!Character->GetCharacterMovement()->IsFalling() && Montage)
 		{
 			Character->PlayMontage(Montage);
-		}
-		else
-		{
-			UE_LOG("[KnifeLightAttackSkill] Cannot play montage - Montage is null!");
-		}
+		} 
 	}
 }

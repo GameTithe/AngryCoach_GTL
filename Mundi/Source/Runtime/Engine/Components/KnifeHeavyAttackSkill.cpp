@@ -3,10 +3,12 @@
 #include "KnifeAccessoryActor.h"
 #include "AngryCoachCharacter.h"
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
+#include "CharacterMovementComponent.h"
 
 UKnifeHeavyAttackSkill::UKnifeHeavyAttackSkill()
 {
 	ObjectName = "KnifeHeavyAttack";
+	
 	Montage = RESOURCE.Load<UAnimMontage>("Data/Montages/Knife2.montage.json");
 	if (!Montage)
 	{
@@ -29,7 +31,7 @@ void UKnifeHeavyAttackSkill::Activate(AActor* Caster)
 	// 애니메이션 재생
 	if (AAngryCoachCharacter* Character = Cast<AAngryCoachCharacter>(Caster))
 	{
-		if (Montage)
+		if (!Character->GetCharacterMovement()->IsFalling()  && Montage)
 		{
 			Character->PlayMontage(Montage);
 		} 
