@@ -36,6 +36,7 @@ public:
 	void EquipAccessory(AAccessoryActor* Accessory);
 	void UnequipAccessory();
 	AAccessoryActor* GetCurrentAccessory() const { return CurrentAccessory; }
+	void SetAttackShape(UShapeComponent* Shape);
 
 	// ===== 스킬 =====
 	void OnAttackInput(EAttackInput Input);
@@ -46,8 +47,24 @@ public:
 	void AttackEnd() override;
 
 	bool bIsCGC = true;
+	// 충돌
+	void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+
+	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
+	float GetHealthPercent() const;
+
+private:
+	// 델리게이트 바인딩 헬퍼 함수
+	void DelegateBindToCachedShape();
+
 protected:
 	// 스킬/악세서리
 	USkillComponent* SkillComponent = nullptr;
 	AAccessoryActor* CurrentAccessory = nullptr;
+	UShapeComponent* CachedAttackShape = nullptr;
+
+	float MaxHealth = 100.0f;
+	float CurrentHealth = MaxHealth;
 };

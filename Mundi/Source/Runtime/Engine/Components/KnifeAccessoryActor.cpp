@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "KnifeAccessoryActor.h"
+
+#include "BoxComponent.h"
 #include "KnifeLightAttackSkill.h"
 #include "KnifeHeavyAttackSkill.h"
 #include "KnifeSpecialAttackSkill.h"
@@ -28,6 +30,8 @@ AKnifeAccessoryActor::AKnifeAccessoryActor()
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
+
+	CreateAttackShape<UBoxComponent>(FName("AttackShape"));
 }
 
 void AKnifeAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)

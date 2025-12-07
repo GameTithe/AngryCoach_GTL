@@ -816,30 +816,85 @@ namespace Collision
     bool ComputeBoxToCapsulePenetration(const FOBB& Box, const FVector& CapP0, const FVector& CapP1, float CapRadius,
         FHitResult& OutHit)
     {
-        // 완벽한 Box vs Capsule은 복잡하므로, 캡슐의 선분을 Box에 대해 테스트하는 방식으로 근사
-        // 1. 캡슐의 양 끝점(구) vs Box
-        FHitResult HitA, HitB;
-        bool bHitA = ComputeSphereToBoxPenetration(CapP0, CapRadius, Box, HitA);
-        bool bHitB = ComputeSphereToBoxPenetration(CapP1, CapRadius, Box, HitB);
+        // [최적화 1] 캡슐의 기본 데이터 미리 계산
+    FVector SegVec = CapP1 - CapP0;
+    float SegLenSq = SegVec.SizeSquared();
+    
+    // 임시 결과 저장소
+    FHitResult BestHit;
+    float MaxPenetration = -FLT_MAX;
+    bool bHasHit = false;
 
-        // 더 깊게 박힌 쪽 선택
-        if (bHitA && bHitB)
+    // 람다: 히트 결과를 갱신하는 헬퍼 함수
+    auto ProcessHit = [&](const FVector& TestPoint)
+    {
+        FHitResult TempHit;
+        // 이미 구현된 SphereToBox 활용
+        if (ComputeSphereToBoxPenetration(TestPoint, CapRadius, Box, TempHit))
         {
-            OutHit = (HitA.PenetrationDepth > HitB.PenetrationDepth) ? HitA : HitB;
+            if (TempHit.PenetrationDepth > MaxPenetration)
+            {
+                MaxPenetration = TempHit.PenetrationDepth;
+                BestHit = TempHit;
+                bHasHit = true;
+            }
             return true;
         }
-        if (bHitA) { OutHit = HitA; return true; }
-        if (bHitB) { OutHit = HitB; return true; }
-
-        // 2. 캡슐 중간 몸통(선분)이 박스 모서리에 걸친 경우 (Edge Case)
-        // 정밀한 검사를 위해 Box의 8개 코너를 Capsule 선분에 대해 테스트
-        // (이 부분은 성능상 생략하거나, 필요한 경우 추가 구현 가능)
-        
-        // 일단 양 끝점 검사만으로도 대부분의 게임 플레이 충돌은 커버됨.
-        // 만약 캡슐이 매우 길어서 중간만 박스를 통과하는 경우가 잦다면
-        // 세그먼트 vs 박스 최단 거리 알고리즘을 추가해야 함.
-        
         return false;
+    };
+
+    // 1. [양 끝점 검사] (가장 싸고 확률 높음)
+    bool bHitP0 = ProcessHit(CapP0);
+    bool bHitP1 = ProcessHit(CapP1);
+
+    // [최적화 2] 조기 종료 (Early Exit)
+    // 만약 양 끝점 중 하나가 충분히 깊게 박혀 있다면, 중간 검사 생략 가능.
+    // (예: 양쪽 다 박혀있으면, 어차피 캡슐 전체가 박힌 것임)
+    if (bHitP0 && bHitP1)
+    {
+        OutHit = BestHit;
+        return true;
+    }
+
+    // 2. [스마트 중간점 검사] (Smart Mid-Point Heuristic)
+    // 기존의 '박스 중심 투영' 대신 '박스 표면 유도 투영'을 사용해 거대 박스 문제를 해결
+    if (SegLenSq > 1e-6f)
+    {
+        // 2-1. 캡슐의 기하학적 중심
+        FVector CapsuleCenter = (CapP0 + CapP1) * 0.5f;
+
+        // 2-2. 캡슐 중심에서 박스 표면(혹은 내부)의 가장 가까운 점 찾기 (Closest Point on OBB)
+        // (이 로직은 ComputeSphereToBox 내부 로직의 일부를 활용하거나 별도 함수로 분리 권장)
+        // 여기서는 개념적으로 인라인 구현:
+        FVector Diff = CapsuleCenter - Box.Center;
+        FVector ClosestOnBox = Box.Center;
+        
+        for (int i = 0; i < 3; ++i)
+        {
+            float Dist = FVector::Dot(Diff, Box.Axes[i]);
+            Dist = FMath::Clamp(Dist, -Box.HalfExtent[i], Box.HalfExtent[i]);
+            ClosestOnBox += Box.Axes[i] * Dist;
+        }
+
+        // 2-3. '박스 표면 점'을 다시 '캡슐 선분'에 투영
+        // 이 과정이 "박스 모서리 쪽으로 검사 지점을 당겨오는" 핵심 역할을 함
+        float t = FVector::Dot(ClosestOnBox - CapP0, SegVec) / SegLenSq;
+        t = FMath::Clamp(t, 0.0f, 1.0f);
+        
+        FVector SmartTestPoint = CapP0 + (SegVec * t);
+
+        // 2-4. 계산된 스마트 지점 검사
+        // (이미 검사한 끝점과 너무 가까우면 생략하는 미세 최적화도 가능)
+        ProcessHit(SmartTestPoint);
+    }
+
+    if (bHasHit)
+    {
+        OutHit = BestHit;
+        return true;
+    }
+
+    return false;
     }
 }
 

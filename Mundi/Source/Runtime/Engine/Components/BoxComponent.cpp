@@ -23,20 +23,24 @@ void UBoxComponent::OnRegister(UWorld* InWorld)
 		FAABB ActorBounds = Owner->GetBounds();
 		FVector WorldHalfExtent = ActorBounds.GetHalfExtent();
 
-		// World scale로 나눠서 local extent 계산
-		const FTransform WordTransform = GetWorldTransform();
-		const FVector S = FVector(
-			std::fabs(WordTransform.Scale3D.X),
-			std::fabs(WordTransform.Scale3D.Y),
-			std::fabs(WordTransform.Scale3D.Z)
-		);
+		// if문이 없으면 BoxExtent가 항상 액터의 바운드로 덮어 씌워짐
+		if (!WorldHalfExtent.IsZero())
+		{
+			// World scale로 나눠서 local extent 계산
+			const FTransform WordTransform = GetWorldTransform();
+			const FVector S = FVector(
+				std::fabs(WordTransform.Scale3D.X),
+				std::fabs(WordTransform.Scale3D.Y),
+				std::fabs(WordTransform.Scale3D.Z)
+			);
 
-		constexpr float Eps = 1e-6f;
-		BoxExtent = FVector(
-			S.X > Eps ? WorldHalfExtent.X / S.X : WorldHalfExtent.X,
-			S.Y > Eps ? WorldHalfExtent.Y / S.Y : WorldHalfExtent.Y,
-			S.Z > Eps ? WorldHalfExtent.Z / S.Z : WorldHalfExtent.Z
-		);
+			constexpr float Eps = 1e-6f;
+			BoxExtent = FVector(
+				S.X > Eps ? WorldHalfExtent.X / S.X : WorldHalfExtent.X,
+				S.Y > Eps ? WorldHalfExtent.Y / S.Y : WorldHalfExtent.Y,
+				S.Z > Eps ? WorldHalfExtent.Z / S.Z : WorldHalfExtent.Z
+			);
+		}
 
 	}
 }
