@@ -31,17 +31,7 @@ AKnifeAccessoryActor::AKnifeAccessoryActor()
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
-	AttackShape = CreateDefaultSubobject<UBoxComponent>("AttackShape");
-	AttackShape->SetTag(FString("Attack"));
-	if (RootComponent)
-	{
-		AttackShape->SetupAttachment(RootComponent);
-		if (auto* Box = Cast<UBoxComponent>(AttackShape))
-		{
-			Box->BoxExtent = FVector(0.575f, 0.15f, 0.02f);
-			Box->SetRelativeLocation(FVector(-0.4f, 0.0f, 0.0f));
-		}
-	}
+	CreateAttackShape<UBoxComponent>(FName("AttackShape"));
 }
 
 void AKnifeAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)

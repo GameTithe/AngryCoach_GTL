@@ -21,12 +21,7 @@ APunchAccessoryActor::APunchAccessoryActor()
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 
-	AttackShape = CreateDefaultSubobject<UCapsuleComponent>("AttackShape");
-	AttackShape->SetTag(FString("Attack"));
-	if (RootComponent)
-	{
-		AttackShape->SetupAttachment(RootComponent);
-	}
+	CreateAttackShape<UCapsuleComponent>(FName("AttackShape"));
 }
 
 void APunchAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)

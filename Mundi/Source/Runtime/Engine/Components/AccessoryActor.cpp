@@ -66,7 +66,7 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			if (auto* Shape = Cast<UShapeComponent>(Comp))
 			{
 				FString Tag = Shape->GetTag();
-				if (Tag == FString("Attack"))
+				if (Shape->ObjectName == FName("Attack"))					
 				{
 					AttackShape = Shape;
 				}
@@ -149,6 +149,17 @@ void AAccessoryActor::StopHitParticle()
 	{
 		UE_LOG("Error Stop Hit Particle");
 	}
+}
+
+void AAccessoryActor::SetAttackShapeNameAndAttach(const FName& Name)
+{
+	if (!RootComponent || !AttackShape)
+	{
+		return;
+	}
+
+	AttackShape->SetupAttachment(RootComponent);
+	AttackShape->ObjectName = Name;
 }
 
 void AAccessoryActor::DuplicateSubObjects()
