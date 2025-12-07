@@ -384,10 +384,10 @@ int32 AGameModeBase::CheckRoundWinCondition()
 		return 0;  // 플레이어 0 승리
 	}
 
-	// 시간 초과 시 무승부
+	// 시간 초과 시 랜덤 승자 (테스트용)
 	if (GameState->GetRoundTimeRemaining() <= 0.0f)
 	{
-		return -2;  // 무승부
+		return rand() % 2;  // 0 또는 1 랜덤 승자
 	}
 
 	return -1;  // 아직 승자 없음
