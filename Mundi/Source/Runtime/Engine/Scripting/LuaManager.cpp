@@ -496,28 +496,6 @@ FLuaManager::FLuaManager()
         }
     );
 
-    // 플레이어 체력 관련 함수
-    SharedLib.set_function("GetPlayer1HealthPercent",
-        []() -> float
-        {
-            return AAngryCoachGameMode::GetPlayer1HealthPercent();
-        }
-    );
-
-    SharedLib.set_function("GetPlayer2HealthPercent",
-        []() -> float
-        {
-            return AAngryCoachGameMode::GetPlayer2HealthPercent();
-        }
-    );
-
-    SharedLib.set_function("ResetPlayersHealth",
-        []()
-        {
-            AAngryCoachGameMode::ResetPlayersHealth();
-        }
-    );
-
     SharedLib.set_function("GetRoundWins",
         [](int32 PlayerIndex) -> int32
         {
