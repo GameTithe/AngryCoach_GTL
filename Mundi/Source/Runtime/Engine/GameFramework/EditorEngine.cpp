@@ -263,6 +263,10 @@ void UEditorEngine::Render()
 
     UI.Render();
     SLATE.Render();
+
+    // D2D Game UI를 3D 렌더링 후, ImGui 전에 렌더링 (D2D가 ImGui 아래에 그려지도록)
+    UGameUIManager::Get().Render();
+
     UI.EndFrame();
     SLATE.RenderAfterUI();
 
