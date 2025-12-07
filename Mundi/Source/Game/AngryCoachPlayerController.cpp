@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "AngryCoachPlayerController.h"
 #include "AngryCoachCharacter.h"
 #include "CameraComponent.h"
@@ -51,7 +51,7 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 	if (InputManager.IsKeyDown('D')) { InputDir.Y += 1.0f; }
 	if (InputManager.IsKeyDown('A')) { InputDir.Y -= 1.0f; }
 
-	if (!InputDir.IsZero())
+	if (!InputDir.IsZero() && !Player1->IsPlayingMontage())
 	{
 		InputDir.Normalize();
 
@@ -105,7 +105,7 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	if (InputManager.IsKeyDown(VK_RIGHT)) { InputDir.Y += 1.0f; }
 	if (InputManager.IsKeyDown(VK_LEFT))  { InputDir.Y -= 1.0f; }
 
-	if (!InputDir.IsZero())
+	if (!InputDir.IsZero() && !Player2->IsPlayingMontage())
 	{
 		InputDir.Normalize();
 
