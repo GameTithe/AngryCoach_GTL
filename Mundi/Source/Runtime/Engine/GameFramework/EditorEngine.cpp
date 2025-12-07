@@ -323,14 +323,15 @@ void UEditorEngine::MainLoop()
 
         if (bChangedPieToEditor)
         {
+            // PIE 종료 시 GameUI 캔버스 먼저 정리 (Lua 콜백 해제)
+            // World/Lua 상태 삭제 전에 해야 dangling reference 방지
+            UGameUIManager::Get().RemoveAllCanvases();
+
             if (GWorld && bPIEActive)
             {
                 WorldContexts.pop_back();
                 ObjectFactory::DeleteObject(GWorld);
             }
-
-            // PIE 종료 시 GameUI 캔버스 모두 정리
-            UGameUIManager::Get().RemoveAllCanvases();
 
             GWorld = WorldContexts[0].World;
             GWorld->GetSelectionManager()->ClearSelection();
