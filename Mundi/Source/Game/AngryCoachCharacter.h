@@ -45,6 +45,7 @@ public:
 	void AttackBegin() override;
 	void AttackEnd() override;
 
+	bool bIsCGC = true;
 protected:
 	// 스킬/악세서리
 	USkillComponent* SkillComponent = nullptr;

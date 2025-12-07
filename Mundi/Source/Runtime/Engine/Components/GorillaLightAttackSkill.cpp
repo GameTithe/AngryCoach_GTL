@@ -4,6 +4,7 @@
 UGorillaLightAttackSkill::UGorillaLightAttackSkill()
 {
 	ObjectName = "GorillaLightAttack";
+	Montage = RESOURCE.Load<UAnimMontage>("Data/Montages/GorillaLight.NewMontage.montage.json");
 }
 
 void UGorillaLightAttackSkill::Activate(AActor* Caster)

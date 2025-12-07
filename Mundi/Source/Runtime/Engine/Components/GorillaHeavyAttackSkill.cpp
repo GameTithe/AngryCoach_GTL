@@ -4,6 +4,7 @@
 UGorillaHeavyAttackSkill::UGorillaHeavyAttackSkill()
 {
 	ObjectName = "GorillaHeavyAttack";
+	Montage = RESOURCE.Load<UAnimMontage>("Data/Montages/GorillaHeavy.NewMontage.montage.json");
 }
 
 void UGorillaHeavyAttackSkill::Activate(AActor* Caster)
