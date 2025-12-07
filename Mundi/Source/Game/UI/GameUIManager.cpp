@@ -240,6 +240,9 @@ void UGameUIManager::Update(float DeltaTime)
     // 마우스 입력 처리
     ProcessMouseInput();
 
+    // 키보드/게임패드 입력 처리 (UI 포커스 네비게이션)
+    ProcessKeyboardInput();
+
     // 모든 캔버스 업데이트 (위젯 애니메이션 처리)
     static int updateLogCount = 0;
     for (auto& Pair : Canvases)
@@ -722,6 +725,72 @@ void UGameUIManager::ProcessMouseInput()
     }
 
     bUIConsumedInput = false;
+}
+
+void UGameUIManager::ProcessKeyboardInput()
+{
+    if (Canvases.empty())
+        return;
+
+    // 정렬이 필요하면 갱신
+    if (bCanvasesSortDirty)
+    {
+        UpdateCanvasSortOrder();
+    }
+
+    // InputManager에서 키보드/게임패드 상태 가져오기
+    UInputManager& Input = UInputManager::GetInstance();
+
+    // 방향키 입력 체크 (W/S, 위/아래 화살표, 게임패드 D-pad)
+    bool bUpKey = Input.IsKeyDown(VK_UP) || Input.IsKeyDown('W');
+    bool bDownKey = Input.IsKeyDown(VK_DOWN) || Input.IsKeyDown('S');
+    bool bConfirmKey = Input.IsKeyDown(VK_RETURN) || Input.IsKeyDown(VK_SPACE);
+
+    // 게임패드 입력 체크 (연결된 모든 게임패드)
+    for (int i = 0; i < 4; ++i)
+    {
+        if (Input.IsGamepadConnected(i))
+        {
+            if (Input.IsGamepadButtonDown(i, EGamepadButton::DPadUp))
+                bUpKey = true;
+            if (Input.IsGamepadButtonDown(i, EGamepadButton::DPadDown))
+                bDownKey = true;
+            if (Input.IsGamepadButtonDown(i, EGamepadButton::A))
+                bConfirmKey = true;
+        }
+    }
+
+    // Edge detection (이번 프레임에 눌렸는지)
+    bool bUpPressed = bUpKey && !bPrevUpKey;
+    bool bDownPressed = bDownKey && !bPrevDownKey;
+    bool bConfirmPressed = bConfirmKey && !bPrevConfirmKey;
+
+    // 이전 상태 저장
+    bPrevUpKey = bUpKey;
+    bPrevDownKey = bDownKey;
+    bPrevConfirmKey = bConfirmKey;
+
+    // 입력이 없으면 리턴
+    if (!bUpPressed && !bDownPressed && !bConfirmPressed)
+        return;
+
+    // Z-order 역순으로 처리 (가장 위에 있는 캔버스부터)
+    for (auto it = SortedCanvases.rbegin(); it != SortedCanvases.rend(); ++it)
+    {
+        UUICanvas* Canvas = *it;
+        if (!Canvas || !Canvas->bVisible)
+            continue;
+
+        // 캔버스에 포커스 가능한 버튼이 있으면 입력 처리
+        if (Canvas->HasFocusableButtons())
+        {
+            if (Canvas->ProcessKeyboardInput(bUpPressed, bDownPressed, bConfirmPressed))
+            {
+                bUIConsumedInput = true;
+                return;
+            }
+        }
+    }
 }
 
 void UGameUIManager::RenderCanvases()

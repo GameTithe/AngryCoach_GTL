@@ -1,6 +1,8 @@
 ﻿#include "pch.h"
 #include <windowsx.h> // GET_X_LPARAM / GET_Y_LPARAM
 
+#pragma comment(lib, "xinput.lib")
+
 #ifndef GET_X_LPARAM
 #define GET_X_LPARAM(lp) ((int)(short)LOWORD(lp))
 #endif
@@ -69,6 +71,9 @@ void UInputManager::Update()
 {
     // 마우스 휠 델타 초기화 (프레임마다 리셋)
     MouseWheelDelta = 0.0f;
+
+    // 게임패드 상태 업데이트
+    UpdateGamepadStates();
 
     // 매 프레임마다 실시간 마우스 위치 업데이트
     if (WindowHandle)
@@ -348,20 +353,50 @@ bool UInputManager::IsMouseButtonReleased(EMouseButton Button) const
 
 bool UInputManager::IsKeyDown(int KeyCode) const
 {
-    if (KeyCode < 0 || KeyCode >= 256) return false; 
-    return KeyStates[KeyCode];
+    if (KeyCode < 0 || KeyCode >= 256) return false;
+
+    // 키보드 상태 체크
+    if (KeyStates[KeyCode]) return true;
+
+    // 게임패드 → 키보드 매핑 체크
+    if (bGamepadToKeyboardMapping && IsGamepadMappedToKey(KeyCode, false, false))
+    {
+        return true;
+    }
+
+    return false;
 }
 
 bool UInputManager::IsKeyPressed(int KeyCode) const
 {
     if (KeyCode < 0 || KeyCode >= 256) return false;
-    return KeyStates[KeyCode] && !PreviousKeyStates[KeyCode];
+
+    // 키보드 상태 체크
+    if (KeyStates[KeyCode] && !PreviousKeyStates[KeyCode]) return true;
+
+    // 게임패드 → 키보드 매핑 체크 (Pressed)
+    if (bGamepadToKeyboardMapping && IsGamepadMappedToKey(KeyCode, true, false))
+    {
+        return true;
+    }
+
+    return false;
 }
 
 bool UInputManager::IsKeyReleased(int KeyCode) const
 {
     if (KeyCode < 0 || KeyCode >= 256) return false;
-    return !KeyStates[KeyCode] && PreviousKeyStates[KeyCode];
+
+    // 키보드 상태 체크
+    if (!KeyStates[KeyCode] && PreviousKeyStates[KeyCode]) return true;
+
+    // 게임패드 → 키보드 매핑 체크 (Released)
+    if (bGamepadToKeyboardMapping && IsGamepadMappedToKey(KeyCode, false, true))
+    {
+        return true;
+    }
+
+    return false;
 }
 
 void UInputManager::UpdateMousePosition(int X, int Y)
@@ -496,4 +531,324 @@ void UInputManager::LockCursorToCenter()
         MousePosition = LockedCursorPosition;
         PreviousMousePosition = LockedCursorPosition;
     }
+}
+
+// === 게임패드 구현 ===
+
+void UInputManager::UpdateGamepadStates()
+{
+    for (int i = 0; i < MaxGamepads; ++i)
+    {
+        FGamepadState& State = GamepadStates[i];
+
+        // 이전 상태 저장
+        State.PreviousState = State.CurrentState;
+
+        // XInput 상태 조회
+        ZeroMemory(&State.CurrentState, sizeof(XINPUT_STATE));
+        DWORD Result = XInputGetState(i, &State.CurrentState);
+
+        State.bConnected = (Result == ERROR_SUCCESS);
+
+        if (State.bConnected)
+        {
+            const XINPUT_GAMEPAD& Gamepad = State.CurrentState.Gamepad;
+
+            // 스틱 값 계산 (데드존 적용)
+            State.LeftStickX = ApplyStickDeadzone(Gamepad.sThumbLX, StickDeadzone);
+            State.LeftStickY = ApplyStickDeadzone(Gamepad.sThumbLY, StickDeadzone);
+            State.RightStickX = ApplyStickDeadzone(Gamepad.sThumbRX, StickDeadzone);
+            State.RightStickY = ApplyStickDeadzone(Gamepad.sThumbRY, StickDeadzone);
+
+            // 트리거 값 계산 (0.0 ~ 1.0)
+            float LeftTriggerNorm = static_cast<float>(Gamepad.bLeftTrigger) / 255.0f;
+            float RightTriggerNorm = static_cast<float>(Gamepad.bRightTrigger) / 255.0f;
+
+            State.LeftTrigger = (LeftTriggerNorm > TriggerThreshold) ? LeftTriggerNorm : 0.0f;
+            State.RightTrigger = (RightTriggerNorm > TriggerThreshold) ? RightTriggerNorm : 0.0f;
+        }
+        else
+        {
+            // 연결 안됨 - 값 초기화
+            State.LeftStickX = State.LeftStickY = 0.0f;
+            State.RightStickX = State.RightStickY = 0.0f;
+            State.LeftTrigger = State.RightTrigger = 0.0f;
+        }
+    }
+}
+
+float UInputManager::ApplyStickDeadzone(SHORT Value, float Deadzone) const
+{
+    // -32768 ~ 32767 범위를 -1.0 ~ 1.0으로 정규화
+    float Normalized = static_cast<float>(Value) / 32767.0f;
+
+    // 데드존 적용
+    float AbsValue = std::abs(Normalized);
+    if (AbsValue < Deadzone)
+    {
+        return 0.0f;
+    }
+
+    // 데드존 이후 영역을 0~1로 리매핑
+    float Sign = (Normalized > 0.0f) ? 1.0f : -1.0f;
+    float Remapped = (AbsValue - Deadzone) / (1.0f - Deadzone);
+    return Sign * Remapped;
+}
+
+bool UInputManager::IsGamepadConnected(int GamepadIndex) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return false;
+    return GamepadStates[GamepadIndex].bConnected;
+}
+
+int UInputManager::GetConnectedGamepadCount() const
+{
+    int Count = 0;
+    for (int i = 0; i < MaxGamepads; ++i)
+    {
+        if (GamepadStates[i].bConnected) ++Count;
+    }
+    return Count;
+}
+
+int32 UInputManager::GetGamepadWithAnyButtonPressed() const
+{
+    for (int i = 0; i < MaxGamepads; ++i)
+    {
+        if (!GamepadStates[i].bConnected) continue;
+
+        // 이번 프레임에 새로 눌린 버튼이 있는지 확인
+        WORD CurrentButtons = GamepadStates[i].CurrentState.Gamepad.wButtons;
+        WORD PreviousButtons = GamepadStates[i].PreviousState.Gamepad.wButtons;
+
+        // 새로 눌린 버튼 = 현재 눌려있고 이전엔 안 눌렸던 것
+        if ((CurrentButtons & ~PreviousButtons) != 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int32 UInputManager::GetGamepadWithAnyInput() const
+{
+    // 먼저 버튼 입력 확인
+    int32 ButtonPad = GetGamepadWithAnyButtonPressed();
+    if (ButtonPad >= 0) return ButtonPad;
+
+    // 스틱이나 트리거 입력 확인
+    for (int i = 0; i < MaxGamepads; ++i)
+    {
+        if (!GamepadStates[i].bConnected) continue;
+
+        const FGamepadState& State = GamepadStates[i];
+
+        // 스틱 입력 (데드존 적용된 값이 0이 아니면)
+        if (std::abs(State.LeftStickX) > 0.5f || std::abs(State.LeftStickY) > 0.5f ||
+            std::abs(State.RightStickX) > 0.5f || std::abs(State.RightStickY) > 0.5f)
+        {
+            return i;
+        }
+
+        // 트리거 입력
+        if (State.LeftTrigger > 0.5f || State.RightTrigger > 0.5f)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+bool UInputManager::IsGamepadButtonDown(int GamepadIndex, EGamepadButton Button) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return false;
+    if (!GamepadStates[GamepadIndex].bConnected) return false;
+
+    WORD ButtonMask = static_cast<WORD>(Button);
+    return (GamepadStates[GamepadIndex].CurrentState.Gamepad.wButtons & ButtonMask) != 0;
+}
+
+bool UInputManager::IsGamepadButtonPressed(int GamepadIndex, EGamepadButton Button) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return false;
+    if (!GamepadStates[GamepadIndex].bConnected) return false;
+
+    WORD ButtonMask = static_cast<WORD>(Button);
+    bool Current = (GamepadStates[GamepadIndex].CurrentState.Gamepad.wButtons & ButtonMask) != 0;
+    bool Previous = (GamepadStates[GamepadIndex].PreviousState.Gamepad.wButtons & ButtonMask) != 0;
+    return Current && !Previous;
+}
+
+bool UInputManager::IsGamepadButtonReleased(int GamepadIndex, EGamepadButton Button) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return false;
+    if (!GamepadStates[GamepadIndex].bConnected) return false;
+
+    WORD ButtonMask = static_cast<WORD>(Button);
+    bool Current = (GamepadStates[GamepadIndex].CurrentState.Gamepad.wButtons & ButtonMask) != 0;
+    bool Previous = (GamepadStates[GamepadIndex].PreviousState.Gamepad.wButtons & ButtonMask) != 0;
+    return !Current && Previous;
+}
+
+float UInputManager::GetGamepadLeftStickX(int GamepadIndex) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return 0.0f;
+    return GamepadStates[GamepadIndex].LeftStickX;
+}
+
+float UInputManager::GetGamepadLeftStickY(int GamepadIndex) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return 0.0f;
+    return GamepadStates[GamepadIndex].LeftStickY;
+}
+
+float UInputManager::GetGamepadRightStickX(int GamepadIndex) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return 0.0f;
+    return GamepadStates[GamepadIndex].RightStickX;
+}
+
+float UInputManager::GetGamepadRightStickY(int GamepadIndex) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return 0.0f;
+    return GamepadStates[GamepadIndex].RightStickY;
+}
+
+float UInputManager::GetGamepadLeftTrigger(int GamepadIndex) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return 0.0f;
+    return GamepadStates[GamepadIndex].LeftTrigger;
+}
+
+float UInputManager::GetGamepadRightTrigger(int GamepadIndex) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return 0.0f;
+    return GamepadStates[GamepadIndex].RightTrigger;
+}
+
+void UInputManager::SetGamepadVibration(int GamepadIndex, float LeftMotor, float RightMotor)
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return;
+    if (!GamepadStates[GamepadIndex].bConnected) return;
+
+    XINPUT_VIBRATION Vibration;
+    Vibration.wLeftMotorSpeed = static_cast<WORD>(std::clamp(LeftMotor, 0.0f, 1.0f) * 65535.0f);
+    Vibration.wRightMotorSpeed = static_cast<WORD>(std::clamp(RightMotor, 0.0f, 1.0f) * 65535.0f);
+    XInputSetState(GamepadIndex, &Vibration);
+}
+
+void UInputManager::StopGamepadVibration(int GamepadIndex)
+{
+    SetGamepadVibration(GamepadIndex, 0.0f, 0.0f);
+}
+
+bool UInputManager::IsGamepadMappedToKey(int KeyCode, bool bCheckPressed, bool bCheckReleased) const
+{
+    // ===== Gamepad 0 → Player 1 (WASD + Space) =====
+    if (GamepadStates[0].bConnected)
+    {
+        const FGamepadState& Pad0 = GamepadStates[0];
+        const FGamepadState& Pad0Prev = GamepadStates[0]; // PreviousState는 구조체 안에 있음
+
+        // 현재/이전 스틱 값
+        float CurrLX = Pad0.LeftStickX;
+        float CurrLY = Pad0.LeftStickY;
+
+        // 이전 프레임 스틱 값 계산 (PreviousState에서)
+        float PrevLX = ApplyStickDeadzone(Pad0.PreviousState.Gamepad.sThumbLX, StickDeadzone);
+        float PrevLY = ApplyStickDeadzone(Pad0.PreviousState.Gamepad.sThumbLY, StickDeadzone);
+
+        // 스틱 → WASD 매핑
+        bool bCurrW = (CurrLY > StickToKeyThreshold);
+        bool bCurrS = (CurrLY < -StickToKeyThreshold);
+        bool bCurrA = (CurrLX < -StickToKeyThreshold);
+        bool bCurrD = (CurrLX > StickToKeyThreshold);
+
+        bool bPrevW = (PrevLY > StickToKeyThreshold);
+        bool bPrevS = (PrevLY < -StickToKeyThreshold);
+        bool bPrevA = (PrevLX < -StickToKeyThreshold);
+        bool bPrevD = (PrevLX > StickToKeyThreshold);
+
+        // 버튼 상태
+        WORD CurrButtons = Pad0.CurrentState.Gamepad.wButtons;
+        WORD PrevButtons = Pad0.PreviousState.Gamepad.wButtons;
+
+        auto CheckKey = [&](bool bCurr, bool bPrev) -> bool {
+            if (bCheckPressed) return bCurr && !bPrev;
+            if (bCheckReleased) return !bCurr && bPrev;
+            return bCurr; // Down
+        };
+
+        auto CheckButton = [&](WORD ButtonMask) -> bool {
+            bool bCurr = (CurrButtons & ButtonMask) != 0;
+            bool bPrev = (PrevButtons & ButtonMask) != 0;
+            if (bCheckPressed) return bCurr && !bPrev;
+            if (bCheckReleased) return !bCurr && bPrev;
+            return bCurr;
+        };
+
+        switch (KeyCode)
+        {
+        case 'W': if (CheckKey(bCurrW, bPrevW)) return true; break;
+        case 'S': if (CheckKey(bCurrS, bPrevS)) return true; break;
+        case 'A': if (CheckKey(bCurrA, bPrevA)) return true; break;
+        case 'D': if (CheckKey(bCurrD, bPrevD)) return true; break;
+        case VK_SPACE: if (CheckButton(XINPUT_GAMEPAD_A)) return true; break;
+        // 추가 액션키 매핑 가능
+        // case 'E': if (CheckButton(XINPUT_GAMEPAD_B)) return true; break;
+        // case VK_SHIFT: if (CheckButton(XINPUT_GAMEPAD_X)) return true; break;
+        }
+    }
+
+    // ===== Gamepad 1 → Player 2 (화살표 + Numpad0) =====
+    if (GamepadStates[1].bConnected)
+    {
+        const FGamepadState& Pad1 = GamepadStates[1];
+
+        float CurrLX = Pad1.LeftStickX;
+        float CurrLY = Pad1.LeftStickY;
+
+        float PrevLX = ApplyStickDeadzone(Pad1.PreviousState.Gamepad.sThumbLX, StickDeadzone);
+        float PrevLY = ApplyStickDeadzone(Pad1.PreviousState.Gamepad.sThumbLY, StickDeadzone);
+
+        bool bCurrUp = (CurrLY > StickToKeyThreshold);
+        bool bCurrDown = (CurrLY < -StickToKeyThreshold);
+        bool bCurrLeft = (CurrLX < -StickToKeyThreshold);
+        bool bCurrRight = (CurrLX > StickToKeyThreshold);
+
+        bool bPrevUp = (PrevLY > StickToKeyThreshold);
+        bool bPrevDown = (PrevLY < -StickToKeyThreshold);
+        bool bPrevLeft = (PrevLX < -StickToKeyThreshold);
+        bool bPrevRight = (PrevLX > StickToKeyThreshold);
+
+        WORD CurrButtons = Pad1.CurrentState.Gamepad.wButtons;
+        WORD PrevButtons = Pad1.PreviousState.Gamepad.wButtons;
+
+        auto CheckKey = [&](bool bCurr, bool bPrev) -> bool {
+            if (bCheckPressed) return bCurr && !bPrev;
+            if (bCheckReleased) return !bCurr && bPrev;
+            return bCurr;
+        };
+
+        auto CheckButton = [&](WORD ButtonMask) -> bool {
+            bool bCurr = (CurrButtons & ButtonMask) != 0;
+            bool bPrev = (PrevButtons & ButtonMask) != 0;
+            if (bCheckPressed) return bCurr && !bPrev;
+            if (bCheckReleased) return !bCurr && bPrev;
+            return bCurr;
+        };
+
+        switch (KeyCode)
+        {
+        case VK_UP:    if (CheckKey(bCurrUp, bPrevUp)) return true; break;
+        case VK_DOWN:  if (CheckKey(bCurrDown, bPrevDown)) return true; break;
+        case VK_LEFT:  if (CheckKey(bCurrLeft, bPrevLeft)) return true; break;
+        case VK_RIGHT: if (CheckKey(bCurrRight, bPrevRight)) return true; break;
+        case VK_NUMPAD0: if (CheckButton(XINPUT_GAMEPAD_A)) return true; break;  // P2 점프키 (필요시 변경)
+        case VK_RCONTROL: if (CheckButton(XINPUT_GAMEPAD_A)) return true; break; // 또는 우측 Ctrl
+        // 추가 액션키 매핑 가능
+        }
+    }
+
+    return false;
 }

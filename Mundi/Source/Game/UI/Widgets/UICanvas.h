@@ -250,6 +250,63 @@ public:
     bool ContainsPoint(float PosX, float PosY) const;
 
     // ============================================
+    // 키보드/게임패드 포커스 시스템
+    // ============================================
+
+    /**
+     * @brief 키보드/게임패드 입력 처리
+     * @param bUp 위 방향 눌림 (W, 위 화살표, D-pad Up)
+     * @param bDown 아래 방향 눌림 (S, 아래 화살표, D-pad Down)
+     * @param bConfirm 확인 눌림 (Enter, Space, A 버튼)
+     * @return 입력이 소비되었으면 true
+     */
+    bool ProcessKeyboardInput(bool bUp, bool bDown, bool bConfirm);
+
+    /**
+     * @brief 특정 버튼에 포커스 설정
+     */
+    void SetFocus(UButtonWidget* Button);
+
+    /**
+     * @brief 이름으로 버튼에 포커스 설정
+     */
+    void SetFocusByName(const std::string& ButtonName);
+
+    /**
+     * @brief 다음 버튼으로 포커스 이동 (아래/오른쪽)
+     */
+    void MoveFocusNext();
+
+    /**
+     * @brief 이전 버튼으로 포커스 이동 (위/왼쪽)
+     */
+    void MoveFocusPrev();
+
+    /**
+     * @brief 현재 포커스된 버튼 클릭 트리거
+     * @return 클릭이 실행되었으면 true
+     */
+    bool TriggerFocusedClick();
+
+    /**
+     * @brief 현재 포커스된 버튼 반환
+     */
+    UButtonWidget* GetFocusedButton() const { return FocusedButton; }
+
+    /**
+     * @brief 포커스 가능한 버튼이 있는지
+     * @note dirty 상태면 자동으로 목록 재구축
+     */
+    bool HasFocusableButtons()
+    {
+        if (bFocusListDirty)
+        {
+            RebuildFocusableButtons();
+        }
+        return !FocusableButtons.empty();
+    }
+
+    // ============================================
     // 캔버스 속성 설정
     // ============================================
 
@@ -293,8 +350,19 @@ private:
     UButtonWidget* HoveredButton = nullptr;   // 현재 호버중인 버튼
     UButtonWidget* PressedButton = nullptr;   // 현재 눌린 버튼
 
+    // 키보드/게임패드 포커스 상태
+    UButtonWidget* FocusedButton = nullptr;   // 현재 포커스된 버튼
+    std::vector<UButtonWidget*> FocusableButtons;  // 포커스 가능한 버튼 목록 (Y좌표 정렬)
+    int32_t FocusIndex = -1;                  // 현재 포커스 인덱스
+    bool bFocusListDirty = true;              // 포커스 목록 갱신 필요
+
     // 정렬 갱신
     void UpdateWidgetSortOrder();
+
+    /**
+     * @brief 포커스 가능한 버튼 목록 갱신 (Y좌표 기준 정렬)
+     */
+    void RebuildFocusableButtons();
 
     /**
      * @brief 좌표에서 가장 위에 있는 버튼 찾기 (Z-order 고려)

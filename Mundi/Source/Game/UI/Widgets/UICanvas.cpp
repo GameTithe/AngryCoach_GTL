@@ -5,6 +5,7 @@
 #include "ButtonWidget.h"
 #include "Source/Game/UI/GameUIManager.h"
 #include <algorithm>
+#include <cmath>
 
 UUICanvas::UUICanvas()
 {
@@ -113,6 +114,7 @@ bool UUICanvas::CreateButton(const std::string& WidgetName, const std::string& T
 
     Widgets[WidgetName] = std::move(Widget);
     bWidgetsSortDirty = true;
+    bFocusListDirty = true;  // 버튼 추가 시 포커스 목록도 갱신 필요
 
     return true;
 }
@@ -175,6 +177,11 @@ void UUICanvas::SetWidgetVisible(const std::string& WidgetName, bool bVis)
     if (auto* Widget = FindWidget(WidgetName))
     {
         Widget->SetVisible(bVis);
+        // 버튼 가시성 변경 시 포커스 목록 갱신 필요
+        if (dynamic_cast<UButtonWidget*>(Widget))
+        {
+            bFocusListDirty = true;
+        }
     }
 }
 
@@ -435,6 +442,7 @@ void UUICanvas::SetButtonInteractable(const std::string& WidgetName, bool bInter
     if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(WidgetName)))
     {
         Button->SetInteractable(bInteractable);
+        bFocusListDirty = true;  // Interactable 변경 시 포커스 목록 갱신 필요
     }
 }
 
@@ -582,6 +590,15 @@ bool UUICanvas::ProcessMouseInput(float MouseX, float MouseY, bool bLeftDown, bo
             HoveredButton->OnMouseLeave();
         }
 
+        // 마우스가 새 버튼에 hover하면 기존 키보드 포커스 해제
+        // (둘 다 hover 상태로 보이는 것 방지)
+        if (CurrentHovered && FocusedButton && FocusedButton != CurrentHovered)
+        {
+            FocusedButton->OnMouseLeave();
+            FocusedButton = nullptr;
+            FocusIndex = -1;
+        }
+
         // 새 호버 버튼에 진입
         if (CurrentHovered)
         {
@@ -589,6 +606,9 @@ bool UUICanvas::ProcessMouseInput(float MouseX, float MouseY, bool bLeftDown, bo
         }
 
         HoveredButton = CurrentHovered;
+
+        // Note: 마우스 hover는 FocusedButton을 설정하지 않음
+        // FocusedButton은 키보드/게임패드 입력에서만 설정됨
     }
 
     // 마우스 버튼 눌림 처리
@@ -615,6 +635,196 @@ bool UUICanvas::ProcessMouseInput(float MouseX, float MouseY, bool bLeftDown, bo
 
     // 버튼 위에 있으면 입력 소비 (다른 UI가 처리하지 않도록)
     return CurrentHovered != nullptr;
+}
+
+// ============================================
+// 키보드/게임패드 포커스 시스템
+// ============================================
+
+void UUICanvas::RebuildFocusableButtons()
+{
+    FocusableButtons.clear();
+
+    // 모든 버튼 위젯 수집
+    for (auto& Pair : Widgets)
+    {
+        if (auto* Button = dynamic_cast<UButtonWidget*>(Pair.second.get()))
+        {
+            if (Button->bVisible && Button->IsInteractable())
+            {
+                FocusableButtons.push_back(Button);
+            }
+        }
+    }
+
+    // Y좌표 기준 오름차순 정렬 (위에서 아래로)
+    std::sort(FocusableButtons.begin(), FocusableButtons.end(),
+        [](const UButtonWidget* A, const UButtonWidget* B)
+        {
+            // Y가 같으면 X 기준
+            if (std::abs(A->Y - B->Y) < 10.0f)
+                return A->X < B->X;
+            return A->Y < B->Y;
+        });
+
+    bFocusListDirty = false;
+
+    // 현재 포커스가 유효한지 확인
+    if (FocusedButton)
+    {
+        auto it = std::find(FocusableButtons.begin(), FocusableButtons.end(), FocusedButton);
+        if (it != FocusableButtons.end())
+        {
+            FocusIndex = static_cast<int32_t>(std::distance(FocusableButtons.begin(), it));
+        }
+        else
+        {
+            FocusedButton = nullptr;
+            FocusIndex = -1;
+        }
+    }
+}
+
+void UUICanvas::SetFocus(UButtonWidget* Button)
+{
+    if (bFocusListDirty)
+    {
+        RebuildFocusableButtons();
+    }
+
+    // 이전 포커스 버튼에서 나감
+    if (FocusedButton && FocusedButton != Button)
+    {
+        FocusedButton->OnMouseLeave();
+    }
+
+    // 키보드 포커스 설정 시 기존 마우스 hover 해제
+    // (둘 다 hover 상태로 보이는 것 방지)
+    if (HoveredButton && HoveredButton != Button)
+    {
+        HoveredButton->OnMouseLeave();
+        HoveredButton = nullptr;
+    }
+
+    FocusedButton = Button;
+
+    if (Button)
+    {
+        // 포커스 인덱스 갱신
+        auto it = std::find(FocusableButtons.begin(), FocusableButtons.end(), Button);
+        if (it != FocusableButtons.end())
+        {
+            FocusIndex = static_cast<int32_t>(std::distance(FocusableButtons.begin(), it));
+        }
+
+        // Hovered 상태로 시각 효과 적용
+        Button->OnMouseEnter();
+
+        UE_LOG("[UICanvas] '%s': Focus set to button '%s' (index %d)\n",
+               Name.c_str(), Button->Name.c_str(), FocusIndex);
+    }
+    else
+    {
+        FocusIndex = -1;
+    }
+}
+
+void UUICanvas::SetFocusByName(const std::string& ButtonName)
+{
+    if (auto* Button = dynamic_cast<UButtonWidget*>(FindWidget(ButtonName)))
+    {
+        SetFocus(Button);
+    }
+}
+
+void UUICanvas::MoveFocusNext()
+{
+    if (bFocusListDirty)
+    {
+        RebuildFocusableButtons();
+    }
+
+    if (FocusableButtons.empty())
+        return;
+
+    // 다음 인덱스로 이동 (순환)
+    int32_t NewIndex = (FocusIndex + 1) % static_cast<int32_t>(FocusableButtons.size());
+    SetFocus(FocusableButtons[NewIndex]);
+}
+
+void UUICanvas::MoveFocusPrev()
+{
+    if (bFocusListDirty)
+    {
+        RebuildFocusableButtons();
+    }
+
+    if (FocusableButtons.empty())
+        return;
+
+    // 이전 인덱스로 이동 (순환)
+    int32_t NewIndex = FocusIndex - 1;
+    if (NewIndex < 0)
+    {
+        NewIndex = static_cast<int32_t>(FocusableButtons.size()) - 1;
+    }
+    SetFocus(FocusableButtons[NewIndex]);
+}
+
+bool UUICanvas::TriggerFocusedClick()
+{
+    if (!FocusedButton || !FocusedButton->IsInteractable())
+        return false;
+
+    UE_LOG("[UICanvas] '%s': Triggering click on focused button '%s'\n",
+           Name.c_str(), FocusedButton->Name.c_str());
+
+    // 버튼 눌림 → 떼기 시뮬레이션
+    FocusedButton->OnMouseDown();
+    bool bClicked = FocusedButton->OnMouseUp();
+
+    return bClicked;
+}
+
+bool UUICanvas::ProcessKeyboardInput(bool bUp, bool bDown, bool bConfirm)
+{
+    if (!bVisible)
+        return false;
+
+    if (bFocusListDirty)
+    {
+        RebuildFocusableButtons();
+    }
+
+    if (FocusableButtons.empty())
+        return false;
+
+    bool bConsumed = false;
+
+    // 포커스가 없으면 첫 번째 버튼에 포커스
+    if (!FocusedButton && (bUp || bDown || bConfirm))
+    {
+        SetFocus(FocusableButtons[0]);
+        bConsumed = true;
+    }
+    else if (bUp)
+    {
+        MoveFocusPrev();
+        bConsumed = true;
+    }
+    else if (bDown)
+    {
+        MoveFocusNext();
+        bConsumed = true;
+    }
+
+    if (bConfirm && FocusedButton)
+    {
+        TriggerFocusedClick();
+        bConsumed = true;
+    }
+
+    return bConsumed;
 }
 
 // ============================================

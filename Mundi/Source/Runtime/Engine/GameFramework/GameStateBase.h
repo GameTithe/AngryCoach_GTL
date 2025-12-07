@@ -115,7 +115,7 @@ protected:
 	TArray<int32> RoundWinsPerPlayer;
 
 	// 시간 정보
-	float RoundDuration = 3.0f;   // 라운드 제한 시간 (초) - 테스트용 3초
+	float RoundDuration = 50.0f;  // 라운드 제한 시간 (초)
 	float RoundTimeRemaining = 0.0f;
 
 	// 게임 결과

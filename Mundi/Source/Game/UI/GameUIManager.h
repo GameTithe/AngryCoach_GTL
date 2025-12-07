@@ -197,5 +197,14 @@ private:
 
     // 마우스 입력 처리
     void ProcessMouseInput();
+
+    // 키보드/게임패드 입력 처리 (UI 포커스 네비게이션)
+    void ProcessKeyboardInput();
+
     bool bUIConsumedInput = false;
+
+    // 키 반복 방지용 이전 프레임 상태
+    bool bPrevUpKey = false;
+    bool bPrevDownKey = false;
+    bool bPrevConfirmKey = false;
 };
