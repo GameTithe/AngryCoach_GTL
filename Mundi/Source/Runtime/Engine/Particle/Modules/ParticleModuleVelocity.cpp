@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "ParticleModuleVelocity.h"
+#include "ParticleModuleRequired.h"
 #include "../ParticleEmitter.h"
 #include "../ParticleHelper.h"
 #include "Source/Runtime/Engine/Particle/ParticleEmitterInstance.h"
@@ -12,7 +13,7 @@ UParticleModuleVelocity::UParticleModuleVelocity()
     bUpdateModule = true;
 }
 
-void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
+void UParticleModuleVelocity::SpawnAsync(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase, FParticleSimulationContext& Context)
 {
     if (!ParticleBase)
         return;
@@ -20,8 +21,22 @@ void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, int32 Offse
     // 초기 속도 설정
     FVector Velocity = StartVelocity.GetValue({Owner->GetRandomFloat(), Owner->GetRandomFloat(),Owner->GetRandomFloat()});
     float Multiplier = VelocityMultiplier.GetValue(Owner->GetRandomFloat());
+    Velocity *= Multiplier;
 
-    ParticleBase->Velocity = Velocity * Multiplier;
+    // bUseLocalSpace가 false면 컴포넌트 회전을 적용해서 월드 방향으로 변환
+    bool bUseLocalSpace = false;
+    if (Owner->CachedRequiredModule)
+    {
+        bUseLocalSpace = Owner->CachedRequiredModule->bUseLocalSpace;
+    }
+
+    if (!bUseLocalSpace)
+    {
+        // 월드 스페이스: 속도 방향에 컴포넌트 회전 적용
+        Velocity = Context.ComponentWorldMatrix.TransformVector(Velocity);
+    }
+
+    ParticleBase->Velocity = Velocity;
     ParticleBase->BaseVelocity = ParticleBase->Velocity;
 }
 

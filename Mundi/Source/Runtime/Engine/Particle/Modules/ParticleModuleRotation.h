@@ -19,5 +19,5 @@ public:
     // ============================================================
 
     // Spawn에서 초기 회전각 설정 - "처음부터 삐뚤게 놓고 시작하는" 역할
-    virtual void Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase) override;
+    virtual void SpawnAsync(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase, FParticleSimulationContext& Context) override;
 };
