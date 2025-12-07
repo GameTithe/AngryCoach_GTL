@@ -20,20 +20,34 @@ public:
 	// 캐릭터 전용 설정 값
 	float MaxWalkSpeed;
 	float MaxAcceleration;
-	float JumpZVelocity; 
+	float JumpZVelocity;
+
+	// 점프 횟수 관련
+	int32 MaxJumpCount = 1;      // 최대 점프 횟수 (기본 1회)
+	int32 CurrentJumpCount = 0;  // 현재 사용한 점프 횟수
 
 	float BrackingDeceleration; // 입력이 없을 때 감속도
-	float GroundFriction; //바닥 마찰 계수 
+	float GroundFriction; //바닥 마찰 계수
+
+	UPROPERTY(EditAnywhere, Category="[컴포넌트]")
+	float MaxIteration;
 
 	//TODO
 	//float MaxWalkSpeedCrouched = 6.0f;
 	//float MaxSwimSpeed;
 	//float MaxFlySpeed;
 
-	// 상태 제어 
+	// 상태 제어
 	void DoJump();
 	void StopJump();
 	bool IsFalling() const { return bIsFalling; }
+
+	void ResolvePenetration(const FHitResult& Hit);
+
+	// 점프 횟수 제어
+	void SetMaxJumpCount(int32 NewMax) { MaxJumpCount = NewMax; }
+	int32 GetMaxJumpCount() const { return MaxJumpCount; }
+	void ResetJumpCount() { CurrentJumpCount = 0; }
 
 protected:
 	void PhysWalking(float DeltaSecond);

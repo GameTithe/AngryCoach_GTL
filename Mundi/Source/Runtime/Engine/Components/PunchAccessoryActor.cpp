@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "PunchAccessoryActor.h"
+
+#include "CapsuleComponent.h"
 #include "PunchLightAttackSkill.h"
 #include "PunchHeavyAttackSkill.h"
 
@@ -18,6 +20,8 @@ APunchAccessoryActor::APunchAccessoryActor()
 
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
+
+	CreateAttackShape<UCapsuleComponent>(FName("AttackShape"));
 }
 
 void APunchAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)

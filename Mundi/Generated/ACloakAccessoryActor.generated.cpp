@@ -34,9 +34,10 @@ const bool ACloakAccessoryActor::bPropertiesRegistered = []() {
 // ===== Property Reflection =====
 
 BEGIN_PROPERTIES(ACloakAccessoryActor)
-    MARK_AS_SPAWNABLE("망토 악세서리", "망토 스킬을 수행하는 악세서리입니다")
+    MARK_AS_SPAWNABLE("망토 악세서리", "이동속도 증가 및 더블점프를 부여하는 악세서리입니다")
+    ADD_PROPERTY(float, SpeedBoostMultiplier, "Cloak", true, "이동속도 배율")
+    ADD_PROPERTY(int32, BonusJumpCount, "Cloak", true, "추가 점프 횟수")
 END_PROPERTIES()
-
 
 // ===== Lua Binding =====
 

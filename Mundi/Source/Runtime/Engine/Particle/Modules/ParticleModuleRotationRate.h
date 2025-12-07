@@ -23,7 +23,7 @@ public:
     // ============================================================
 
     // Spawn에서 초기 회전 속도 설정
-    virtual void Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase) override;
+    virtual void SpawnAsync(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase, FParticleSimulationContext& Context) override;
 
     // Update에서 Rotation += RotationRate * dt
     virtual void Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime) override;

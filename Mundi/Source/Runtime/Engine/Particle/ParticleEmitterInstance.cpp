@@ -161,9 +161,27 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
         // 초기값 (추후 모듈이 덮어쓸 것임)
         if (Required)
         {
-            Particle->Size = Required->InitialSize.GetValue(0.0f); 
+            Particle->Size = Required->InitialSize.GetValue(0.0f);
             Particle->Color = Required->InitialColor.GetValue(0.0f);
-            Particle->Rotation = Required->InitialRotation.GetValue(0.0f);
+
+            // 초기 회전 설정 (bUseLocalSpace가 false면 컴포넌트 회전 적용)
+            FVector RotationValue = Required->InitialRotation.GetValue(0.0f);
+            if (!Required->bUseLocalSpace)
+            {
+                FQuat LocalRotQuat = FQuat::MakeFromEulerZYX(FVector(
+                    RadiansToDegrees(RotationValue.X),
+                    RadiansToDegrees(RotationValue.Y),
+                    RadiansToDegrees(RotationValue.Z)
+                ));
+                FQuat CombinedRot = InContext.ComponentRotation * LocalRotQuat;
+                FVector EulerDeg = CombinedRot.ToEulerZYXDeg();
+                RotationValue = FVector(
+                    DegreesToRadians(EulerDeg.X),
+                    DegreesToRadians(EulerDeg.Y),
+                    DegreesToRadians(EulerDeg.Z)
+                );
+            }
+            Particle->Rotation = RotationValue;
         }
         else
         {
@@ -510,6 +528,7 @@ FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicData()
         MeshData->SortMode = CachedRequiredModule->SortMode;
         MeshData->Alignment = CachedRequiredModule->ScreenAlignment;
         MeshData->SortPriority = 0;
+        MeshData->bUseLocalSpace = CachedRequiredModule->bUseLocalSpace;
 
         // 데이터 채우기
         BuildReplayData(MeshData->Source);
@@ -539,10 +558,11 @@ FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicData()
         // RIBBON
         auto* RibbonData = new FDynamicRibbonEmitterData();
         RibbonData->EmitterType = Type;
+        RibbonData->bUseLocalSpace = CachedRequiredModule->bUseLocalSpace;
 
         // 데이터 채우기
         BuildReplayData(RibbonData->Source);
-        
+
         NewData = RibbonData;
     }
 

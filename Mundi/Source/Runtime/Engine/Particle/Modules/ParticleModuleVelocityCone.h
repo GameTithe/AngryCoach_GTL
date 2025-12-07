@@ -8,7 +8,7 @@ class UParticleModuleVelocityCone : public UParticleModule
 
 public:
     UParticleModuleVelocityCone();
-    void Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase) override;
+    void SpawnAsync(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase, FParticleSimulationContext& Context) override;
 
 public:
     // 원뿔이 향할 기준 방향

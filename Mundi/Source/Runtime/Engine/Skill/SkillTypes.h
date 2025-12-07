@@ -4,6 +4,6 @@ enum class ESkillSlot
 	LightAttack,
 	HeavyAttack,
 	JumpAttack,
-	Speical,
+	Specical,
 	None, 
 };

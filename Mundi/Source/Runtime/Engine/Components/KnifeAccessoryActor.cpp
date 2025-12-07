@@ -1,7 +1,10 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "KnifeAccessoryActor.h"
+
+#include "BoxComponent.h"
 #include "KnifeLightAttackSkill.h"
 #include "KnifeHeavyAttackSkill.h"
+#include "KnifeSpecialAttackSkill.h"
 #include "StaticMeshComponent.h"
 #include "Source/Runtime/AssetManagement/ResourceManager.h"
 
@@ -22,9 +25,13 @@ AKnifeAccessoryActor::AKnifeAccessoryActor()
 
 	UKnifeLightAttackSkill* LightSkill = NewObject<UKnifeLightAttackSkill>();
 	UKnifeHeavyAttackSkill* HeavySkill = NewObject<UKnifeHeavyAttackSkill>();
+	UKnifeSpecialAttackSkill* SpecialSkill = NewObject<UKnifeSpecialAttackSkill>();
 
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
+	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
+
+	CreateAttackShape<UBoxComponent>(FName("AttackShape"));
 }
 
 void AKnifeAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -36,8 +43,11 @@ void AKnifeAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		GrantedSkills.clear();
 		UKnifeLightAttackSkill* LightSkill = NewObject<UKnifeLightAttackSkill>();
 		UKnifeHeavyAttackSkill* HeavySkill = NewObject<UKnifeHeavyAttackSkill>();
+		UKnifeSpecialAttackSkill* SpecialSkill = NewObject<UKnifeSpecialAttackSkill>();
+
 		GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 		GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
+		GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 	}
 }
 
@@ -48,6 +58,9 @@ void AKnifeAccessoryActor::DuplicateSubObjects()
 	GrantedSkills.clear();
 	UKnifeLightAttackSkill* LightSkill = NewObject<UKnifeLightAttackSkill>();
 	UKnifeHeavyAttackSkill* HeavySkill = NewObject<UKnifeHeavyAttackSkill>();
+	UKnifeSpecialAttackSkill* SpecialSkill = NewObject<UKnifeSpecialAttackSkill>();
+
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
+	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 }

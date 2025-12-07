@@ -1,10 +1,12 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "AngryCoachCharacter.h"
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
 #include "AccessoryActor.h"
 #include "KnifeAccessoryActor.h"
 #include "PunchAccessoryActor.h"
+#include "ShapeComponent.h"
+#include "StaticMeshComponent.h"
 #include "World.h"
 #include "Source/Runtime/Engine/Animation/AnimInstance.h"
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
@@ -40,9 +42,15 @@ void AAngryCoachCharacter::BeginPlay()
 		// 	{
 		// 		SkillComponent->OverrideSkills(PunchAccessory->GetGrantedSkills(), PunchAccessory);
 		// 	}
+		//
+		// 	PunchAccessory->GetRootComponent()->SetOwner(this);
 		// }
 
-		AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
+		//AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
+		 
+		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+
 		if (KnifeAccessory)
 		{
 			EquipAccessory(KnifeAccessory);
@@ -51,6 +59,8 @@ void AAngryCoachCharacter::BeginPlay()
 			{
 				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
 			}
+			
+			KnifeAccessory->GetRootComponent()->SetOwner(this);
 		}
 	}
 }
@@ -111,9 +121,16 @@ void AAngryCoachCharacter::DuplicateSubObjects()
 // ===== 몽타주 =====
 void AAngryCoachCharacter::PlayMontage(UAnimMontage* Montage)
 {
+	UE_LOG("[AAngryCoachCharacter::PlayMontage] Called!");
+
 	if (!Montage)
 	{
 		UE_LOG("[PlayMontage] Montage is null!");
+		return;
+	}
+	if (IsPlayingMontage())
+	{
+		UE_LOG("[PlayMontage] Montage is already playing!");
 		return;
 	}
 
@@ -194,6 +211,23 @@ void AAngryCoachCharacter::UnequipAccessory()
 	CurrentAccessory = nullptr;
 }
 
+void AAngryCoachCharacter::SetAttackShape(UShapeComponent* Shape)
+{
+	if (!Shape)
+	{
+		return;
+	}
+	
+	if (CachedAttackShape == Shape)
+	{
+		return;
+	}
+
+	CachedAttackShape = Shape;
+
+	DelegateBindToCachedShape();
+}
+
 // ===== 스킬 =====
 void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 {
@@ -221,7 +255,7 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 		}
 	case EAttackInput::Skill:
 		{
-			Slot = ESkillSlot::Speical;
+			Slot = ESkillSlot::Specical;
 			/*
 			 * TODO
 			 * Skil별 데미지 적용
@@ -240,19 +274,70 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackBegin)
 void AAngryCoachCharacter::AttackBegin()
 {
-	/*
-	 * TODO
-	 * 공격을 발생시키는 ShapeComp의 콜리전 활성화
-	 */
-	// GetCapsuleComponent()->SetBlockComponent(true);
+	if (CachedAttackShape)
+	{
+		CachedAttackShape->SetBlockComponent(true);
+		UE_LOG("attack begine");
+	}
 }
 
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackEnd)
 void AAngryCoachCharacter::AttackEnd()
 {
-	/*
-	 * TODO
-	 * 공격을 발생시키는 ShapeComp의 콜리전 비활성화
-	 */
-	// GetCapsuleComponent()->SetBlockComponent(false);
+	if (CachedAttackShape)
+	{
+		CachedAttackShape->SetBlockComponent(false);
+		UE_LOG("attack end");
+	}
+}
+
+void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+	UE_LOG("OnBeginOverlap");
+}
+
+void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+	UE_LOG("OnEndOverlap");
+}
+
+void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+	UE_LOG("OnHit");
+}
+
+float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator)
+{
+	if (CurrentHealth <= 0.0f)
+	{
+		return 0.0f;
+	}
+	
+	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
+	float ActualDamage = DamageAmount;
+
+	// 오버킬 처리
+	// 남은 체력보다 데미지가 크면 남은 체력이 실질적인 데미지
+	ActualDamage = FMath::Min(ActualDamage, CurrentHealth);
+	CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
+	
+	return ActualDamage;
+}
+
+float AAngryCoachCharacter::GetHealthPercent() const
+{
+	if (MaxHealth <= KINDA_SMALL_NUMBER)
+	{
+		UE_LOG("최대 체력이 0 이하입니다.");
+		return 0.0f;
+	}
+	
+	float HeathPercent = CurrentHealth / MaxHealth;
+	return HeathPercent;
+}
+
+void AAngryCoachCharacter::DelegateBindToCachedShape()
+{
+	CachedAttackShape->OnComponentHit.AddDynamic(this, &AAngryCoachCharacter::OnHit);
+	UE_LOG("Delegate Bind");
 }

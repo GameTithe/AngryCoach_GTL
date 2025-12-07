@@ -49,9 +49,7 @@ public:
 protected:
 	UCapsuleComponent* CapsuleComponent = nullptr;
 	UCharacterMovementComponent* CharacterMovement = nullptr;
-	// 캐릭터 기본 공격 - 주먹, 발차기
-	UShapeComponent* FistComponent;
-	UShapeComponent* KickComponent;
+
 	USkillComponent* SkillComponent;
 	class AAccessoryActor* CurrentAccessory = nullptr; 
 
