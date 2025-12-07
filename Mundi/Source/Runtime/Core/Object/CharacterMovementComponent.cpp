@@ -62,6 +62,61 @@ void UCharacterMovementComponent::StopJump()
 	//}
 }
 
+void UCharacterMovementComponent::ResolvePenetration(const FHitResult& Hit)
+{
+	AActor* OtherActor = Hit.HitActor;
+	if (!OtherActor)
+	{
+		return;
+	}
+
+	// 내 캡슐 정보
+	float Radius, HalfHeight;
+	GetCapsuleSize(Radius, HalfHeight);
+	FVector P1 = UpdatedComponent->GetWorldLocation();
+
+	// 상대방 캡슐 정보 (상대방이 ACharacter라고 가정)
+	float R2 = 0.5f; // 기본값
+	FVector P2 = OtherActor->GetActorLocation();
+    
+	ACharacter* OtherChar = Cast<ACharacter>(OtherActor);
+	if (OtherChar && OtherChar->GetCapsuleComponent())
+	{
+		R2 = OtherChar->GetCapsuleComponent()->CapsuleRadius;
+		// 스케일 고려는 생략(필요시 추가)
+	}
+
+	// 수평 거리 계산 (Z축 제외)
+	FVector Diff = P1 - P2;
+	Diff.Z = 0.0f;
+	float DistSq = Diff.SizeSquared();
+	float MinDist = Radius + R2;
+
+	// 겹쳐 있다면 (거리 < 반지름 합)
+	if (DistSq < MinDist * MinDist)
+	{
+		float Dist = FMath::Sqrt(DistSq);
+        
+		// 밀어낼 방향 (중심 -> 중심)
+		FVector PushDir;
+		if (Dist > KINDA_SMALL_NUMBER)
+		{
+			PushDir = Diff / Dist;
+		}
+		else
+		{
+			PushDir = UpdatedComponent->GetWorldRotation().GetForwardVector(); // 완전히 겹치면 앞쪽으로
+		}
+
+		// 밀어낼 거리: (반지름 합 - 현재 거리) + 약간의 여유(SkinWidth)
+		float PushDist = (MinDist - Dist) + 0.005f;
+		PushDist = FMath::Max(PushDist, 0.05f);
+
+		// 강제 이동
+		UpdatedComponent->AddWorldOffset(PushDir * PushDist);
+	}
+}
+
 void UCharacterMovementComponent::PhysWalking(float DeltaSecond)
 {
 	// 입력 벡터 가져오기
@@ -85,24 +140,91 @@ void UCharacterMovementComponent::PhysWalking(float DeltaSecond)
 	}
 
 	FVector DeltaLoc = Velocity * DeltaSecond;
-
-	// Sweep 검사를 통한 안전한 이동
-	if (!DeltaLoc.IsZero())
+	FVector RemainingDelta = DeltaLoc;
+	for (int32 i = 0; i < MaxIteration; i++)
 	{
-		FHitResult Hit;
-		bool bMoved = SafeMoveUpdatedComponent(DeltaLoc, Hit);
-
-		// 충돌 시 슬라이딩 처리
-		if (!bMoved && Hit.bBlockingHit)
+		if (RemainingDelta.IsZero())
 		{
-			FVector SlideVector = SlideAlongSurface(DeltaLoc, Hit);
-			if (!SlideVector.IsZero())
+			break;
+		}
+		FHitResult Hit;
+		bool bMoved = SafeMoveUpdatedComponent(RemainingDelta, Hit);
+
+		if (bMoved && !Hit.bBlockingHit)
+		{
+			break;
+		}
+
+		if (Hit.bBlockingHit)
+		{
+			/*
+			 * 끼임(sticking) 방지
+			 * 이동 거리가 0에 가깝거나 이미 겹쳐있는 상태라면 이동하다 부딪힌 게 아니라 껴있는 상태
+			 */
+			if (Hit.Distance < 0.001f)
 			{
-				FHitResult SlideHit;
-				SafeMoveUpdatedComponent(SlideVector, SlideHit);
+				// 동작은 하는데 벽에 끼이는 문제 있음
+				// 쓰고 싶으면 좀 더 깎아야함
+				// ResolvePenetration(Hit);
+				AActor* Owner = GetOwner();
+				AActor* HitActor = Hit.HitActor;
+				// 다른 액터인지 확인
+				if (HitActor && Owner != HitActor)
+				{
+					FVector MyLocation = UpdatedComponent->GetWorldLocation();
+					FVector OtherLocation = HitActor->GetActorLocation();
+					// z축 무시하고 수평으로 밀기
+					MyLocation.Z = 0.0f;
+					OtherLocation.Z = 0.0f;
+				
+					FVector PushDirection = MyLocation - OtherLocation;
+					if (PushDirection.IsZero())
+					{
+						PushDirection = UpdatedComponent->GetWorldRotation().GetForwardVector();
+					}
+					PushDirection.Normalize();
+				
+					const float PushDistance = 0.01f;
+					FVector FixVector = PushDirection * PushDistance;
+					UpdatedComponent->AddWorldOffset(FixVector);
+				}
 			}
+			
+			float Time = 0.0f;
+			if (RemainingDelta.Size() > KINDA_SMALL_NUMBER)
+			{
+				Time = Hit.Distance / RemainingDelta.Size();
+			}
+
+			// 남은 벡터 계산 (전체 - 이동한 것)
+			FVector Travelled = RemainingDelta * Time;
+			FVector Remaining = RemainingDelta - Travelled;
+
+			// [핵심] 남은 벡터만 벽을 타고 미끄러지게 함
+			FVector SlideVector = SlideAlongSurface(Remaining, Hit);
+
+			// 다음 루프에서 이 슬라이딩 벡터만큼 이동 시도
+			RemainingDelta = SlideVector;
 		}
 	}
+
+	// Sweep 검사를 통한 안전한 이동
+	// if (!DeltaLoc.IsZero())
+	// {
+	// 	FHitResult Hit;
+	// 	bool bMoved = SafeMoveUpdatedComponent(DeltaLoc, Hit);
+	//
+	// 	// 충돌 시 슬라이딩 처리
+	// 	if (!bMoved && Hit.bBlockingHit)
+	// 	{
+	// 		FVector SlideVector = SlideAlongSurface(DeltaLoc, Hit);
+	// 		if (!SlideVector.IsZero())
+	// 		{
+	// 			FHitResult SlideHit;
+	// 			SafeMoveUpdatedComponent(SlideVector, SlideHit);
+	// 		}
+	// 	}
+	// }
 
 	// 바닥 검사
 	FHitResult FloorHit;

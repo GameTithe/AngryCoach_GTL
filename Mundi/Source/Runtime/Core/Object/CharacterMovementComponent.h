@@ -23,7 +23,10 @@ public:
 	float JumpZVelocity; 
 
 	float BrackingDeceleration; // 입력이 없을 때 감속도
-	float GroundFriction; //바닥 마찰 계수 
+	float GroundFriction; //바닥 마찰 계수
+
+	UPROPERTY(EditAnywhere, Category="[컴포넌트]")
+	float MaxIteration;
 
 	//TODO
 	//float MaxWalkSpeedCrouched = 6.0f;
@@ -34,6 +37,8 @@ public:
 	void DoJump();
 	void StopJump();
 	bool IsFalling() const { return bIsFalling; }
+
+	void ResolvePenetration(const FHitResult& Hit);
 
 protected:
 	void PhysWalking(float DeltaSecond);

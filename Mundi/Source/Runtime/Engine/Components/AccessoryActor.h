@@ -26,6 +26,8 @@ public:
 	// 타격 성공 Particle
 	UParticleSystemComponent* HitAttackParticle;
 
+	UShapeComponent* AttackShape = nullptr;
+
 	// === 악세서리 데이터 ===
 	//UPROPERTY(EditAnywhere, Category = "Accessory", Tooltip = "이 악세서리가 부여하는 스킬들")
 	TMap<ESkillSlot, USkillBase*> GrantedSkills;

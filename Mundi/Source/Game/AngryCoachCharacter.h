@@ -36,6 +36,7 @@ public:
 	void EquipAccessory(AAccessoryActor* Accessory);
 	void UnequipAccessory();
 	AAccessoryActor* GetCurrentAccessory() const { return CurrentAccessory; }
+	void SetAttackShape(UShapeComponent* Shape);
 
 	// ===== 스킬 =====
 	void OnAttackInput(EAttackInput Input);
@@ -45,8 +46,18 @@ public:
 	void AttackBegin() override;
 	void AttackEnd() override;
 
+	// 충돌
+	void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
+
+private:
+	// 델리게이트 바인딩 헬퍼 함수
+	void DelegateBindToCachedShape();
+
 protected:
 	// 스킬/악세서리
 	USkillComponent* SkillComponent = nullptr;
 	AAccessoryActor* CurrentAccessory = nullptr;
+	UShapeComponent* CachedAttackShape = nullptr;
 };

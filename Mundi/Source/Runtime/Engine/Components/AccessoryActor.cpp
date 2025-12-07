@@ -21,7 +21,7 @@ AAccessoryActor::AAccessoryActor()
 	AccessoryMesh = CreateDefaultSubobject<UStaticMeshComponent>("AccessoryMesh");
 	AccessoryMesh->SetupAttachment(SceneRoot);
 
-	TryAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("TryAttac;article");
+	TryAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("TryAttackParticle");
 	TryAttackParticle->SetupAttachment(SceneRoot);
 
 	HitAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("HitAttackParticle");
@@ -47,6 +47,7 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		TryAttackParticle = nullptr;
 		HitAttackParticle = nullptr;
 		OwningCharacter = nullptr;
+		AttackShape = nullptr;
 
 		for (UActorComponent* Comp : GetOwnedComponents())
 		{
@@ -55,6 +56,15 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				if (Scene == GetRootComponent())
 				{
 					SceneRoot = Scene;
+				}
+			}
+
+			if (auto* Shape = Cast<UShapeComponent>(Comp))
+			{
+				FString Tag = Shape->GetTag();
+				if (Tag == FString("Attack"))
+				{
+					AttackShape = Shape;
 				}
 			}
 
@@ -176,6 +186,12 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	if (SkillComp && !GrantedSkills.empty())
 	{
 		SkillComp->OverrideSkills(GrantedSkills, this);
+	}
+
+	// 3. Attack Shape을 캐릭터에 캐싱
+	if (AttackShape)
+	{
+		OwnerCharacter->SetAttackShape(AttackShape);
 	}
 }
 

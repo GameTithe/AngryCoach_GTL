@@ -20,27 +20,12 @@ ACharacter::ACharacter()
 
 	SetRootComponent(CapsuleComponent);
 	CapsuleComponent->SetBlockComponent(false);
+	CapsuleComponent->SetGenerateOverlapEvents(false);
 
 	if (SkeletalMeshComp)
 	{
 		SkeletalMeshComp->SetupAttachment(CapsuleComponent);
 		SkeletalMeshComp->SetupAttachment(CapsuleComponent);
-	}
-	
-	FistComponent = CreateDefaultSubobject<UCapsuleComponent>("FistComponent");
-	if (FistComponent)
-	{
-		FistComponent->SetupAttachment(CapsuleComponent);
-		FistComponent->SetBlockComponent(false);
-		FistComponent->SetTag("Fist");
-	}
-	
-	KickComponent = CreateDefaultSubobject<UCapsuleComponent>("KickComponent");
-	if (KickComponent)
-	{
-		KickComponent->SetupAttachment(CapsuleComponent);
-		KickComponent->SetBlockComponent(false);
-		FistComponent->SetTag("Kick");
 	}
 	 
 	CharacterMovement = CreateDefaultSubobject<UCharacterMovementComponent>("CharacterMovement");
@@ -63,20 +48,6 @@ void ACharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (FistComponent)
-	{
-		FistComponent->OnComponentHit.AddDynamic(this, &ACharacter::OnHit);
-		FistComponent->OnComponentBeginOverlap.AddDynamic(this, &ACharacter::OnBeginOverlap);
-		FistComponent->OnComponentEndOverlap.AddDynamic(this, &ACharacter::OnEndOverlap);
-	}
-
-	if (KickComponent)
-	{
-		KickComponent->OnComponentHit.AddDynamic(this, &ACharacter::OnHit);
-		KickComponent->OnComponentBeginOverlap.AddDynamic(this, &ACharacter::OnBeginOverlap);
-		KickComponent->OnComponentEndOverlap.AddDynamic(this, &ACharacter::OnEndOverlap);
-	}
-
 	// Hardcode: equip FlowKnife prefab on PIE start (moved from Lua to C++)
 	if (GWorld && GWorld->bPie)
 	{
@@ -97,8 +68,7 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         // Rebind important component pointers after load (prefab/scene)
         CapsuleComponent = nullptr;
         CharacterMovement = nullptr;
-    	FistComponent = nullptr;
-    	KickComponent = nullptr;
+
         SkillComponent = nullptr;
         CurrentAccessory = nullptr;
         SkeletalMeshComp = nullptr;  // APawn 멤버 - 재바인딩 필요
@@ -134,19 +104,6 @@ void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
             {
                 SkeletalMeshComp = SkelMesh;  // APawn 멤버 재바인딩
             }
-
-        	if (auto* Shape = Cast<UShapeComponent>(Comp))
-        	{
-        		if (CompTag == FString("Fist"))
-        		{
-        			FistComponent = Shape;
-        		}
-        		if (CompTag == FString("Kick"))
-        		{
-        			KickComponent = Shape;
-        		}
-        		Shape->SetBlockComponent(false);
-        	}
         }
 
 		if (CharacterMovement)
@@ -166,8 +123,6 @@ void ACharacter::DuplicateSubObjects()
     CharacterMovement = nullptr;
     SkillComponent = nullptr;
     CurrentAccessory = nullptr;
-	FistComponent = nullptr;
-	KickComponent = nullptr;
 	SkeletalMeshComp = nullptr;  // APawn 멤버 - 재바인딩 필요
 
     for (UActorComponent* Comp : GetOwnedComponents())
@@ -195,18 +150,7 @@ void ACharacter::DuplicateSubObjects()
         {
             SkeletalMeshComp = SkelMesh;  // APawn 멤버 재바인딩
         }
-        else if (auto* Shape = Cast<UShapeComponent>(Comp))
-        {
-        	if (CompName == FName("FistComponent"))
-        	{
-        		FistComponent = Shape;
-        	}
-        	else if (CompName == FName("KickComponent"))
-        	{
-        		KickComponent = Shape;
-        	}
-        	Shape->SetBlockComponent(false);
-        }
+        
     }
 
 	if (CharacterMovement)
@@ -268,9 +212,5 @@ void ACharacter::AttackEnd()
 
 void ACharacter::Attack()
 {
-	if (FistComponent)
-	{
-		FistComponent->SetBlockComponent(true);
-		FistComponent->SetGenerateOverlapEvents(true);
-	}
+	
 }

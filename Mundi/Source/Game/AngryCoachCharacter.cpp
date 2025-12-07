@@ -5,6 +5,8 @@
 #include "AccessoryActor.h"
 #include "KnifeAccessoryActor.h"
 #include "PunchAccessoryActor.h"
+#include "ShapeComponent.h"
+#include "StaticMeshComponent.h"
 #include "World.h"
 #include "Source/Runtime/Engine/Animation/AnimInstance.h"
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
@@ -40,6 +42,8 @@ void AAngryCoachCharacter::BeginPlay()
 		// 	{
 		// 		SkillComponent->OverrideSkills(PunchAccessory->GetGrantedSkills(), PunchAccessory);
 		// 	}
+		//
+		// 	PunchAccessory->GetRootComponent()->SetOwner(this);
 		// }
 
 		AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
@@ -51,6 +55,8 @@ void AAngryCoachCharacter::BeginPlay()
 			{
 				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
 			}
+			
+			KnifeAccessory->GetRootComponent()->SetOwner(this);
 		}
 	}
 }
@@ -194,6 +200,23 @@ void AAngryCoachCharacter::UnequipAccessory()
 	CurrentAccessory = nullptr;
 }
 
+void AAngryCoachCharacter::SetAttackShape(UShapeComponent* Shape)
+{
+	if (!Shape)
+	{
+		return;
+	}
+	
+	if (CachedAttackShape == Shape)
+	{
+		return;
+	}
+
+	CachedAttackShape = Shape;
+
+	DelegateBindToCachedShape();
+}
+
 // ===== 스킬 =====
 void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 {
@@ -240,19 +263,40 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackBegin)
 void AAngryCoachCharacter::AttackBegin()
 {
-	/*
-	 * TODO
-	 * 공격을 발생시키는 ShapeComp의 콜리전 활성화
-	 */
-	// GetCapsuleComponent()->SetBlockComponent(true);
+	if (CachedAttackShape)
+	{
+		CachedAttackShape->SetBlockComponent(true);
+		UE_LOG("attack begine");
+	}
 }
 
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackEnd)
 void AAngryCoachCharacter::AttackEnd()
 {
-	/*
-	 * TODO
-	 * 공격을 발생시키는 ShapeComp의 콜리전 비활성화
-	 */
-	// GetCapsuleComponent()->SetBlockComponent(false);
+	if (CachedAttackShape)
+	{
+		CachedAttackShape->SetBlockComponent(false);
+		UE_LOG("attack end");
+	}
+}
+
+void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+	UE_LOG("OnBeginOverlap");
+}
+
+void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+	UE_LOG("OnEndOverlap");
+}
+
+void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
+{
+	UE_LOG("OnHit");
+}
+
+void AAngryCoachCharacter::DelegateBindToCachedShape()
+{
+	CachedAttackShape->OnComponentHit.AddDynamic(this, &AAngryCoachCharacter::OnHit);
+	UE_LOG("Delegate Bind");
 }
