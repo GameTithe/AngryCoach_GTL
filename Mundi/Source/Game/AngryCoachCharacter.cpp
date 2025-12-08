@@ -411,7 +411,7 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
 	float ActualDamage = DamageAmount;
 
-	if (ActualDamage <= 15.f)
+	if (ActualDamage < 10.f)
 	{
 		if (Hit1Sound)
 		{
