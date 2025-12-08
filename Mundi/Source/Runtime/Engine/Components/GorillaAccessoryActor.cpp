@@ -62,9 +62,17 @@ void AGorillaAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandl
 		if (AttackShapes.Num() == 0)
 		{
 			if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
+			{
 				LeftShape->SphereRadius = 1.f;
+				LeftShape->SetGenerateOverlapEvents(false);
+				LeftShape->SetBlockComponent(false);
+			}
 			if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
+			{
 				RightShape->SphereRadius = 1.f;
+				RightShape->SetGenerateOverlapEvents(false);
+				RightShape->SetBlockComponent(false);
+			}
 			UE_LOG("[GorillaAccessory] Serialize: AttackShapes recreated, count=%d", AttackShapes.Num());
 		}
 	}
@@ -86,9 +94,17 @@ void AGorillaAccessoryActor::DuplicateSubObjects()
 	if (AttackShapes.Num() == 0)
 	{
 		if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
+		{
 			LeftShape->SphereRadius = 1.f;
+			LeftShape->SetGenerateOverlapEvents(false);
+			LeftShape->SetBlockComponent(false);
+		}
 		if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
+		{
 			RightShape->SphereRadius = 1.f;
+			RightShape->SetGenerateOverlapEvents(false);
+			RightShape->SetBlockComponent(false);
+		}
 	}
 }
 

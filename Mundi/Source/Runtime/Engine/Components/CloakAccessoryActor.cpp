@@ -233,13 +233,29 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		if (AttackShapes.Num() == 0)
 		{
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
+			{
 				Shape->SphereRadius = 1.f;
+				Shape->SetGenerateOverlapEvents(false);
+				Shape->SetBlockComponent(false);
+			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
+			{
 				Shape->SphereRadius = 1.f;
+				Shape->SetGenerateOverlapEvents(false);
+				Shape->SetBlockComponent(false);
+			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
+			{
 				Shape->SphereRadius = 1.f;
+				Shape->SetGenerateOverlapEvents(false);
+				Shape->SetBlockComponent(false);
+			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
+			{
 				Shape->SphereRadius = 1.f;
+				Shape->SetGenerateOverlapEvents(false);
+				Shape->SetBlockComponent(false);
+			}
 			UE_LOG("[CloakAccessory] Serialize: AttackShapes recreated, count=%d", AttackShapes.Num());
 		}
 
@@ -278,13 +294,29 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 	if (AttackShapes.Num() == 0)
 	{
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
+		{
 			Shape->SphereRadius = 1.f;
+			Shape->SetGenerateOverlapEvents(false);
+			Shape->SetBlockComponent(false);
+		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
+		{
 			Shape->SphereRadius = 1.f;
+			Shape->SetGenerateOverlapEvents(false);
+			Shape->SetBlockComponent(false);
+		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
+		{
 			Shape->SphereRadius = 1.f;
+			Shape->SetGenerateOverlapEvents(false);
+			Shape->SetBlockComponent(false);
+		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
+		{
 			Shape->SphereRadius = 1.f;
+			Shape->SetGenerateOverlapEvents(false);
+			Shape->SetBlockComponent(false);
+		}
 	}
 
 	// 저장된 값 초기화
