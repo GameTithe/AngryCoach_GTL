@@ -10,6 +10,7 @@
 #include "BlueprintGraph/K2Node_Animation.h"
 #include "AnimGraph/BlendSpacePreviewWindow.h"
 #include "Source/Editor/FBX/BlendSpace/BlendSpace2D.h"
+#include "InputManager.h" // InputManager 추가
 
 // ImGui-Node-Editor ID 변환 헬퍼
 static inline ed::NodeId ToNodeId(int32 id) { return (uintptr_t)id; }
@@ -194,6 +195,12 @@ void SGraphEditorWindow::RenderEditor()
 
     ed::SetCurrentEditor(Context);
     ed::Begin("GraphEditorInternal");
+
+    // 'F' 키를 눌렀을 때 모든 콘텐츠에 초점 맞추기
+    if (UInputManager::GetInstance().IsKeyPressed('F'))
+    {
+        ed::NavigateToContent();
+    }
 
     // #1. 모든 노드 렌더링
     for (UEdGraphNode* Node : Graph->Nodes)

@@ -46,6 +46,7 @@ public:
 	void AttackBegin() override;
 	void AttackEnd() override;
 
+	bool bIsCGC = true;
 	// 충돌
 	void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;

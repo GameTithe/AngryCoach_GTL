@@ -70,10 +70,7 @@ public:
     /**
      * @brief 애니메이션 그래프 설정 
      */
-    void SetAnimGraph(UAnimationGraph* InAnimGraph) 
-    { 
-        AnimGraph = InAnimGraph;
-    }
+    void SetAnimGraph(UAnimationGraph* InAnimGraph);
 
     /**
      * @brief 애니메이션 재생 시작/중지
