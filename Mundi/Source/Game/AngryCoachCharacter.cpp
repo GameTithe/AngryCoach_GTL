@@ -81,35 +81,35 @@ void AAngryCoachCharacter::BeginPlay()
 		//	}
 		//}
 
-		//FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		//AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		//
-		//if (KnifeAccessory)
-		//{
-		//	EquipAccessory(KnifeAccessory);
-		//
-		//	if (SkillComponent)
-		//	{
-		//		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
-		//	}
-		//	
-		//	KnifeAccessory->GetRootComponent()->SetOwner(this);
-		//}
+		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		
+		if (KnifeAccessory)
+		{
+			EquipAccessory(KnifeAccessory);
+		
+			if (SkillComponent)
+			{
+				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+			}
+			
+			KnifeAccessory->GetRootComponent()->SetOwner(this);
+		}
 			  
-		 FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		 AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		
-		 if (GorillaAccessory)
-		 {
-		 	EquipAccessory(GorillaAccessory);
-		
-		 	if (SkillComponent)
-		 	{
-		 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-		 	}
-		 	
-		 	GorillaAccessory->GetRootComponent()->SetOwner(this);
-		 }
+		 // FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		 // AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		 //
+		 // if (GorillaAccessory)
+		 // {
+		 // 	EquipAccessory(GorillaAccessory);
+		 //
+		 // 	if (SkillComponent)
+		 // 	{
+		 // 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+		 // 	}
+		 // 	
+		 // 	GorillaAccessory->GetRootComponent()->SetOwner(this);
+		 // }
 	}
 }
 
@@ -367,7 +367,8 @@ void AAngryCoachCharacter::AttackBegin()
 	{
 		return;
 	}
-	
+
+	HitActors.Empty();
 	if (CachedAttackShape)
 	{
 		CachedAttackShape->SetGenerateOverlapEvents(true);
@@ -381,7 +382,7 @@ void AAngryCoachCharacter::AttackEnd()
 {	
     if (CachedAttackShape)
     {
-        CachedAttackShape->SetBlockComponent(false);
+        CachedAttackShape->SetGenerateOverlapEvents(false);
         SetCurrentState(ECharacterState::Idle);
         UE_LOG("attack end");
     }
@@ -391,7 +392,13 @@ void AAngryCoachCharacter::AttackEnd()
 
 void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
-	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, BaseDamage, this, HitResult);
+	if (!HitActors.IsEmpty() && HitActors.Contains(HitResult.HitActor))
+	{
+		return;
+		UE_LOG("dsadsadas");
+	}
+	
+	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 1.0f, this, HitResult);
 	UE_LOG("OnBeginOverlap");
 }
 
@@ -462,6 +469,7 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 		float KnockbackPower = 10.0f;
 		CharacterMovement->LaunchCharacter(KnockbackDirection * KnockbackPower, true, false);
 
+
 		// float KnockbackDistance = 0.2f;
 		// RootComponent->AddWorldOffset(KnockbackDirection);
 	}
@@ -471,7 +479,7 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 		Die();
 	}	
 	
-	HitReation();
+	// HitReation();
 
 	//CurrentAccessory->PlayHitParticle();
 	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
@@ -519,8 +527,9 @@ void AAngryCoachCharacter::DoGuard()
 	{
 		return;
 	}
-
+	
 	SetCurrentState(ECharacterState::Guard);
+
 	if (bCanPlayHitReactionMontage)
 	{
 		PlayMontage(GuardMontage);
