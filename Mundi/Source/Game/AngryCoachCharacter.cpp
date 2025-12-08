@@ -392,7 +392,7 @@ void AAngryCoachCharacter::AttackEnd()
 
 void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
-	if (HitActors.Contains(HitResult.HitActor))
+	if (!HitActors.IsEmpty() && HitActors.Contains(HitResult.HitActor))
 	{
 		return;
 		UE_LOG("dsadsadas");
