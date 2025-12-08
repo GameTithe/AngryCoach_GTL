@@ -59,27 +59,27 @@ void AAngryCoachCharacter::BeginPlay()
 	// 기본 펀치 악세서리 장착 (이미 장착된 게 없을 때만)
 	if (GWorld && !CurrentAccessory)
 	{
-		FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		
-		if (CloakAccessory)
-		{
-			EquipAccessory(CloakAccessory);
-			FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-			ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		
-			if (CloakAccessory)
-			{
-				EquipAccessory(CloakAccessory);
-		
-				if (SkillComponent)
-				{
-					SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
-				}
-		
-				CloakAccessory->GetRootComponent()->SetOwner(this);
-			}
-		}
+		//FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		//ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		//if (CloakAccessory)
+		//{
+		//	EquipAccessory(CloakAccessory);
+		//	FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		//	ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		//	if (CloakAccessory)
+		//	{
+		//		EquipAccessory(CloakAccessory);
+		//
+		//		if (SkillComponent)
+		//		{
+		//			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
+		//		}
+		//
+		//		CloakAccessory->GetRootComponent()->SetOwner(this);
+		//	}
+		//}
 
 		//FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
 		//AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
@@ -96,20 +96,20 @@ void AAngryCoachCharacter::BeginPlay()
 		//	KnifeAccessory->GetRootComponent()->SetOwner(this);
 		//}
 			  
-		 //FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		 //AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		 //
-		 //if (GorillaAccessory)
-		 //{
-		 //	EquipAccessory(GorillaAccessory);
-		 //
-		 //	if (SkillComponent)
-		 //	{
-		 //		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-		 //	}
-		 //	
-		 //	GorillaAccessory->GetRootComponent()->SetOwner(this);
-		 //}
+		 FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		 AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		 
+		 if (GorillaAccessory)
+		 {
+		 	EquipAccessory(GorillaAccessory);
+		 
+		 	if (SkillComponent)
+		 	{
+		 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+		 	}
+		 	
+		 	GorillaAccessory->GetRootComponent()->SetOwner(this);
+		 }
 	}
 }
 
@@ -482,7 +482,8 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	// HitReation();
 
 	//CurrentAccessory->PlayHitParticle();
-	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
+	// 피격 위치를 카메라 쪽(캐릭터 앞쪽)으로 오프셋
+	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation() + FVector(-2,0,01));
 
 	UE_LOG("[TakeDamage] Owner %p, insti %p cur %f", this, Instigator, CurrentHealth);
 	return ActualDamage;
