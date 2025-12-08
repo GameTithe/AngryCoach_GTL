@@ -48,6 +48,8 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 		Shape->SphereRadius = 2.f;
 		Shape->SetGenerateOverlapEvents(false);
 		Shape->SetBlockComponent(false);
+		Shape->bOverrideCollisionSetting = true;
+		Shape->CollisionEnabled = ECollisionState::QueryOnly;
 		UE_LOG("[CloakAccessory] LeftHandAttackShape created, Radius=%.2f", Shape->SphereRadius);
 	}
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
@@ -55,6 +57,8 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 		Shape->SphereRadius = 2.f;
 		Shape->SetGenerateOverlapEvents(false);
 		Shape->SetBlockComponent(false);
+		Shape->bOverrideCollisionSetting = true;
+		Shape->CollisionEnabled = ECollisionState::QueryOnly;
 		UE_LOG("[CloakAccessory] RightHandAttackShape created, Radius=%.2f", Shape->SphereRadius);
 	}
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
@@ -62,6 +66,8 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 		Shape->SphereRadius = 2.f;
 		Shape->SetGenerateOverlapEvents(false);
 		Shape->SetBlockComponent(false);
+		Shape->bOverrideCollisionSetting = true;
+		Shape->CollisionEnabled = ECollisionState::QueryOnly;
 		UE_LOG("[CloakAccessory] LeftFootAttackShape created, Radius=%.2f", Shape->SphereRadius);
 	}
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
@@ -69,6 +75,8 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 		Shape->SphereRadius = 2.f;
 		Shape->SetGenerateOverlapEvents(false);
 		Shape->SetBlockComponent(false);
+		Shape->bOverrideCollisionSetting = true;
+		Shape->CollisionEnabled = ECollisionState::QueryOnly;
 		UE_LOG("[CloakAccessory] RightFootAttackShape created, Radius=%.2f", Shape->SphereRadius);
 	}
 	UE_LOG("[CloakAccessory] Total AttackShapes: %d", AttackShapes.Num());
@@ -244,24 +252,32 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				Shape->SphereRadius = 2.f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
+				Shape->bOverrideCollisionSetting = true;
+				Shape->CollisionEnabled = ECollisionState::QueryOnly;
 			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
 			{
 				Shape->SphereRadius = 2.f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
+				Shape->bOverrideCollisionSetting = true;
+				Shape->CollisionEnabled = ECollisionState::QueryOnly;
 			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
 			{
 				Shape->SphereRadius = 2.f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
+				Shape->bOverrideCollisionSetting = true;
+				Shape->CollisionEnabled = ECollisionState::QueryOnly;
 			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
 			{
 				Shape->SphereRadius = 2.f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
+				Shape->bOverrideCollisionSetting = true;
+				Shape->CollisionEnabled = ECollisionState::QueryOnly;
 			}
 			UE_LOG("[CloakAccessory] Serialize: AttackShapes recreated, count=%d", AttackShapes.Num());
 		}
@@ -275,6 +291,8 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 					Sphere->SphereRadius = 2.f;
 					Sphere->SetGenerateOverlapEvents(false);
 					Sphere->SetBlockComponent(false);
+					Sphere->bOverrideCollisionSetting = true;
+					Sphere->CollisionEnabled = ECollisionState::QueryOnly;
 				}
 			}
 			UE_LOG("[CloakAccessory] Serialize: AttackShapes updated, count=%d", AttackShapes.Num());
@@ -319,24 +337,32 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 			Shape->SphereRadius = 2.f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
+			Shape->bOverrideCollisionSetting = true;
+			Shape->CollisionEnabled = ECollisionState::QueryOnly;
 		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
 		{
 			Shape->SphereRadius = 2.f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
+			Shape->bOverrideCollisionSetting = true;
+			Shape->CollisionEnabled = ECollisionState::QueryOnly;
 		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
 		{
 			Shape->SphereRadius = 2.f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
+			Shape->bOverrideCollisionSetting = true;
+			Shape->CollisionEnabled = ECollisionState::QueryOnly;
 		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
 		{
 			Shape->SphereRadius = 2.f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
+			Shape->bOverrideCollisionSetting = true;
+			Shape->CollisionEnabled = ECollisionState::QueryOnly;
 		}
 	}
 	else
@@ -348,6 +374,8 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 				Sphere->SphereRadius = 2.f;
 				Sphere->SetGenerateOverlapEvents(false);
 				Sphere->SetBlockComponent(false);
+				Sphere->bOverrideCollisionSetting = true;
+				Sphere->CollisionEnabled = ECollisionState::QueryOnly;
 			}
 		}
 	}

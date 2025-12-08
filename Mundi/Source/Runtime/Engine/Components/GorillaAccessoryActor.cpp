@@ -126,12 +126,16 @@ void AGorillaAccessoryActor::DuplicateSubObjects()
 			LeftShape->SphereRadius = 2.f;
 			LeftShape->SetGenerateOverlapEvents(false);
 			LeftShape->SetBlockComponent(false);
+			LeftShape->bOverrideCollisionSetting = true;
+			LeftShape->CollisionEnabled = ECollisionState::QueryOnly;
 		}
 		if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
 		{
 			RightShape->SphereRadius = 2.f;
 			RightShape->SetGenerateOverlapEvents(false);
 			RightShape->SetBlockComponent(false);
+			RightShape->bOverrideCollisionSetting = true;
+			RightShape->CollisionEnabled = ECollisionState::QueryOnly;
 		}
 	}
 	else
@@ -143,6 +147,8 @@ void AGorillaAccessoryActor::DuplicateSubObjects()
 				Sphere->SphereRadius = 2.f;
 				Sphere->SetGenerateOverlapEvents(false);
 				Sphere->SetBlockComponent(false);
+				Sphere->bOverrideCollisionSetting = true;
+				Sphere->CollisionEnabled = ECollisionState::QueryOnly;
 			}
 		}
 	}
