@@ -21,6 +21,7 @@
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 #include "CloakAccessoryActor.h" 
 #include "FAudioDevice.h"
+#include "PlayerCameraManager.h"
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
@@ -417,6 +418,10 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	
 	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
 	float ActualDamage = DamageAmount;
+
+	GWorld->GetPlayerCameraManager()->StartCameraShake(
+		0.3, 0.3, 0.3, DamageAmount
+		);
 
 	if (ActualDamage < 10.f)
 	{
