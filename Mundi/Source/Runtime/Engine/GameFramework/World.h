@@ -133,6 +133,7 @@ public:
     AGizmoActor* GetGizmoActor() { return GizmoActor; }
     AGridActor* GetGridActor() { return GridActor; }
     UWorldPartitionManager* GetPartitionManager() { return Partition.get(); }
+    bool IsTearingDown() const { return bIsTearingDown; }
 
     // PIE용 World 생성
     static UWorld* DuplicateWorldForPIE(UWorld* InEditorWorld);

@@ -32,6 +32,10 @@ public:
     void StartPIE();
     void EndPIE();
     bool IsPIEActive() const { return bPIEActive; }
+
+    // TestMode: true면 ATestGameMode 사용 (UI 흐름 없이 배치된 액터만 테스트)
+    void SetUseTestGameMode(bool bUseTest) { bUseTestGameMode = bUseTest; }
+    bool IsUsingTestGameMode() const { return bUseTestGameMode; }
     
     HWND GetHWND() const { return HWnd; }
     
@@ -71,6 +75,7 @@ private:
     bool bRunning = false;
     bool bUVScrollPaused = true;
     bool bPIEActive = false;
+    bool bUseTestGameMode = false;  // true면 ATestGameMode 사용
     float UVScrollTime = 0.0f;
     FVector2D UVScrollSpeed = FVector2D(0.5f, 0.5f);
 

@@ -301,6 +301,7 @@
     <ClCompile Include="Source\Game\AngryCoachCharacter.cpp" />
     <ClCompile Include="Source\Game\AngryCoachGameMode.cpp" />
     <ClCompile Include="Source\Game\AngryCoachPlayerController.cpp" />
+    <ClCompile Include="Source\Game\TestGameMode.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\MyCar.cpp" />
     <ClCompile Include="Source\Editor\FBX\BlendSpace\BlendSpace2D.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimNotify_CallFunction.cpp" />
@@ -759,6 +760,7 @@
     <ClCompile Include="Generated\USpringArmComponent.generated.cpp" />
     <ClCompile Include="Generated\UClothComponent.generated.cpp" />
     <ClCompile Include="Generated\AAngryCoachGameMode.generated.cpp" />
+    <ClCompile Include="Generated\ATestGameMode.generated.cpp" />
     <ClCompile Include="Generated\AAngryCoachPlayerController.generated.cpp" />
     <ClCompile Include="Generated\AAccessoryActor.generated.cpp" />
     <ClCompile Include="Generated\APunchAccessoryActor.generated.cpp" />
@@ -975,6 +977,7 @@
     <ClInclude Include="Source\Game\AngryCoachCharacter.h" />
     <ClInclude Include="Source\Game\AngryCoachGameMode.h" />
     <ClInclude Include="Source\Game\AngryCoachPlayerController.h" />
+    <ClInclude Include="Source\Game\TestGameMode.h" />
     <ClInclude Include="Source\Runtime\AssetManagement\SkeletalMesh.h" />
     <ClInclude Include="Source\Runtime\Core\Memory\GPUProfile.h" />
     <ClInclude Include="Source\Runtime\Core\Misc\DamageTypes.h" />
@@ -1351,7 +1354,7 @@
     <ClInclude Include="Generated\UKnifeSpecialAttackSkill.generated.h" />
     <ClInclude Include="Generated\UGorillaSpecialAttackSkill.generated.h" />
     <ClInclude Include="Generated\UPunchSpecialAttackSkill.generated.h" />
-  <ClInclude Include="Generated\UCloakSpecialAttackSkill.generated.h" /></ItemGroup>
+  <ClInclude Include="Generated\UCloakSpecialAttackSkill.generated.h" /><ClInclude Include="Generated\ATestGameMode.generated.h" /></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />
