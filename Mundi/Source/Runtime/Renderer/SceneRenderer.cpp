@@ -458,29 +458,48 @@ void FSceneRenderer::RenderShadowMaps()
 
 void FSceneRenderer::RenderShadowDepthPass(FShadowRenderRequest& ShadowRequest, const TArray<FMeshBatchElement>& InShadowBatches)
 {
-	// 1. 뎁스 전용 셰이더 로드
-	UShader* DepthVS = UResourceManager::GetInstance().Load<UShader>("Shaders/Shadows/DepthOnly_VS.hlsl");
-	if (!DepthVS || !DepthVS->GetVertexShader()) return;
+	// 1. 뎁스 전용 셰이더 로드 (static 캐싱으로 매 프레임 Load 호출 방지)
+	static UShader* CachedDepthVS = nullptr;
+	static UShader* CachedDepthPS = nullptr;
+	static FShaderVariant* CachedVariantStatic = nullptr;
+	static FShaderVariant* CachedVariantSkinned = nullptr;
+	static FShaderVariant* CachedVariantVSM = nullptr;
 
-	// 스태틱 메쉬용 (GPU 스키닝 없음)
-	FShaderVariant* ShaderVariantStatic = DepthVS->GetOrCompileShaderVariant({});
-	if (!ShaderVariantStatic) return;
-
-	// 스켈레탈 메쉬용 (GPU 스키닝 있음) - SF_GPUSkinning이 활성화된 경우에만 준비
-	FShaderVariant* ShaderVariantSkinned = nullptr;
-	bool bGPUSkinningEnabled = GWorld->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_GPUSkinning);
-	if (bGPUSkinningEnabled)
+	// 최초 1회만 로드
+	if (!CachedDepthVS)
 	{
-		TArray<FShaderMacro> SkinningMacros;
-		SkinningMacros.Add({"USE_GPU_SKINNING", "1"});
-		ShaderVariantSkinned = DepthVS->GetOrCompileShaderVariant(SkinningMacros);
+		CachedDepthVS = UResourceManager::GetInstance().Load<UShader>("Shaders/Shadows/DepthOnly_VS.hlsl");
+		if (CachedDepthVS)
+		{
+			CachedVariantStatic = CachedDepthVS->GetOrCompileShaderVariant({});
+			TArray<FShaderMacro> SkinningMacros;
+			SkinningMacros.Add({"USE_GPU_SKINNING", "1"});
+			CachedVariantSkinned = CachedDepthVS->GetOrCompileShaderVariant(SkinningMacros);
+		}
+	}
+	if (!CachedDepthPS)
+	{
+		CachedDepthPS = UResourceManager::GetInstance().Load<UShader>("Shaders/Shadows/DepthOnly_PS.hlsl");
+		if (CachedDepthPS)
+		{
+			CachedVariantVSM = CachedDepthPS->GetOrCompileShaderVariant();
+		}
 	}
 
-	// vsm용 픽셀 셰이더
-	UShader* DepthPs = UResourceManager::GetInstance().Load<UShader>("Shaders/Shadows/DepthOnly_PS.hlsl");
+	UShader* DepthVS = CachedDepthVS;
+	if (!DepthVS || !DepthVS->GetVertexShader()) return;
+
+	FShaderVariant* ShaderVariantStatic = CachedVariantStatic;
+	if (!ShaderVariantStatic) return;
+
+	// 스켈레탈 메쉬용 (GPU 스키닝 있음)
+	FShaderVariant* ShaderVariantSkinned = CachedVariantSkinned;
+	bool bGPUSkinningEnabled = GWorld->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_GPUSkinning);
+
+	UShader* DepthPs = CachedDepthPS;
 	if (!DepthPs || !DepthPs->GetPixelShader()) return;
 
-	FShaderVariant* ShaderVarianVSM = DepthPs->GetOrCompileShaderVariant();
+	FShaderVariant* ShaderVarianVSM = CachedVariantVSM;
 	if (!ShaderVarianVSM) return;
 
 	// 2. 픽셀 셰이더 설정 (배치에 관계없이 동일)
