@@ -79,6 +79,7 @@ protected:
 
 	UAnimMontage* HitReationMontage = nullptr;
 	UAnimMontage* GuardMontage = nullptr;
+	UAnimMontage* GorillaGuardMontage = nullptr;
 	USound* Hit1Sound = nullptr;
 	USound* Hit2Sound = nullptr;
 	USound* SkillSound = nullptr;

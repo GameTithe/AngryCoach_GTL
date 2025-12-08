@@ -26,10 +26,16 @@ AAngryCoachCharacter::AAngryCoachCharacter()
 	// SkillComponent 생성
 	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
 	GuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
+	GorillaGuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
 	if (GuardMontage)
 	{
 		GuardMontage->bLoop = true;
 	}
+	if (GorillaGuardMontage)
+	{
+		GorillaGuardMontage->bLoop = true;
+	}
+	
 	Hit1Sound = RESOURCE.Load<USound>("Data/Audio/HIT1.wav");
 	Hit2Sound = RESOURCE.Load<USound>("Data/Audio/HIT2.wav");
 	SkillSound = RESOURCE.Load<USound>("Data/Audio/SKILL.wav");
@@ -503,7 +509,14 @@ void AAngryCoachCharacter::DoGuard()
 	}
 
 	SetCurrentState(ECharacterState::Guard);
-	PlayMontage(GuardMontage);
+	if (bCanPlayHitReactionMontage)
+	{
+		PlayMontage(GuardMontage);
+	}
+	else
+	{
+		PlayMontage(GorillaGuardMontage);
+	}
 }
 
 void AAngryCoachCharacter::StopGuard()
