@@ -186,6 +186,7 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 {
 	if (!Player1 || !Player2 || !GameCamera) return;
+	if (Player1->GetHealthPercent() <= 0.f || Player2->GetHealthPercent() <= 0.f) return;
 
 	// 두 캐릭터의 중심점 계산
 	FVector P1Pos = Player1->GetActorLocation();
