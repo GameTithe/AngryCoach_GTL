@@ -66,7 +66,7 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			if (auto* Shape = Cast<UShapeComponent>(Comp))
 			{
 				FString Tag = Shape->GetTag();
-				if (Shape->ObjectName == FName("Attack"))					
+				if (Shape->ObjectName == FName("AttackShape"))					
 				{
 					AttackShape = Shape;
 				}
@@ -100,11 +100,11 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 }
 
 void AAccessoryActor::PlayTryParticle()
-{
+{	
 	if (TryAttackParticle)
 	{
 		TryAttackParticle->ActivateSystem();
-		UE_LOG("Play Try Particle");
+		// UE_LOG("Play Try Particle");
 	}
 	else
 	{
@@ -117,7 +117,7 @@ void AAccessoryActor::StopTryParticle()
 	if (TryAttackParticle)
 	{
 		TryAttackParticle->DeactivateSystem();  
-		UE_LOG("Stop Try Particle");
+		// UE_LOG("Stop Try Particle");
 	}
 	else
 	{
@@ -256,7 +256,9 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	if (AttackShape)
 	{
 		OwnerCharacter->SetAttackShape(AttackShape);
-	}
+		// 자신을 공격하는 걸 방지하기 위해서 owner 설정
+		AttackShape->SetOwner(OwnerCharacter);
+	}	
 }
 
 void AAccessoryActor::Unequip()

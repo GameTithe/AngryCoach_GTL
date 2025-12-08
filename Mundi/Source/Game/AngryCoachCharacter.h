@@ -51,19 +51,17 @@ public:
 	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 
-	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
-	float GetHealthPercent() const;
+	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;	
 
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
+	// 죽었을 때 필요한 로직 모아둔 헬퍼
+	void Die();
 
 protected:
 	// 스킬/악세서리
 	USkillComponent* SkillComponent = nullptr;
 	AAccessoryActor* CurrentAccessory = nullptr;
 	UShapeComponent* CachedAttackShape = nullptr;
-
-	float MaxHealth = 100.0f;
-	float CurrentHealth = MaxHealth;
 };

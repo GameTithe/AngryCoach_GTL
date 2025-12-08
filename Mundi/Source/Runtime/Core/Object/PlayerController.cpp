@@ -41,16 +41,6 @@ void APlayerController::Tick(float DeltaSeconds)
         }
     }
 
-	{
-		if (InputManager.IsMouseButtonPressed(EMouseButton::LeftButton))
-		{
-			if (ACharacter* Character = Cast<ACharacter>(GetPawn()))
-			{
-				Character->Attack();
-			}
-		}
-	}
-
 	// 입력 처리 (Move)
 	ProcessMovementInput(DeltaSeconds);
 	  

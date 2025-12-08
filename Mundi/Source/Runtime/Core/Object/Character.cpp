@@ -42,12 +42,29 @@ ACharacter::~ACharacter()
 void ACharacter::Tick(float DeltaSecond)
 {
 	Super::Tick(DeltaSecond);
+
+	// 상태 업데이트를 위한 변위 계산
+	{
+		FVector CurrentLocation = GetActorLocation();
+		FVector Displacement = CurrentLocation - LastFrameLocation;
+		Displacement.Z = 0.0f;
+
+		float CurrentSpeedSq = 0.0f;
+		if (DeltaSecond > KINDA_SMALL_NUMBER)
+		{
+			CurrentSpeedSq = Displacement.SizeSquared() / (DeltaSecond * DeltaSecond);
+		}
+
+		LastFrameLocation = CurrentLocation;
+		UpdateCharacterState(CurrentSpeedSq);
+	}	
 }
 
 void ACharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	LastFrameLocation = GetActorLocation();
 	// Hardcode: equip FlowKnife prefab on PIE start (moved from Lua to C++)
 	//if (GWorld && GWorld->bPie)
 	//{
@@ -166,6 +183,8 @@ void ACharacter::Jump()
 	if (CharacterMovement)
 	{
 		CharacterMovement->DoJump();
+		SetCurrentState(ECharacterState::Jumping);
+		UE_LOG("Jumping");
 	}
 }
 
@@ -174,6 +193,8 @@ void ACharacter::StopJumping()
 	if (CharacterMovement)
 	{
 		CharacterMovement->StopJump();
+		SetCurrentState(ECharacterState::Idle);
+		UE_LOG("Stopjump");
 	}
 }
 
@@ -210,7 +231,43 @@ void ACharacter::AttackEnd()
 	Super::AttackEnd();
 }
 
-void ACharacter::Attack()
+float ACharacter::GetHealthPercent() const
 {
+	if (MaxHealth <= KINDA_SMALL_NUMBER)
+	{
+		UE_LOG("최대 체력이 0 이하입니다.");
+		return 0.0f;
+	}
 	
+	float HeathPercent = CurrentHealth / MaxHealth;
+	return HeathPercent;
+}
+
+void ACharacter::UpdateCharacterState(float CurrentSpeedSq)
+{
+	// 높은 우선 순위 상태면 return
+	if (CurrentState == ECharacterState::Attacking ||
+		CurrentState == ECharacterState::Dead)
+	{
+		return;
+	}
+
+	if (CurrentSpeedSq > 1.0f)
+	{
+		CurrentState = ECharacterState::Walking;
+		// UE_LOG("UpdateCharacterState : walking");
+	}
+	else
+	{
+		CurrentState = ECharacterState::Idle;
+		// UE_LOG("UpdateCharacterState : idle");
+	}
+}
+
+bool ACharacter::CanAttack()
+{
+	return (CurrentState == ECharacterState::Attacking &&
+		CurrentState == ECharacterState::Walking &&
+		CurrentState == ECharacterState::Jumping &&
+		CurrentState == ECharacterState::Damaged);
 }
