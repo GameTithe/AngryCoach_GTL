@@ -336,7 +336,7 @@ void AAngryCoachPlayerController::ProcessPlayer2Attack(float DeltaTime)
 	// 테스트용
 	if (InputManager.IsKeyPressed('M'))
 	{
-		Player2->OnAttackInput(EAttackInput::Skill);
+		Player2->OnAttackInput(EAttackInput::Light);
 		ResetInputBuffer(bIsP2InputBuffering, P2PendingKey, P2InputBufferTime);
 		return;
 	}
