@@ -419,7 +419,7 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	float ActualDamage = DamageAmount;
 
 	GWorld->GetPlayerCameraManager()->StartCameraShake(
-		0.3, 0.3, 0.3, DamageAmount * 2
+		0.3, 0.3, 0.3, DamageAmount
 		);
 
 	if (ActualDamage < 10.f)
