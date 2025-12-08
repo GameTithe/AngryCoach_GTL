@@ -36,9 +36,9 @@ public:
 	nv::cloth::Factory* GetFactory() { return factory; }
 	nv::cloth::Solver* GetSolver() { return solver; }
 
-protected: 
-	nv::cloth::Factory* factory;
-	nv::cloth::Solver* solver;
+protected:
+	nv::cloth::Factory* factory = nullptr;
+	nv::cloth::Solver* solver = nullptr;
 
 	bool bInit = false; 
 };

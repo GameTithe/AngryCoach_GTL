@@ -6,6 +6,7 @@
 #include "Source/Game/UI/GameUIManager.h"
 #include "Source/Runtime/AssetManagement/ResourceManager.h"
 #include "Source/Runtime/AssetManagement/Texture.h"
+#include <algorithm>  // std::transform
 
 // ============================================
 // FUIAsset 직렬화
@@ -17,6 +18,10 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
 
     // Name
     doc["name"] = Name;
+
+    // 디자인 해상도 (캔버스 크기)
+    doc["canvasWidth"] = CanvasWidth;
+    doc["canvasHeight"] = CanvasHeight;
 
     // Widgets array
     JSON widgetsArray = JSON::Make(JSON::Class::Array);
@@ -75,6 +80,47 @@ bool FUIAsset::SaveToFile(const std::string& Path) const
             widgetObj["additive"] = widget.bAdditive;
         }
 
+        // Rect specific
+        if (widget.Type == "Rect")
+        {
+            JSON color = JSON::Make(JSON::Class::Array);
+            color.append(widget.ForegroundColor[0], widget.ForegroundColor[1],
+                        widget.ForegroundColor[2], widget.ForegroundColor[3]);
+            widgetObj["color"] = color;
+        }
+
+        // Button specific
+        if (widget.Type == "Button")
+        {
+            widgetObj["texturePath"] = widget.TexturePath;
+            if (!widget.HoveredTexturePath.empty())
+                widgetObj["hoveredTexturePath"] = widget.HoveredTexturePath;
+            if (!widget.PressedTexturePath.empty())
+                widgetObj["pressedTexturePath"] = widget.PressedTexturePath;
+            if (!widget.DisabledTexturePath.empty())
+                widgetObj["disabledTexturePath"] = widget.DisabledTexturePath;
+
+            // State alpha values
+            widgetObj["normalAlpha"] = widget.NormalAlpha;
+            widgetObj["hoveredAlpha"] = widget.HoveredAlpha;
+            widgetObj["pressedAlpha"] = widget.PressedAlpha;
+            widgetObj["disabledAlpha"] = widget.DisabledAlpha;
+
+            widgetObj["interactable"] = widget.bInteractable;
+
+            // Hover Scale 효과
+            if (widget.HoverScale > 1.0f)
+            {
+                widgetObj["hoverScale"] = widget.HoverScale;
+                widgetObj["hoverScaleDuration"] = widget.HoverScaleDuration;
+            }
+
+            // SubUV 설정 (Button도 TextureWidget 상속)
+            widgetObj["subUV_NX"] = widget.SubUV_NX;
+            widgetObj["subUV_NY"] = widget.SubUV_NY;
+            widgetObj["subUV_Frame"] = widget.SubUV_Frame;
+        }
+
         // Binding
         if (!widget.BindingKey.empty())
         {
@@ -125,6 +171,10 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
     FString tempName;
     if (FJsonSerializer::ReadString(doc, "name", tempName, "", false))
         Name = tempName;
+
+    // 디자인 해상도 (캔버스 크기)
+    FJsonSerializer::ReadFloat(doc, "canvasWidth", CanvasWidth, 1920.0f, false);
+    FJsonSerializer::ReadFloat(doc, "canvasHeight", CanvasHeight, 1080.0f, false);
 
     // Widgets
     Widgets.clear();
@@ -210,6 +260,44 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
 
             FJsonSerializer::ReadBool(widgetObj, "additive", widget.bAdditive, false, false);
 
+            // Rect
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "color", tempColor, FLinearColor(0.2f, 0.8f, 0.2f, 1.0f), false))
+            {
+                widget.ForegroundColor[0] = tempColor.R;
+                widget.ForegroundColor[1] = tempColor.G;
+                widget.ForegroundColor[2] = tempColor.B;
+                widget.ForegroundColor[3] = tempColor.A;
+            }
+
+            // Button
+            if (FJsonSerializer::ReadString(widgetObj, "hoveredTexturePath", tempStr, "", false))
+                widget.HoveredTexturePath = tempStr;
+            if (FJsonSerializer::ReadString(widgetObj, "pressedTexturePath", tempStr, "", false))
+                widget.PressedTexturePath = tempStr;
+            if (FJsonSerializer::ReadString(widgetObj, "disabledTexturePath", tempStr, "", false))
+                widget.DisabledTexturePath = tempStr;
+
+            // New alpha format
+            FJsonSerializer::ReadFloat(widgetObj, "normalAlpha", widget.NormalAlpha, 1.0f, false);
+            FJsonSerializer::ReadFloat(widgetObj, "hoveredAlpha", widget.HoveredAlpha, 1.0f, false);
+            FJsonSerializer::ReadFloat(widgetObj, "pressedAlpha", widget.PressedAlpha, 1.0f, false);
+            FJsonSerializer::ReadFloat(widgetObj, "disabledAlpha", widget.DisabledAlpha, 0.5f, false);
+
+            // Legacy tint format 호환 (alpha만 사용)
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "normalTint", tempColor, FLinearColor(1, 1, 1, 1), false))
+                widget.NormalAlpha = tempColor.A;
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "hoveredTint", tempColor, FLinearColor(1, 1, 1, 1), false))
+                widget.HoveredAlpha = tempColor.A;
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "pressedTint", tempColor, FLinearColor(1, 1, 1, 1), false))
+                widget.PressedAlpha = tempColor.A;
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "disabledTint", tempColor, FLinearColor(0.5f, 0.5f, 0.5f, 0.5f), false))
+                widget.DisabledAlpha = tempColor.A;
+            FJsonSerializer::ReadBool(widgetObj, "interactable", widget.bInteractable, true, false);
+
+            // Hover Scale 효과
+            FJsonSerializer::ReadFloat(widgetObj, "hoverScale", widget.HoverScale, 1.0f, false);
+            FJsonSerializer::ReadFloat(widgetObj, "hoverScaleDuration", widget.HoverScaleDuration, 0.1f, false);
+
             // Binding
             if (FJsonSerializer::ReadString(widgetObj, "bind", tempStr, "", false))
                 widget.BindingKey = tempStr;
@@ -257,7 +345,13 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
 
 SUIEditorWindow::SUIEditorWindow()
 {
+#ifdef _EDITOR
+    // 에디터에서는 소스 폴더에 저장 (Git 버전 관리 + 빌드 시 복사)
+    UIAssetPath = std::filesystem::path("../../Mundi/Data/UI");
+#else
+    // 게임 빌드에서는 실행 파일 기준 Data/UI
     UIAssetPath = std::filesystem::path(GDataDir) / "UI";
+#endif
     if (!std::filesystem::exists(UIAssetPath))
     {
         std::filesystem::create_directories(UIAssetPath);
@@ -496,8 +590,30 @@ void SUIEditorWindow::RenderToolbar()
     ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
     ImGui::SameLine();
 
-    // 캔버스(뷰포트) 크기 표시
-    ImGui::TextDisabled("Canvas: %.0fx%.0f", CanvasSize.x, CanvasSize.y);
+    // 캔버스(디자인 해상도) 크기 입력
+    ImGui::Text("Canvas:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    int canvasW = static_cast<int>(CanvasSize.x);
+    if (ImGui::DragInt("##CanvasW", &canvasW, 1.0f, 100, 4096))
+    {
+        if (canvasW < 100) canvasW = 100;
+        if (canvasW > 4096) canvasW = 4096;
+        CanvasSize.x = static_cast<float>(canvasW);
+        bModified = true;
+    }
+    ImGui::SameLine();
+    ImGui::Text("x");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    int canvasH = static_cast<int>(CanvasSize.y);
+    if (ImGui::DragInt("##CanvasH", &canvasH, 1.0f, 100, 4096))
+    {
+        if (canvasH < 100) canvasH = 100;
+        if (canvasH > 4096) canvasH = 4096;
+        CanvasSize.y = static_cast<float>(canvasH);
+        bModified = true;
+    }
 
     ImGui::Separator();
 }
@@ -508,7 +624,7 @@ void SUIEditorWindow::RenderWidgetPalette(float Width, float Height)
     ImGui::Separator();
 
     // 위젯 타입 버튼들
-    const char* widgetTypes[] = { "ProgressBar", "Texture", "Rect" };
+    const char* widgetTypes[] = { "ProgressBar", "Texture", "Rect", "Button" };
 
     for (const char* type : widgetTypes)
     {
@@ -567,10 +683,15 @@ void SUIEditorWindow::RenderCanvas(float Width, float Height)
                                      canvasBoundsMin.y + CanvasSize.y * CanvasZoom);
     drawList->AddRect(canvasBoundsMin, canvasBoundsMax, IM_COL32(100, 100, 100, 255), 0, 0, 2.0f);
 
-    // 위젯 그리기
-    for (size_t i = 0; i < CurrentAsset.Widgets.size(); i++)
+    // 위젯 그리기 (Z-Order 순으로 정렬 - 낮은 것이 먼저 그려짐)
+    std::vector<size_t> sortedIndices(CurrentAsset.Widgets.size());
+    for (size_t i = 0; i < sortedIndices.size(); i++) sortedIndices[i] = i;
+    std::sort(sortedIndices.begin(), sortedIndices.end(), [this](size_t a, size_t b) {
+        return CurrentAsset.Widgets[a].ZOrder < CurrentAsset.Widgets[b].ZOrder;
+    });
+    for (size_t idx : sortedIndices)
     {
-        DrawWidget(drawList, CurrentAsset.Widgets[i], canvasBoundsMin, CanvasZoom);
+        DrawWidget(drawList, CurrentAsset.Widgets[idx], canvasBoundsMin, CanvasZoom);
     }
 
     // 선택된 위젯 핸들
@@ -767,15 +888,22 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     if (!widget)
     {
         ImGui::TextDisabled("No widget selected");
+        LastSelectedWidgetIndex = -1;
         return;
     }
 
-    // 이름
-    char nameBuf[256];
-    strncpy_s(nameBuf, widget->Name.c_str(), sizeof(nameBuf) - 1);
-    if (ImGui::InputText("Name", nameBuf, sizeof(nameBuf)))
+    // 선택된 위젯이 변경되면 입력 버퍼를 새 위젯 값으로 동기화
+    if (SelectedWidgetIndex != LastSelectedWidgetIndex)
     {
-        widget->Name = nameBuf;
+        strncpy_s(WidgetNameBuffer, widget->Name.c_str(), sizeof(WidgetNameBuffer) - 1);
+        strncpy_s(BindingKeyBuffer, widget->BindingKey.c_str(), sizeof(BindingKeyBuffer) - 1);
+        LastSelectedWidgetIndex = SelectedWidgetIndex;
+    }
+
+    // 이름 (멤버 버퍼 사용)
+    if (ImGui::InputText("Name", WidgetNameBuffer, sizeof(WidgetNameBuffer)))
+    {
+        widget->Name = WidgetNameBuffer;
         bModified = true;
     }
 
@@ -821,46 +949,11 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
         }
         else
         {
-            // Foreground 텍스처 콤보박스
-            int fgIndex = 0;
-            for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+            // 검색 가능한 Foreground 텍스처 콤보박스
+            if (TextureComboWithSearch("FG Texture", widget->ForegroundTexturePath, TexturePaths,
+                                        FGTextureSearchFilter, sizeof(FGTextureSearchFilter)))
             {
-                if (TexturePaths[idx] == widget->ForegroundTexturePath.c_str())
-                {
-                    fgIndex = idx + 1;
-                    break;
-                }
-            }
-            FString fgPreview = "None";
-            if (fgIndex > 0)
-            {
-                std::filesystem::path p(TexturePaths[fgIndex - 1]);
-                fgPreview = p.filename().string();
-            }
-            if (ImGui::BeginCombo("FG Texture", fgPreview.c_str()))
-            {
-                bool selNone = (fgIndex == 0);
-                if (ImGui::Selectable("None", selNone))
-                {
-                    widget->ForegroundTexturePath = "";
-                    bModified = true;
-                }
-                if (selNone) ImGui::SetItemDefaultFocus();
-                for (int i = 0; i < TexturePaths.Num(); ++i)
-                {
-                    bool selected = (fgIndex == i + 1);
-                    std::filesystem::path p(TexturePaths[i]);
-                    FString displayName = p.filename().string();
-                    if (ImGui::Selectable(displayName.c_str(), selected))
-                    {
-                        widget->ForegroundTexturePath = TexturePaths[i].c_str();
-                        bModified = true;
-                    }
-                    if (selected) ImGui::SetItemDefaultFocus();
-                    if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("%s", TexturePaths[i].c_str());
-                }
-                ImGui::EndCombo();
+                bModified = true;
             }
         }
 
@@ -881,46 +974,11 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
         }
         else
         {
-            // Background 텍스처 콤보박스
-            int bgIndex = 0;
-            for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+            // 검색 가능한 Background 텍스처 콤보박스
+            if (TextureComboWithSearch("BG Texture", widget->BackgroundTexturePath, TexturePaths,
+                                        BGTextureSearchFilter, sizeof(BGTextureSearchFilter)))
             {
-                if (TexturePaths[idx] == widget->BackgroundTexturePath.c_str())
-                {
-                    bgIndex = idx + 1;
-                    break;
-                }
-            }
-            FString bgPreview = "None";
-            if (bgIndex > 0)
-            {
-                std::filesystem::path p(TexturePaths[bgIndex - 1]);
-                bgPreview = p.filename().string();
-            }
-            if (ImGui::BeginCombo("BG Texture", bgPreview.c_str()))
-            {
-                bool selNone = (bgIndex == 0);
-                if (ImGui::Selectable("None", selNone))
-                {
-                    widget->BackgroundTexturePath = "";
-                    bModified = true;
-                }
-                if (selNone) ImGui::SetItemDefaultFocus();
-                for (int i = 0; i < TexturePaths.Num(); ++i)
-                {
-                    bool selected = (bgIndex == i + 1);
-                    std::filesystem::path p(TexturePaths[i]);
-                    FString displayName = p.filename().string();
-                    if (ImGui::Selectable(displayName.c_str(), selected))
-                    {
-                        widget->BackgroundTexturePath = TexturePaths[i].c_str();
-                        bModified = true;
-                    }
-                    if (selected) ImGui::SetItemDefaultFocus();
-                    if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("%s", TexturePaths[i].c_str());
-                }
-                ImGui::EndCombo();
+                bModified = true;
             }
         }
 
@@ -933,61 +991,14 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     {
         ImGui::Text("Texture");
 
-        // 텍스처 콤보박스
+        // 검색 가능한 텍스처 콤보박스
         UResourceManager& ResMgr = UResourceManager::GetInstance();
         TArray<FString> TexturePaths = ResMgr.GetAllFilePaths<UTexture>();
 
-        // 현재 선택된 인덱스 찾기
-        int CurrentIndex = 0; // 0 = None
-        for (int idx = 0; idx < TexturePaths.Num(); ++idx)
+        if (TextureComboWithSearch("Texture", widget->TexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
         {
-            if (TexturePaths[idx] == widget->TexturePath.c_str())
-            {
-                CurrentIndex = idx + 1;
-                break;
-            }
-        }
-
-        // 프리뷰 텍스트 (파일명만 표시)
-        FString Preview = "None";
-        if (CurrentIndex > 0)
-        {
-            std::filesystem::path p(TexturePaths[CurrentIndex - 1]);
-            Preview = p.filename().string();
-        }
-
-        if (ImGui::BeginCombo("Texture", Preview.c_str()))
-        {
-            // None 옵션
-            bool selNone = (CurrentIndex == 0);
-            if (ImGui::Selectable("None", selNone))
-            {
-                widget->TexturePath = "";
-                bModified = true;
-            }
-            if (selNone) ImGui::SetItemDefaultFocus();
-
-            // 텍스처 목록
-            for (int i = 0; i < TexturePaths.Num(); ++i)
-            {
-                bool selected = (CurrentIndex == i + 1);
-                std::filesystem::path p(TexturePaths[i]);
-                FString DisplayName = p.filename().string();
-
-                if (ImGui::Selectable(DisplayName.c_str(), selected))
-                {
-                    widget->TexturePath = TexturePaths[i].c_str();
-                    bModified = true;
-                }
-                if (selected) ImGui::SetItemDefaultFocus();
-
-                // 툴팁으로 전체 경로 표시
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::SetTooltip("%s", TexturePaths[i].c_str());
-                }
-            }
-            ImGui::EndCombo();
+            bModified = true;
         }
 
         ImGui::Text("SubUV");
@@ -1001,6 +1012,75 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     {
         ImGui::Text("Rect");
         if (ImGui::ColorEdit4("Color", widget->ForegroundColor)) bModified = true;
+    }
+    else if (widget->Type == "Button")
+    {
+        ImGui::Text("Button");
+
+        // 기본 텍스처
+        UResourceManager& ResMgr = UResourceManager::GetInstance();
+        TArray<FString> TexturePaths = ResMgr.GetAllFilePaths<UTexture>();
+
+        if (TextureComboWithSearch("Normal Texture", widget->TexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
+        {
+            bModified = true;
+        }
+
+        // 상태별 텍스처
+        if (TextureComboWithSearch("Hovered Texture", widget->HoveredTexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
+        {
+            bModified = true;
+        }
+        if (TextureComboWithSearch("Pressed Texture", widget->PressedTexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
+        {
+            bModified = true;
+        }
+        if (TextureComboWithSearch("Disabled Texture", widget->DisabledTexturePath, TexturePaths,
+                                    TextureSearchFilter, sizeof(TextureSearchFilter)))
+        {
+            bModified = true;
+        }
+
+        ImGui::Separator();
+
+        // 상태별 투명도
+        ImGui::Text("State Alpha");
+        if (ImGui::SliderFloat("Normal Alpha", &widget->NormalAlpha, 0.0f, 1.0f, "%.2f")) bModified = true;
+        if (ImGui::SliderFloat("Hovered Alpha", &widget->HoveredAlpha, 0.0f, 1.0f, "%.2f")) bModified = true;
+        if (ImGui::SliderFloat("Pressed Alpha", &widget->PressedAlpha, 0.0f, 1.0f, "%.2f")) bModified = true;
+        if (ImGui::SliderFloat("Disabled Alpha", &widget->DisabledAlpha, 0.0f, 1.0f, "%.2f")) bModified = true;
+
+        ImGui::Separator();
+
+        // 호버 스케일 효과
+        ImGui::Text("Hover Effect");
+        if (ImGui::DragFloat("Hover Scale", &widget->HoverScale, 0.01f, 1.0f, 2.0f, "%.2f"))
+            bModified = true;
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("1.0 = no effect, 1.1 = 10%% scale up");
+        if (widget->HoverScale > 1.0f)
+        {
+            if (ImGui::DragFloat("Scale Duration", &widget->HoverScaleDuration, 0.01f, 0.0f, 1.0f, "%.2f s"))
+                bModified = true;
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::Checkbox("Interactable", &widget->bInteractable)) bModified = true;
+
+        ImGui::Separator();
+
+        // SubUV (Button도 TextureWidget 상속)
+        ImGui::Text("SubUV");
+        if (ImGui::DragInt("Columns (NX)", &widget->SubUV_NX, 1, 1, 16)) bModified = true;
+        if (ImGui::DragInt("Rows (NY)", &widget->SubUV_NY, 1, 1, 16)) bModified = true;
+        int maxFrame = widget->SubUV_NX * widget->SubUV_NY - 1;
+        if (ImGui::DragInt("Frame", &widget->SubUV_Frame, 1, 0, maxFrame)) bModified = true;
     }
 
     // === Animation 설정 ===
@@ -1023,10 +1103,10 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
             if (ImGui::Combo("Easing##Enter", &widget->EnterAnim.Easing, easingNames, IM_ARRAYSIZE(easingNames))) bModified = true;
             if (ImGui::DragFloat("Delay##Enter", &widget->EnterAnim.Delay, 0.01f, 0.0f, 5.0f, "%.2f s")) bModified = true;
             // Slide 타입일 경우에만 Offset 표시
-            if (widget->EnterAnim.Type >= 2 && widget->EnterAnim.Type <= 4 ||
+            if (widget->EnterAnim.Type >= 2 && widget->EnterAnim.Type <= 5 ||
                 widget->EnterAnim.Type >= 7 && widget->EnterAnim.Type <= 10)
             {
-                if (ImGui::DragFloat("Offset##Enter", &widget->EnterAnim.Offset, 1.0f, 0.0f, 500.0f, "%.0f px")) bModified = true;
+                if (ImGui::DragFloat("Offset##Enter", &widget->EnterAnim.Offset, 10.0f, 0.0f, 3000.0f, "%.0f px")) bModified = true;
             }
         }
         ImGui::PopID();
@@ -1043,10 +1123,10 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
             if (ImGui::Combo("Easing##Exit", &widget->ExitAnim.Easing, easingNames, IM_ARRAYSIZE(easingNames))) bModified = true;
             if (ImGui::DragFloat("Delay##Exit", &widget->ExitAnim.Delay, 0.01f, 0.0f, 5.0f, "%.2f s")) bModified = true;
             // Slide 타입일 경우에만 Offset 표시
-            if (widget->ExitAnim.Type >= 2 && widget->ExitAnim.Type <= 4 ||
+            if (widget->ExitAnim.Type >= 2 && widget->ExitAnim.Type <= 5 ||
                 widget->ExitAnim.Type >= 7 && widget->ExitAnim.Type <= 10)
             {
-                if (ImGui::DragFloat("Offset##Exit", &widget->ExitAnim.Offset, 1.0f, 0.0f, 500.0f, "%.0f px")) bModified = true;
+                if (ImGui::DragFloat("Offset##Exit", &widget->ExitAnim.Offset, 10.0f, 0.0f, 3000.0f, "%.0f px")) bModified = true;
             }
         }
         ImGui::PopID();
@@ -1055,11 +1135,10 @@ void SUIEditorWindow::RenderPropertyPanel(float Width, float Height)
     ImGui::Separator();
     ImGui::Text("Binding");
 
-    char bindBuf[256];
-    strncpy_s(bindBuf, widget->BindingKey.c_str(), sizeof(bindBuf) - 1);
-    if (ImGui::InputText("Binding Key", bindBuf, sizeof(bindBuf)))
+    // Binding Key (멤버 버퍼 사용 - 선택 변경 시 상단에서 동기화됨)
+    if (ImGui::InputText("Binding Key", BindingKeyBuffer, sizeof(BindingKeyBuffer)))
     {
-        widget->BindingKey = bindBuf;
+        widget->BindingKey = BindingKeyBuffer;
         bModified = true;
     }
     ImGui::TextDisabled("e.g., Player.Health");
@@ -1085,6 +1164,24 @@ void SUIEditorWindow::RenderHierarchy(float Width, float Height)
         if (ImGui::IsItemClicked())
         {
             SelectWidget((int32_t)i);
+        }
+
+        // 우클릭 컨텍스트 메뉴
+        if (ImGui::BeginPopupContextItem())
+        {
+            SelectWidget((int32_t)i);  // 우클릭 시 선택
+
+            if (ImGui::MenuItem("Delete"))
+            {
+                DeleteSelectedWidget();
+                ImGui::EndPopup();
+                break;  // 삭제 후 루프 탈출
+            }
+            if (ImGui::MenuItem("Duplicate"))
+            {
+                DuplicateSelectedWidget();
+            }
+            ImGui::EndPopup();
         }
     }
 }
@@ -1263,6 +1360,85 @@ void SUIEditorWindow::DrawWidget(ImDrawList* DrawList, const FUIEditorWidget& Wi
             (int)(Widget.ForegroundColor[3] * 255)
         );
         DrawList->AddRectFilled(min, max, color);
+    }
+    else if (Widget.Type == "Button")
+    {
+        // 버튼 미리보기: 4개 텍스처를 2x2로 배치
+        float halfW = (max.x - min.x) * 0.5f;
+        float halfH = (max.y - min.y) * 0.5f;
+
+        // 4개 영역 정의: Normal(좌상), Hovered(우상), Pressed(좌하), Disabled(우하)
+        ImVec2 cells[4][2] = {
+            { min, ImVec2(min.x + halfW, min.y + halfH) },                                    // Normal
+            { ImVec2(min.x + halfW, min.y), ImVec2(max.x, min.y + halfH) },                   // Hovered
+            { ImVec2(min.x, min.y + halfH), ImVec2(min.x + halfW, max.y) },                   // Pressed
+            { ImVec2(min.x + halfW, min.y + halfH), max }                                      // Disabled
+        };
+
+        const char* labels[4] = { "N", "H", "P", "D" };
+        std::string texPaths[4] = {
+            Widget.TexturePath,
+            Widget.HoveredTexturePath.empty() ? Widget.TexturePath : Widget.HoveredTexturePath,
+            Widget.PressedTexturePath.empty() ? Widget.TexturePath : Widget.PressedTexturePath,
+            Widget.DisabledTexturePath.empty() ? Widget.TexturePath : Widget.DisabledTexturePath
+        };
+        float alphas[4] = {
+            Widget.NormalAlpha,
+            Widget.HoveredAlpha,
+            Widget.PressedAlpha,
+            Widget.DisabledAlpha
+        };
+
+        // SubUV 계산
+        float uMin = 0.0f, vMin = 0.0f, uMax = 1.0f, vMax = 1.0f;
+        if (Widget.SubUV_NX > 1 || Widget.SubUV_NY > 1)
+        {
+            int frameX = Widget.SubUV_Frame % Widget.SubUV_NX;
+            int frameY = Widget.SubUV_Frame / Widget.SubUV_NX;
+            float cellW = 1.0f / Widget.SubUV_NX;
+            float cellH = 1.0f / Widget.SubUV_NY;
+            uMin = frameX * cellW;
+            vMin = frameY * cellH;
+            uMax = uMin + cellW;
+            vMax = vMin + cellH;
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            ImVec2 cellMin = cells[i][0];
+            ImVec2 cellMax = cells[i][1];
+
+            // Alpha만 적용 (RGB는 255 고정)
+            ImU32 tintColor = IM_COL32(255, 255, 255, (int)(alphas[i] * 255.0f));
+
+            if (!texPaths[i].empty())
+            {
+                UTexture* tex = ResMgr.Load<UTexture>(FString(texPaths[i].c_str()));
+                if (tex && tex->GetShaderResourceView())
+                {
+                    DrawList->AddImage((ImTextureID)tex->GetShaderResourceView(), cellMin, cellMax,
+                                       ImVec2(uMin, vMin), ImVec2(uMax, vMax), tintColor);
+                }
+                else
+                {
+                    DrawList->AddRectFilled(cellMin, cellMax, IM_COL32(80, 80, 120, 200));
+                }
+            }
+            else
+            {
+                DrawList->AddRectFilled(cellMin, cellMax, IM_COL32(80, 80, 120, 200));
+            }
+
+            // 상태 라벨 표시
+            DrawList->AddText(ImVec2(cellMin.x + 2, cellMin.y + 2), IM_COL32(255, 255, 0, 200), labels[i]);
+        }
+
+        // 구분선
+        DrawList->AddLine(ImVec2(min.x + halfW, min.y), ImVec2(min.x + halfW, max.y), IM_COL32(255, 255, 255, 100));
+        DrawList->AddLine(ImVec2(min.x, min.y + halfH), ImVec2(max.x, min.y + halfH), IM_COL32(255, 255, 255, 100));
+
+        // 외곽선
+        DrawList->AddRect(min, max, IM_COL32(100, 200, 100, 255));
     }
 
     // 위젯 이름 표시
@@ -1528,6 +1704,10 @@ void SUIEditorWindow::LoadAsset(const std::string& Path)
         CurrentAssetPath = Path;
         SelectedWidgetIndex = -1;
         bModified = false;
+
+        // 로드한 캔버스 크기 적용
+        CanvasSize.x = CurrentAsset.CanvasWidth;
+        CanvasSize.y = CurrentAsset.CanvasHeight;
     }
 }
 
@@ -1539,6 +1719,10 @@ void SUIEditorWindow::SaveAsset()
     }
     else
     {
+        // 현재 캔버스 크기를 에셋에 저장
+        CurrentAsset.CanvasWidth = CanvasSize.x;
+        CurrentAsset.CanvasHeight = CanvasSize.y;
+
         if (CurrentAsset.SaveToFile(CurrentAssetPath))
         {
             bModified = false;
@@ -1571,9 +1755,109 @@ void SUIEditorWindow::SaveAssetAs()
         std::filesystem::path p(path);
         CurrentAsset.Name = p.stem().string();
 
+        // 현재 캔버스 크기를 에셋에 저장
+        CurrentAsset.CanvasWidth = CanvasSize.x;
+        CurrentAsset.CanvasHeight = CanvasSize.y;
+
         if (CurrentAsset.SaveToFile(path))
         {
             bModified = false;
         }
     }
+}
+
+// ============================================
+// 검색 가능한 텍스처 콤보박스
+// ============================================
+
+bool SUIEditorWindow::TextureComboWithSearch(const char* label, std::string& outPath,
+                                              const TArray<FString>& texturePaths,
+                                              char* searchBuffer, size_t bufferSize)
+{
+    bool modified = false;
+
+    // 현재 선택된 인덱스 찾기
+    int currentIndex = 0; // 0 = None
+    for (int idx = 0; idx < texturePaths.Num(); ++idx)
+    {
+        if (texturePaths[idx] == outPath.c_str())
+        {
+            currentIndex = idx + 1;
+            break;
+        }
+    }
+
+    // 프리뷰 텍스트 (파일명만 표시)
+    FString preview = "None";
+    if (currentIndex > 0)
+    {
+        std::filesystem::path p(texturePaths[currentIndex - 1]);
+        preview = p.filename().string();
+    }
+
+    if (ImGui::BeginCombo(label, preview.c_str()))
+    {
+        // 검색 입력 필드
+        ImGui::SetNextItemWidth(-1);
+        if (ImGui::IsWindowAppearing())
+        {
+            ImGui::SetKeyboardFocusHere();
+            searchBuffer[0] = '\0';  // 콤보박스 열릴 때 검색어 초기화
+        }
+        ImGui::InputTextWithHint("##search", "Search...", searchBuffer, bufferSize);
+
+        ImGui::Separator();
+
+        // 검색어를 소문자로 변환
+        std::string searchLower = searchBuffer;
+        std::transform(searchLower.begin(), searchLower.end(), searchLower.begin(), ::tolower);
+
+        // None 옵션 (검색어가 없거나 "none"과 매칭될 때만)
+        if (searchLower.empty() || std::string("none").find(searchLower) != std::string::npos)
+        {
+            bool selNone = (currentIndex == 0);
+            if (ImGui::Selectable("None", selNone))
+            {
+                outPath = "";
+                modified = true;
+            }
+            if (selNone) ImGui::SetItemDefaultFocus();
+        }
+
+        // 텍스처 목록 (필터링 적용)
+        for (int i = 0; i < texturePaths.Num(); ++i)
+        {
+            std::filesystem::path p(texturePaths[i]);
+            FString displayName = p.filename().string();
+
+            // 검색 필터링 (대소문자 무시)
+            if (!searchLower.empty())
+            {
+                std::string nameLower = displayName.c_str();
+                std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
+                if (nameLower.find(searchLower) == std::string::npos)
+                {
+                    continue;  // 매칭되지 않으면 스킵
+                }
+            }
+
+            bool selected = (currentIndex == i + 1);
+            if (ImGui::Selectable(displayName.c_str(), selected))
+            {
+                outPath = texturePaths[i].c_str();
+                modified = true;
+            }
+            if (selected) ImGui::SetItemDefaultFocus();
+
+            // 툴팁으로 전체 경로 표시
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("%s", texturePaths[i].c_str());
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+    return modified;
 }

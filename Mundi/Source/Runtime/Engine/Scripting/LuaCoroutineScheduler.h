@@ -45,11 +45,14 @@ public:
     
 private:
     void Process(double Now);
+    void FlushPendingTasks();
 
 private:
     TArray<FCoroTask> Tasks;
+    TArray<FCoroTask> PendingTasks;  // 코루틴 실행 중 추가된 태스크들
     uint32 NextId = 0;
-    
+    bool bIsProcessing = false;  // Process 중인지 여부
+
     double NowSeconds = 0.0;
     double MaxDeltaClamp = 0.1; // 한 프레임의 최대 반영시간, Debug으로 중단 시에도 시간이 가지 않게 방지
 };

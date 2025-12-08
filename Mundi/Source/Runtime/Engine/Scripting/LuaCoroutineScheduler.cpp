@@ -25,9 +25,20 @@ FLuaCoroHandle FLuaCoroutineScheduler::Register(sol::thread&& Thread, sol::corou
 	Task.Co     = std::move(Co);
 	Task.Owner  = Owner;
 	Task.Id     = ++NextId;
-	Tasks.push_back(std::move(Task));
-	
-	return FLuaCoroHandle{ Task.Id };
+
+	const uint32 TaskId = Task.Id; // move 전에 Id 저장
+
+	// Process 중이면 대기열에 추가 (반복자 무효화 방지)
+	if (bIsProcessing)
+	{
+		PendingTasks.push_back(std::move(Task));
+	}
+	else
+	{
+		Tasks.push_back(std::move(Task));
+	}
+
+	return FLuaCoroHandle{ TaskId };
 }
 
 void FLuaCoroutineScheduler::Tick(double DeltaTime)
@@ -40,8 +51,11 @@ void FLuaCoroutineScheduler::Tick(double DeltaTime)
 }
 void FLuaCoroutineScheduler::Process(double Now)
 {
-	for (auto& task : Tasks)
+	bIsProcessing = true;
+
+	for (size_t i = 0; i < Tasks.Num(); ++i)
 	{
+		auto& task = Tasks[i];
 		if (task.Finished)
 			continue;
 
@@ -117,8 +131,30 @@ void FLuaCoroutineScheduler::Process(double Now)
 			task.Finished = true;
 		}
 	}
+
+	bIsProcessing = false;
+
+	// 완료된 태스크 정리 (역순으로 순회하여 인덱스 무효화 방지)
+	for (int32 i = Tasks.Num() - 1; i >= 0; --i)
+	{
+		if (Tasks[i].Finished)
+		{
+			Tasks.RemoveAtSwap(i);
+		}
+	}
+
+	// 대기 중인 태스크 추가
+	FlushPendingTasks();
 }
 
+void FLuaCoroutineScheduler::FlushPendingTasks()
+{
+	for (auto& Task : PendingTasks)
+	{
+		Tasks.push_back(std::move(Task));
+	}
+	PendingTasks.Empty();
+}
 
 void FLuaCoroutineScheduler::AddCoroutine(sol::coroutine&& Co)
 {
@@ -127,8 +163,11 @@ void FLuaCoroutineScheduler::AddCoroutine(sol::coroutine&& Co)
 
 void FLuaCoroutineScheduler::TriggerEvent(const FString& EventName)
 {
-	for (auto& task : Tasks)
+	bIsProcessing = true;
+
+	for (size_t i = 0; i < Tasks.Num(); ++i)
 	{
+		auto& task = Tasks[i];
 		if (task.Finished) continue;
 		if (task.WaitType != EWaitType::Event) continue;
 		if (task.EventName == EventName)
@@ -137,6 +176,9 @@ void FLuaCoroutineScheduler::TriggerEvent(const FString& EventName)
 			task.Co(); // resume
 		}
 	}
+
+	bIsProcessing = false;
+	FlushPendingTasks();
 }
 
 void FLuaCoroutineScheduler::CancelByOwner(void* Owner)

@@ -4,8 +4,10 @@
 #include "Widgets/UICanvas.h"
 #include "Widgets/ProgressBarWidget.h"
 #include "Widgets/TextureWidget.h"
+#include "Widgets/ButtonWidget.h"
 #include "Source/Runtime/Core/Misc/JsonSerializer.h"
 #include "Source/Slate/GlobalConsole.h"
+#include "Source/Runtime/InputCore/InputManager.h"
 
 #include <d2d1_1.h>
 #include <dwrite.h>
@@ -45,7 +47,9 @@ void UGameUIManager::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InC
     }
 
     CreateD2DResources();
-    bInitialized = true;
+
+    // D2DContext가 제대로 생성되었을 때만 초기화 완료
+    bInitialized = (D2DContext != nullptr);
 }
 
 void UGameUIManager::CreateD2DResources()
@@ -235,6 +239,12 @@ void UGameUIManager::Update(float DeltaTime)
     if (!bInitialized)
         return;
 
+    // 마우스 입력 처리
+    ProcessMouseInput();
+
+    // 키보드/게임패드 입력 처리 (UI 포커스 네비게이션)
+    ProcessKeyboardInput();
+
     // 모든 캔버스 업데이트 (위젯 애니메이션 처리)
     static int updateLogCount = 0;
     for (auto& Pair : Canvases)
@@ -331,6 +341,13 @@ void UGameUIManager::Render()
 
 UUICanvas* UGameUIManager::CreateCanvas(const std::string& Name, int32_t ZOrder)
 {
+    // 초기화되지 않았으면 실패
+    if (!bInitialized)
+    {
+        UE_LOG("[UI] CreateCanvas failed: GameUIManager not initialized!\n");
+        return nullptr;
+    }
+
     // 이미 존재하면 실패
     if (Canvases.find(Name) != Canvases.end())
         return nullptr;
@@ -352,6 +369,20 @@ UUICanvas* UGameUIManager::FindCanvas(const std::string& Name)
     if (it != Canvases.end())
         return it->second.get();
     return nullptr;
+}
+
+bool UGameUIManager::IsValidCanvas(UUICanvas* Canvas) const
+{
+    if (!Canvas)
+        return false;
+
+    // Canvases 맵에서 해당 포인터가 존재하는지 확인
+    for (const auto& Pair : Canvases)
+    {
+        if (Pair.second.get() == Canvas)
+            return true;
+    }
+    return false;
 }
 
 void UGameUIManager::RemoveCanvas(const std::string& Name)
@@ -388,6 +419,13 @@ void UGameUIManager::SetCanvasZOrder(const std::string& Name, int32_t Z)
 
 UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
 {
+    // 초기화되지 않았으면 실패
+    if (!bInitialized)
+    {
+        UE_LOG("[UI] LoadUIAsset failed: GameUIManager not initialized! File: %s\n", FilePath.c_str());
+        return nullptr;
+    }
+
     // JSON 파일 로드
     std::wstring widePath(FilePath.begin(), FilePath.end());
     JSON doc;
@@ -399,6 +437,18 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
     // 에셋 이름 읽기
     FString assetName;
     FJsonSerializer::ReadString(doc, "name", assetName, "UIAsset", false);
+
+    // 디자인 해상도 읽기
+    float designWidth = 1920.0f, designHeight = 1080.0f;
+    FJsonSerializer::ReadFloat(doc, "canvasWidth", designWidth, 1920.0f, false);
+    FJsonSerializer::ReadFloat(doc, "canvasHeight", designHeight, 1080.0f, false);
+
+    // 실제 뷰포트 크기와의 스케일 비율 계산
+    float scaleX = (designWidth > 0) ? ViewportWidth / designWidth : 1.0f;
+    float scaleY = (designHeight > 0) ? ViewportHeight / designHeight : 1.0f;
+
+    UE_LOG("[LoadUIAsset] Design: %.0fx%.0f, Viewport: %.0fx%.0f, Scale: %.3fx%.3f\n",
+           designWidth, designHeight, ViewportWidth, ViewportHeight, scaleX, scaleY);
 
     // 같은 이름의 캔버스가 있으면 삭제
     RemoveCanvas(assetName.c_str());
@@ -425,11 +475,18 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
         FJsonSerializer::ReadString(widgetObj, "name", widgetName, "", false);
         FJsonSerializer::ReadString(widgetObj, "type", widgetType, "", false);
 
-        float x = 0, y = 0, w = 100, h = 30;
-        FJsonSerializer::ReadFloat(widgetObj, "x", x, 0.0f, false);
-        FJsonSerializer::ReadFloat(widgetObj, "y", y, 0.0f, false);
-        FJsonSerializer::ReadFloat(widgetObj, "width", w, 100.0f, false);
-        FJsonSerializer::ReadFloat(widgetObj, "height", h, 30.0f, false);
+        // 디자인 해상도 기준 좌표/크기 읽기
+        float rawX = 0, rawY = 0, rawW = 100, rawH = 30;
+        FJsonSerializer::ReadFloat(widgetObj, "x", rawX, 0.0f, false);
+        FJsonSerializer::ReadFloat(widgetObj, "y", rawY, 0.0f, false);
+        FJsonSerializer::ReadFloat(widgetObj, "width", rawW, 100.0f, false);
+        FJsonSerializer::ReadFloat(widgetObj, "height", rawH, 30.0f, false);
+
+        // 실제 뷰포트에 맞게 스케일링
+        float x = rawX * scaleX;
+        float y = rawY * scaleY;
+        float w = rawW * scaleX;
+        float h = rawH * scaleY;
 
         int32 zOrder = 0;
         FJsonSerializer::ReadInt32(widgetObj, "zOrder", zOrder, 0, false);
@@ -514,9 +571,77 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
             canvas->CreateRect(widgetName.c_str(), x, y, w, h);
 
             FLinearColor color;
-            if (FJsonSerializer::ReadLinearColor(widgetObj, "foregroundColor", color, FLinearColor(1, 1, 1, 1), false))
+            if (FJsonSerializer::ReadLinearColor(widgetObj, "color", color, FLinearColor(1, 1, 1, 1), false))
             {
                 canvas->SetWidgetForegroundColor(widgetName.c_str(), color.R, color.G, color.B, color.A);
+            }
+        }
+        else if (widgetType == "Button")
+        {
+            FString texPath;
+            FJsonSerializer::ReadString(widgetObj, "texturePath", texPath, "", false);
+
+            if (canvas->CreateButton(widgetName.c_str(), texPath.c_str(), x, y, w, h, D2DContext))
+            {
+                // 상태별 텍스처 로드
+                FString hoveredPath, pressedPath, disabledPath;
+                if (FJsonSerializer::ReadString(widgetObj, "hoveredTexturePath", hoveredPath, "", false) && !hoveredPath.empty())
+                {
+                    canvas->SetButtonHoveredTexture(widgetName.c_str(), hoveredPath.c_str(), D2DContext);
+                }
+                if (FJsonSerializer::ReadString(widgetObj, "pressedTexturePath", pressedPath, "", false) && !pressedPath.empty())
+                {
+                    canvas->SetButtonPressedTexture(widgetName.c_str(), pressedPath.c_str(), D2DContext);
+                }
+                if (FJsonSerializer::ReadString(widgetObj, "disabledTexturePath", disabledPath, "", false) && !disabledPath.empty())
+                {
+                    canvas->SetButtonDisabledTexture(widgetName.c_str(), disabledPath.c_str(), D2DContext);
+                }
+
+                // 상태별 Alpha 값 (새 형식)
+                float normalAlpha = 1.0f, hoveredAlpha = 1.0f, pressedAlpha = 1.0f, disabledAlpha = 0.5f;
+                FJsonSerializer::ReadFloat(widgetObj, "normalAlpha", normalAlpha, 1.0f, false);
+                FJsonSerializer::ReadFloat(widgetObj, "hoveredAlpha", hoveredAlpha, 1.0f, false);
+                FJsonSerializer::ReadFloat(widgetObj, "pressedAlpha", pressedAlpha, 1.0f, false);
+                FJsonSerializer::ReadFloat(widgetObj, "disabledAlpha", disabledAlpha, 0.5f, false);
+
+                // Legacy tint 형식 호환 (alpha만 사용)
+                FLinearColor tempTint;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "normalTint", tempTint, FLinearColor(1, 1, 1, 1), false))
+                    normalAlpha = tempTint.A;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "hoveredTint", tempTint, FLinearColor(1, 1, 1, 1), false))
+                    hoveredAlpha = tempTint.A;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "pressedTint", tempTint, FLinearColor(1, 1, 1, 1), false))
+                    pressedAlpha = tempTint.A;
+                if (FJsonSerializer::ReadLinearColor(widgetObj, "disabledTint", tempTint, FLinearColor(0.5f, 0.5f, 0.5f, 0.5f), false))
+                    disabledAlpha = tempTint.A;
+
+                // Alpha 설정 (RGB는 1.0으로 고정)
+                canvas->SetButtonNormalTint(widgetName.c_str(), 1.0f, 1.0f, 1.0f, normalAlpha);
+                canvas->SetButtonHoveredTint(widgetName.c_str(), 1.0f, 1.0f, 1.0f, hoveredAlpha);
+                canvas->SetButtonPressedTint(widgetName.c_str(), 1.0f, 1.0f, 1.0f, pressedAlpha);
+                canvas->SetButtonDisabledTint(widgetName.c_str(), 1.0f, 1.0f, 1.0f, disabledAlpha);
+
+                // 활성화 상태
+                bool bInteractable = true;
+                FJsonSerializer::ReadBool(widgetObj, "interactable", bInteractable, true, false);
+                canvas->SetButtonInteractable(widgetName.c_str(), bInteractable);
+
+                // 호버 스케일 효과
+                float hoverScale = 1.0f, hoverScaleDuration = 0.1f;
+                FJsonSerializer::ReadFloat(widgetObj, "hoverScale", hoverScale, 1.0f, false);
+                FJsonSerializer::ReadFloat(widgetObj, "hoverScaleDuration", hoverScaleDuration, 0.1f, false);
+                canvas->SetButtonHoverScale(widgetName.c_str(), hoverScale, hoverScaleDuration);
+
+                // SubUV 설정 (Button도 TextureWidget을 상속받으므로 지원)
+                int32 nx = 1, ny = 1, frame = 0;
+                FJsonSerializer::ReadInt32(widgetObj, "subUV_NX", nx, 1, false);
+                FJsonSerializer::ReadInt32(widgetObj, "subUV_NY", ny, 1, false);
+                FJsonSerializer::ReadInt32(widgetObj, "subUV_Frame", frame, 0, false);
+                if (nx > 1 || ny > 1)
+                {
+                    canvas->SetTextureSubUV(widgetName.c_str(), frame, nx, ny);
+                }
             }
         }
 
@@ -589,6 +714,113 @@ void UGameUIManager::UpdateCanvasSortOrder()
         });
 
     bCanvasesSortDirty = false;
+}
+
+void UGameUIManager::ProcessMouseInput()
+{
+    if (Canvases.empty())
+        return;
+
+    // 정렬이 필요하면 갱신
+    if (bCanvasesSortDirty)
+    {
+        UpdateCanvasSortOrder();
+    }
+
+    // InputManager에서 마우스 상태 가져오기
+    UInputManager& Input = UInputManager::GetInstance();
+    FVector2D MousePos = Input.GetMousePosition();
+
+    // 뷰포트 로컬 좌표로 변환
+    float LocalMouseX = MousePos.X - ViewportX;
+    float LocalMouseY = MousePos.Y - ViewportY;
+
+    bool bLeftDown = Input.IsMouseButtonDown(EMouseButton::LeftButton);
+    bool bLeftPressed = Input.IsMouseButtonPressed(EMouseButton::LeftButton);
+    bool bLeftReleased = Input.IsMouseButtonReleased(EMouseButton::LeftButton);
+
+    // Z-order 역순으로 처리 (가장 위에 있는 캔버스부터)
+    for (auto it = SortedCanvases.rbegin(); it != SortedCanvases.rend(); ++it)
+    {
+        UUICanvas* Canvas = *it;
+        if (!Canvas || !Canvas->bVisible)
+            continue;
+
+        // 캔버스가 입력을 처리했으면 종료 (다른 캔버스로 전파하지 않음)
+        if (Canvas->ProcessMouseInput(LocalMouseX, LocalMouseY, bLeftDown, bLeftPressed, bLeftReleased))
+        {
+            bUIConsumedInput = true;
+            return;
+        }
+    }
+
+    bUIConsumedInput = false;
+}
+
+void UGameUIManager::ProcessKeyboardInput()
+{
+    if (Canvases.empty())
+        return;
+
+    // 정렬이 필요하면 갱신
+    if (bCanvasesSortDirty)
+    {
+        UpdateCanvasSortOrder();
+    }
+
+    // InputManager에서 키보드/게임패드 상태 가져오기
+    UInputManager& Input = UInputManager::GetInstance();
+
+    // 방향키 입력 체크 (W/S, 위/아래 화살표, 게임패드 D-pad)
+    bool bUpKey = Input.IsKeyDown(VK_UP) || Input.IsKeyDown('W');
+    bool bDownKey = Input.IsKeyDown(VK_DOWN) || Input.IsKeyDown('S');
+    bool bConfirmKey = Input.IsKeyDown(VK_RETURN) || Input.IsKeyDown(VK_SPACE);
+
+    // 게임패드 입력 체크 (연결된 모든 게임패드)
+    for (int i = 0; i < 4; ++i)
+    {
+        if (Input.IsGamepadConnected(i))
+        {
+            if (Input.IsGamepadButtonDown(i, EGamepadButton::DPadUp))
+                bUpKey = true;
+            if (Input.IsGamepadButtonDown(i, EGamepadButton::DPadDown))
+                bDownKey = true;
+            if (Input.IsGamepadButtonDown(i, EGamepadButton::A))
+                bConfirmKey = true;
+        }
+    }
+
+    // Edge detection (이번 프레임에 눌렸는지)
+    bool bUpPressed = bUpKey && !bPrevUpKey;
+    bool bDownPressed = bDownKey && !bPrevDownKey;
+    bool bConfirmPressed = bConfirmKey && !bPrevConfirmKey;
+
+    // 이전 상태 저장
+    bPrevUpKey = bUpKey;
+    bPrevDownKey = bDownKey;
+    bPrevConfirmKey = bConfirmKey;
+
+    // 입력이 없으면 리턴
+    if (!bUpPressed && !bDownPressed && !bConfirmPressed)
+        return;
+
+    // Z-order 역순으로 처리 (가장 위에 있는 캔버스부터)
+    for (auto it = SortedCanvases.rbegin(); it != SortedCanvases.rend(); ++it)
+    {
+        UUICanvas* Canvas = *it;
+        if (!Canvas || !Canvas->bVisible)
+            continue;
+
+        // 캔버스에 포커스 가능한 버튼이 있으면 입력 처리
+        if (Canvas->HasFocusableButtons())
+        {
+            if (Canvas->ProcessKeyboardInput(bUpPressed, bDownPressed, bConfirmPressed))
+            {
+                bUIConsumedInput = true;
+                return;
+            }
+        }
+    }
 }
 
 void UGameUIManager::RenderCanvases()

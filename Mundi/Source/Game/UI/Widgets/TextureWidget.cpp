@@ -65,11 +65,17 @@ void UTextureWidget::ShutdownWICFactory()
 bool UTextureWidget::LoadFromFile(const wchar_t* Path, ID2D1DeviceContext* Context)
 {
     if (!Path || !Context)
+    {
+        UE_LOG("[UI] TextureWidget::LoadFromFile failed: Path=%p, Context=%p\n", Path, Context);
         return false;
+    }
 
     // WIC 팩토리 초기화
     if (!InitWICFactory())
+    {
+        UE_LOG("[UI] TextureWidget::LoadFromFile failed: WIC Factory init failed\n");
         return false;
+    }
 
     // 기존 텍스처 해제
     ReleaseTexture();
@@ -87,7 +93,10 @@ bool UTextureWidget::LoadFromFile(const wchar_t* Path, ID2D1DeviceContext* Conte
     );
 
     if (FAILED(hr))
+    {
+        UE_LOG("[UI] TextureWidget::LoadFromFile failed: CreateDecoderFromFilename hr=0x%08X, Path=%ls\n", hr, Path);
         return false;
+    }
 
     // 프레임 가져오기
     IWICBitmapFrameDecode* Frame = nullptr;
@@ -248,4 +257,64 @@ void UTextureWidget::SetSubUVFrameWithGrid(int32_t FrameIndex, int32_t NX, int32
 {
     SetSubUVGrid(NX, NY);
     SetSubUVFrame(FrameIndex);
+}
+
+void UTextureWidget::Update(float DeltaTime)
+{
+    // 부모 클래스 Update 호출 (애니메이션 처리)
+    UUIWidget::Update(DeltaTime);
+
+    // SubUV 자동 애니메이션 처리
+    if (bSubUVAnimating && SubUVFrameRate > 0.0f)
+    {
+        int32_t TotalFrames = GetTotalFrames();
+        if (TotalFrames <= 1)
+            return;
+
+        SubUVElapsedTime += DeltaTime;
+        float FrameDuration = 1.0f / SubUVFrameRate;
+
+        while (SubUVElapsedTime >= FrameDuration)
+        {
+            SubUVElapsedTime -= FrameDuration;
+            CurrentSubUVFrame++;
+
+            if (CurrentSubUVFrame >= TotalFrames)
+            {
+                if (bSubUVLoop)
+                {
+                    CurrentSubUVFrame = 0;
+                }
+                else
+                {
+                    CurrentSubUVFrame = TotalFrames - 1;
+                    bSubUVAnimating = false;
+                    break;
+                }
+            }
+
+            SetSubUVFrame(CurrentSubUVFrame);
+        }
+    }
+}
+
+void UTextureWidget::StartSubUVAnimation(float FrameRate, bool bLoop)
+{
+    SubUVFrameRate = (std::max)(0.1f, FrameRate);  // 최소 0.1 FPS
+    bSubUVLoop = bLoop;
+    bSubUVAnimating = true;
+    SubUVElapsedTime = 0.0f;
+    CurrentSubUVFrame = 0;
+    SetSubUVFrame(0);
+
+    UE_LOG("[UI] TextureWidget '%s': SubUV animation started (FPS=%.1f, Loop=%s)\n",
+        Name.c_str(), SubUVFrameRate, bSubUVLoop ? "true" : "false");
+}
+
+void UTextureWidget::StopSubUVAnimation()
+{
+    bSubUVAnimating = false;
+    SubUVElapsedTime = 0.0f;
+
+    UE_LOG("[UI] TextureWidget '%s': SubUV animation stopped\n", Name.c_str());
 }
