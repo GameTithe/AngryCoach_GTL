@@ -33,12 +33,12 @@ AGorillaAccessoryActor::AGorillaAccessoryActor()
 	// 양손 AttackShape 생성 (왼손/오른손)
 	if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
 	{
-		LeftShape->SphereRadius = 0.5f;
+		LeftShape->SphereRadius = 1.f;
 		UE_LOG("[GorillaAccessory] LeftAttackShape created, Radius=%.2f", LeftShape->SphereRadius);
 	}
 	if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
 	{
-		RightShape->SphereRadius = 0.5f;
+		RightShape->SphereRadius = 1.f;
 		UE_LOG("[GorillaAccessory] RightAttackShape created, Radius=%.2f", RightShape->SphereRadius);
 	}
 	UE_LOG("[GorillaAccessory] Total AttackShapes: %d", AttackShapes.Num());
@@ -62,9 +62,9 @@ void AGorillaAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandl
 		if (AttackShapes.Num() == 0)
 		{
 			if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
-				LeftShape->SphereRadius = 0.5f;
+				LeftShape->SphereRadius = 1.f;
 			if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
-				RightShape->SphereRadius = 0.5f;
+				RightShape->SphereRadius = 1.f;
 			UE_LOG("[GorillaAccessory] Serialize: AttackShapes recreated, count=%d", AttackShapes.Num());
 		}
 	}
@@ -86,9 +86,9 @@ void AGorillaAccessoryActor::DuplicateSubObjects()
 	if (AttackShapes.Num() == 0)
 	{
 		if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
-			LeftShape->SphereRadius = 0.5f;
+			LeftShape->SphereRadius = 1.f;
 		if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
-			RightShape->SphereRadius = 0.5f;
+			RightShape->SphereRadius = 1.f;
 	}
 }
 
