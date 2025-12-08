@@ -246,7 +246,7 @@ bool UGameEngine::Startup(HINSTANCE hInstance)
     ///////////////////////////////////
 
     // 시작 scene(level)을 직접 로드
-    const FString StartupScenePath = GDataDir + "/Scenes/DemoScene.scene";
+    const FString StartupScenePath = GDataDir + "/Scenes/Game.scene";
 
     if (!GWorld->LoadLevelFromFile(UTF8ToWide(StartupScenePath)))
     {
@@ -268,22 +268,12 @@ bool UGameEngine::Startup(HINSTANCE hInstance)
     {
         AGameModeBase* GM = GWorld->SpawnActor<AAngryCoachGameMode>(FTransform());
         GWorld->SetGameMode(GM);
-        MessageBoxW(nullptr, L"GameMode spawned: AAngryCoachGameMode", L"Debug", MB_OK);
-    }
-    else
-    {
-        MessageBoxW(nullptr, L"GameMode already exists in scene! AAngryCoachGameMode NOT spawned.", L"Warning", MB_OK | MB_ICONWARNING);
     }
 
     // GameMode의 StartPlay 호출 (게임 흐름 시작: Match → Intro → StartPage → ...)
     if (AGameModeBase* GameMode = GWorld->GetGameMode())
     {
-        MessageBoxW(nullptr, L"Calling GameMode->StartPlay()", L"Debug", MB_OK);
         GameMode->StartPlay();
-    }
-    else
-    {
-        MessageBoxW(nullptr, L"GameMode is NULL! Cannot call StartPlay.", L"Error", MB_OK | MB_ICONERROR);
     }
 
     // Note: 마우스 커서는 UI 화면에서 보여야 하므로 시작 시에는 숨기지 않음
