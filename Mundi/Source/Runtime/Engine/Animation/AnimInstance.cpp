@@ -827,6 +827,7 @@ bool UAnimInstance::JumpToSection(const FString& SectionName)
         return false;
     }
 
+    
     MontageState->CurrentSectionIndex = Index;
     MontageState->Position = 0.0f;
     PreviousMontagePlayTime = 0.0f;
@@ -922,7 +923,7 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
         {
             MontageState->bPlaying = false;
             MontageState->Montage = nullptr;
-            UE_LOG("UAnimInstance::UpdateMontage - Montage finished");
+            // UE_LOG("UAnimInstance::UpdateMontage - Montage finished");
             return;
         }
     }
@@ -996,7 +997,7 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
             {
                 MontageState->bBlendingOut = true;
                 MontageState->BlendTime = 0.0f;
-                UE_LOG("UAnimInstance::UpdateMontage - Montage finished");
+                // UE_LOG("UAnimInstance::UpdateMontage - Montage finished");
             }
         }
     }

@@ -639,16 +639,8 @@ void USkeletalMeshComponent::ForceRecomputePose()
     UpdateComponentSpaceTransforms();
     // ComponentSpace -> Final Skinning Matrices 계산
     UpdateFinalSkinningMatrices();
-    UpdateSkinningMatrices(TempFinalSkinningMatrices, TempFinalSkinningNormalMatrices);    
-    // {
-    //     TIME_PROFILE(SkeletalAABB)
-    //     // GetWorldAABB 함수에서 AABB를 갱신중 - 실제로는 const 함수라 갱신 안 됨, 반환값도 안 씀
-         //GetWorldAABB();
-    //     TIME_PROFILE_END(SkeletalAABB)
-    // }
-    
-    PerformSkinning();
-    
+    UpdateSkinningMatrices(TempFinalSkinningMatrices, TempFinalSkinningNormalMatrices);
+    PerformSkinning();    
 }
 
 void USkeletalMeshComponent::UpdateComponentSpaceTransforms()

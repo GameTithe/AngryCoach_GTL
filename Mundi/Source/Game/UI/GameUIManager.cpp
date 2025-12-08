@@ -431,6 +431,7 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
     JSON doc;
     if (!FJsonSerializer::LoadJsonFromFile(doc, widePath))
     {
+        UE_LOG("[UI] LoadUIAsset failed: Could not load JSON file: %s\n", FilePath.c_str());
         return nullptr;
     }
 
@@ -447,9 +448,6 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
     float scaleX = (designWidth > 0) ? ViewportWidth / designWidth : 1.0f;
     float scaleY = (designHeight > 0) ? ViewportHeight / designHeight : 1.0f;
 
-    UE_LOG("[LoadUIAsset] Design: %.0fx%.0f, Viewport: %.0fx%.0f, Scale: %.3fx%.3f\n",
-           designWidth, designHeight, ViewportWidth, ViewportHeight, scaleX, scaleY);
-
     // 같은 이름의 캔버스가 있으면 삭제
     RemoveCanvas(assetName.c_str());
 
@@ -457,6 +455,7 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
     UUICanvas* canvas = CreateCanvas(assetName.c_str(), 0);
     if (!canvas)
     {
+        UE_LOG("[UI] LoadUIAsset failed: Could not create canvas '%s'\n", assetName.c_str());
         return nullptr;
     }
 

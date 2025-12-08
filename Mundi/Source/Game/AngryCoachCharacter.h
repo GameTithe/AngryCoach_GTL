@@ -32,6 +32,7 @@ public:
 	void PlayMontage(UAnimMontage* Montage);
 	void StopCurrentMontage(float BlendOutTime = 0.2f);
 	bool IsPlayingMontage() const;
+	bool PlayMontageSection(UAnimMontage* Montage, const FString& SectionName);
 
 	// ===== 악세서리 =====
 	void EquipAccessory(AAccessoryActor* Accessory);
@@ -56,8 +57,19 @@ public:
 	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
 
 	void HitReation() override;
+	void Revive() override;  // 라운드 시작 시 캐릭터 복원 (Ragdoll 해제, collision 복원 등)
 	void ClearState() override;
 
+	void DoGuard();
+	void StopGuard();
+
+	bool IsGuard() const { return CurrentState == ECharacterState::Guard; }
+	
+	bool bCanPlayHitReactionMontage = true; // New flag to control hit reaction montage playback
+
+	UPROPERTY(EditAnywhere, Category="[캐릭터]", Tooltip="밀려나는 강도를 정합니다.");
+	float KnockbackPower = 10.0f;
+	
 	// 애니메이션 노티파이용 함수
 	void ToggleGorillaFormOnAccessory();
 
@@ -74,5 +86,10 @@ protected:
 	UShapeComponent* CachedAttackShape = nullptr;
 
 	UAnimMontage* HitReationMontage = nullptr;
+	UAnimMontage* GuardMontage = nullptr;
+	UAnimMontage* GorillaGuardMontage = nullptr;
+	USound* Hit1Sound = nullptr;
+	USound* Hit2Sound = nullptr;
+	USound* SkillSound = nullptr;
 	USound* DieSound = nullptr;
 };

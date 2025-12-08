@@ -28,8 +28,10 @@ protected:
 	void UpdateCameraPosition(float DeltaTime);
 
 private:
+	// 헬퍼 함수
 	void ProcessPlayer1Attack(float DeltaTime);
 	void ProcessPlayer2Attack(float DeltaTime);
+	void ResetInputBuffer(bool& bIsInputBuffering, char& PendingKey, float& InputBufferTime);
 
 protected:
 	AAngryCoachCharacter* Player1 = nullptr;
@@ -37,6 +39,18 @@ protected:
 	ACameraActor* GameCamera = nullptr;
 
 	// 카메라 오프셋 (두 캐릭터 중심에서 얼마나 떨어질지) - 미터 단위
-	FVector CameraOffset = FVector(-6.0f, 0.0f, 1.5f);
+	FVector CameraOffset = FVector(-8.0f, 0.0f, 6.f);
 	float CameraLerpSpeed = 5.0f;
+
+	// Player 1
+	bool bIsP1InputBuffering = false;
+	char P1PendingKey = 0;
+	float P1InputBufferTime = 0.0f;
+	// Player2
+	bool bIsP2InputBuffering = false;
+	char P2PendingKey = 0;
+	float P2InputBufferTime = 0.0f;
+	
+	float InputBufferLimit = 0.1f;
+
 };

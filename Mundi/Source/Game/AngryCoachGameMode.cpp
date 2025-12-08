@@ -5,6 +5,7 @@
 #include "World.h"
 #include "CameraComponent.h"
 #include "CameraActor.h"
+#include "FAudioDevice.h"
 #include "PlayerCameraManager.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 
@@ -12,15 +13,22 @@ AAngryCoachGameMode::AAngryCoachGameMode()
 {
 	DefaultPawnClass = nullptr; // 직접 스폰할 거라 비활성화
 	PlayerControllerClass = nullptr; // 직접 생성할 거라 비활성화
+	
+	MainSound = RESOURCE.Load<USound>("Data/Audio/MAINSOUND.wav");
 }
 
 AAngryCoachGameMode::~AAngryCoachGameMode()
 {
+	FAudioDevice::StopAllSounds();
 }
 
 void AAngryCoachGameMode::StartPlay()
 {
 	Super::StartPlay();
+	if (MainSound)
+	{
+		FAudioDevice::PlaySound3D(MainSound, {0,0, 0,}, 0.1f, true);
+	}
 }
 
 APlayerController* AAngryCoachGameMode::Login()
@@ -40,7 +48,8 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 		Player1 = Cast<AAngryCoachCharacter>(P1Actor);
 		if (Player1)
 		{
-			Player1->SetActorLocation(FVector(0, -5, 2));
+			Player1->SetActorLocation(FVector(0, -2.5f, 2));
+			Player1->SetActorRotation(FVector(0, 0, 90));  // Yaw=90: +Y 방향 (Player2를 향함)
 			Player1->PossessedBy(AngryCoachController);
 		}
 	}
@@ -53,7 +62,8 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 		if (Player2)
 		{
 			Player2->bIsCGC = false;
-			Player2->SetActorLocation(FVector(0, 5, 2));
+			Player2->SetActorLocation(FVector(0, 2.5f, 2));
+			Player2->SetActorRotation(FVector(0, 0, -90));  // Yaw=-90: -Y 방향 (Player1을 향함)
 			Player2->PossessedBy(AngryCoachController);
 		}
 	}
@@ -78,5 +88,57 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 	{
 		AngryCoachController->SetControlledCharacters(Player1, Player2);
 		AngryCoachController->SetGameCamera(GameCamera);
+	}
+}
+
+float AAngryCoachGameMode::GetP1HealthPercent() const
+{
+	if (Player1)
+	{
+		return Player1->GetHealthPercent();
+	}
+	return 0.0f;
+}
+
+float AAngryCoachGameMode::GetP2HealthPercent() const
+{
+	if (Player2)
+	{
+		return Player2->GetHealthPercent();
+	}
+	return 0.0f;
+}
+
+bool AAngryCoachGameMode::IsP1Alive() const
+{
+	if (Player1)
+	{
+		return Player1->IsAlive();
+	}
+	return false;
+}
+
+bool AAngryCoachGameMode::IsP2Alive() const
+{
+	if (Player2)
+	{
+		return Player2->IsAlive();
+	}
+	return false;
+}
+
+void AAngryCoachGameMode::ResetPlayersHP()
+{
+	if (Player1)
+	{
+		Player1->Revive();
+		Player1->SetActorLocation(FVector(0, -5, 2));  // 초기 위치로 리셋
+		Player1->SetActorRotation(FVector(0, 0, 0));   // 회전 리셋 (오일러 각도)
+	}
+	if (Player2)
+	{
+		Player2->Revive();
+		Player2->SetActorLocation(FVector(0, 5, 2));   // 초기 위치로 리셋
+		Player2->SetActorRotation(FVector(0, 0, 0));   // 회전 리셋 (오일러 각도)
 	}
 }

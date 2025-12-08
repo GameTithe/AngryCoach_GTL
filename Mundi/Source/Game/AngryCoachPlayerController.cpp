@@ -4,6 +4,8 @@
 #include "CameraComponent.h"
 #include "CameraActor.h"
 #include "InputManager.h"
+#include "PlayerCameraManager.h" // APlayerCameraManager
+#include "World.h"               // GWorld
 #include <cmath>
 
 AAngryCoachPlayerController::AAngryCoachPlayerController()
@@ -23,12 +25,22 @@ void AAngryCoachPlayerController::SetControlledCharacters(AAngryCoachCharacter* 
 void AAngryCoachPlayerController::SetGameCamera(ACameraActor* InCamera)
 {
 	GameCamera = InCamera;
+	GameCamera->SetActorRotation(FVector{0.f, 30.f, 0.f});
 }
 
 void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 {
 	// 부모의 Tick은 호출하지 않음 (기존 WASD 로직 무시)
 	AActor::Tick(DeltaSeconds);
+
+	// 게임플레이 입력이 비활성화된 경우 (UI 상태 등) 캐릭터 입력 처리 스킵
+	UInputManager& InputManager = UInputManager::GetInstance();
+	if (!InputManager.IsGameplayInputEnabled())
+	{
+		// 카메라 위치는 계속 업데이트 (Select 화면에서도 카메라 동작 유지)
+		UpdateCameraPosition(DeltaSeconds);
+		return;
+	}
 
 	// 각 플레이어 입력 처리
 	// 생존한 경우만 입력받음
@@ -50,6 +62,18 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 	if (!Player1) return;	
 
 	UInputManager& InputManager = UInputManager::GetInstance();
+
+	bool bIsTKeyDown = InputManager.IsKeyDown('T');
+	bool bIsYKeyDown = InputManager.IsKeyDown('Y');
+	if (Player1->IsGuard())
+	{
+		if (!bIsTKeyDown || !bIsYKeyDown)
+		{
+			Player1->StopGuard();
+		}
+		return;
+	}
+
 	FVector InputDir = FVector::Zero();
 
 	// WASD 이동
@@ -96,7 +120,7 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		Player1->Jump();
 	}
 
-	if (Player1->CanAttack())
+	if (bIsP1InputBuffering || Player1->CanAttack())
 	{
 		ProcessPlayer1Attack(DeltaTime);
 	}
@@ -107,6 +131,18 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	if (!Player2) return;
 
 	UInputManager& InputManager = UInputManager::GetInstance();
+
+	bool bIsNum1KeyDown = InputManager.IsKeyDown(VK_NUMPAD1);
+	bool bIsNum2KeyDown = InputManager.IsKeyDown(VK_NUMPAD2);
+	if (Player2->IsGuard())
+	{
+		if (!bIsNum1KeyDown || !bIsNum2KeyDown)
+		{
+			Player2->StopGuard();
+		}
+		return;
+	}
+	
 	FVector InputDir = FVector::Zero();
 
 	// 화살표 이동
@@ -141,7 +177,7 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 		Player2->Jump();
 	}
 
-	if (Player2->CanAttack())
+	if (bIsP2InputBuffering || Player2->CanAttack())
 	{
 		ProcessPlayer2Attack(DeltaTime);
 	}
@@ -158,7 +194,7 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 
 	// 두 캐릭터 사이 거리에 따라 카메라 거리 조절 (미터 단위)
 	float Distance = FVector::Distance(P1Pos, P2Pos);
-	float ZoomFactor = FMath::Max(1.0f, Distance / 5.0f);  // 5m 이상 떨어지면 줌아웃
+	float ZoomFactor = FMath::Max(1.0f, Distance / 10.0f);  // 10m 이상 떨어지면 줌아웃
 
 	FVector TargetCameraPos = CenterPos + CameraOffset * ZoomFactor;
 
@@ -166,40 +202,216 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 	FVector CurrentPos = GameCamera->GetActorLocation();
 	FVector NewPos = FMath::Lerp(CurrentPos, TargetCameraPos, CameraLerpSpeed * DeltaTime);
 	GameCamera->SetActorLocation(NewPos);
+
+	// ===== 포스트 프로세싱 적용  =====
+	APlayerCameraManager* PlayerCameraManager = GWorld->GetPlayerCameraManager();
+	if (PlayerCameraManager)
+	{
+		// 1. 동적 피사계 심도 (DOF)
+		float DistToP1 = FVector::Distance(NewPos, P1Pos);
+		float DistToP2 = FVector::Distance(NewPos, P2Pos);
+		
+		float MinPlayerDistToCam = FMath::Min(DistToP1, DistToP2);
+		float MaxPlayerDistToCam = FMath::Max(DistToP1, DistToP2);
+
+		// 초점 거리는 두 플레이어까지의 평균 거리로 설정
+		float DofFocalDistance = (MinPlayerDistToCam + MaxPlayerDistToCam) / 2.0f;
+		// 초점 영역은 두 플레이어의 거리를 커버하도록 설정 (최소값 보장)
+		float DofFocalRegion = FMath::Max(5.f, (MaxPlayerDistToCam - MinPlayerDistToCam) * 2.f); // 1.2f는 약간의 여유
+
+		float DofNearTransition = 0.1f;
+		float DofFarTransition = 0.5f;
+
+		// ZoomFactor에 따라 블러 강도 조절 (멀리 떨어지면 블러 약화, 가까우면 강화)
+		float DofMaxNearBlur = 2.0f / FMath::Max(1.0f, ZoomFactor);
+		float DofMaxFarBlur = 2.0f / FMath::Max(1.0f, ZoomFactor);
+		
+		PlayerCameraManager->StartDOF(
+			DofFocalDistance, DofFocalRegion,
+			DofNearTransition, DofFarTransition,
+			DofMaxNearBlur, DofMaxFarBlur,
+			0 // Priority
+		);
+
+		// 2. 동적 비네트 (Vignette)
+		float CameraMovementDistance = (NewPos - CurrentPos).Size();
+		float VignetteIntensity = FMath::Clamp(CameraMovementDistance / 0.1f, 0.0f, 0.8f);  
+		float VignetteRadius = 0.5f;
+		float VignetteSoftness = 1.f;
+		float VignetteRoundness = 2.0f;
+		FLinearColor VignetteColor = FLinearColor(0.0f, 0.0f, 0.0f, 1.0f); // 검은색 비네트
+
+		PlayerCameraManager->StartVignette(
+			0.5f, // Duration
+			VignetteRadius, VignetteSoftness,
+			VignetteIntensity, VignetteRoundness,
+			VignetteColor,
+			0 // Priority
+		);
+	}
 }
 
 void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
 {
 	UInputManager& InputManager = UInputManager::GetInstance();
-	// T - 약공, Y - 강공, U - 스킬
-	if (InputManager.IsKeyPressed('T'))
-	{
-		Player1->OnAttackInput(EAttackInput::Light);
-	}
-	if (InputManager.IsKeyPressed('Y'))
-	{
-		Player1->OnAttackInput(EAttackInput::Heavy);
-	}
+
+	bool bIsTKeyDown = InputManager.IsKeyDown('T');
+	bool bIsYKeyDown = InputManager.IsKeyDown('Y');
+
+	// 스킬은 즉발로 처리
 	if (InputManager.IsKeyPressed('U'))
 	{
 		Player1->OnAttackInput(EAttackInput::Skill);
+		ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
+		return;
+	}
+
+	if (bIsP1InputBuffering)
+	{
+		P1InputBufferTime += DeltaTime;
+		if (P1PendingKey == 'T' && bIsYKeyDown || P1PendingKey == 'Y' && bIsTKeyDown)
+		{
+			Player1->DoGuard();
+			ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
+
+			return;
+		}
+
+		if (P1InputBufferTime >= InputBufferLimit)
+		{
+			// T - 약공, Y - 강공, U - 스킬
+			if (P1PendingKey == 'T')
+			{
+				Player1->OnAttackInput(EAttackInput::Light);
+			}
+			else if (P1PendingKey == 'Y')
+			{
+				Player1->OnAttackInput(EAttackInput::Heavy);
+			}			
+
+			ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
+		}
+
+		// 키를 눌렀다 바로 떼면 버퍼를 기다리지 않고 바로 공격
+		if (P1PendingKey == 'T' && !bIsTKeyDown)
+		{
+			Player1->OnAttackInput(EAttackInput::Light);
+			bIsP1InputBuffering = false;
+		}
+		else if (P1PendingKey == 'Y' && !bIsYKeyDown)
+		{
+			Player1->OnAttackInput(EAttackInput::Heavy);
+			bIsP1InputBuffering = false;
+		}
+	}
+	// 새로운 입력 발생 (대기 상태)
+	else
+	{
+		if (bIsTKeyDown && bIsYKeyDown)
+		{
+			Player1->DoGuard();
+		}
+		else if(bIsTKeyDown)
+		{
+			bIsP1InputBuffering = true;
+			P1InputBufferTime = 0.0f;
+			P1PendingKey = 'T';
+		}
+		else if (bIsYKeyDown)
+		{
+			bIsP1InputBuffering = true;
+			P1InputBufferTime = 0.0f;
+			P1PendingKey = 'Y';
+		}
 	}
 }
 
 void AAngryCoachPlayerController::ProcessPlayer2Attack(float DeltaTime)
 {
 	UInputManager& InputManager = UInputManager::GetInstance();
-	// Numpad1 - 약공, Numpad2 - 강공, Numpad3 - 스킬
-	if (InputManager.IsKeyPressed(VK_NUMPAD1))
+	
+	bool bIsNum1KeyDown = InputManager.IsKeyDown(VK_NUMPAD1);
+	bool bIsNum2KeyDown = InputManager.IsKeyDown(VK_NUMPAD2);
+
+	// 테스트용
+	if (InputManager.IsKeyPressed('M'))
 	{
-		Player2->OnAttackInput(EAttackInput::Light);
+		Player2->OnAttackInput(EAttackInput::Skill);
+		ResetInputBuffer(bIsP2InputBuffering, P2PendingKey, P2InputBufferTime);
+		return;
 	}
-	if (InputManager.IsKeyPressed(VK_NUMPAD2))
-	{
-		Player2->OnAttackInput(EAttackInput::Heavy);
-	}
+
+	// 스킬은 즉발로 처리
 	if (InputManager.IsKeyPressed(VK_NUMPAD3))
 	{
 		Player2->OnAttackInput(EAttackInput::Skill);
+		ResetInputBuffer(bIsP2InputBuffering, P2PendingKey, P2InputBufferTime);
+		return;
 	}
+
+	if (bIsP2InputBuffering)
+	{
+		P2InputBufferTime += DeltaTime;
+		if (P2PendingKey == VK_NUMPAD1 && bIsNum2KeyDown || P2PendingKey == VK_NUMPAD2 && bIsNum1KeyDown)
+		{
+			Player2->DoGuard();
+			ResetInputBuffer(bIsP2InputBuffering, P2PendingKey, P2InputBufferTime);
+
+			return;
+		}
+
+		if (P2InputBufferTime >= InputBufferLimit)
+		{
+			// Numpad1 - 약공, Numpad2 - 강공, Numpad3 - 스킬
+			if (P2PendingKey == VK_NUMPAD1)
+			{
+				Player2->OnAttackInput(EAttackInput::Light);
+			}
+			else if (P2PendingKey == VK_NUMPAD2)
+			{
+				Player2->OnAttackInput(EAttackInput::Heavy);
+			}			
+
+			ResetInputBuffer(bIsP2InputBuffering, P2PendingKey, P2InputBufferTime);
+		}
+
+		// 키를 눌렀다 바로 떼면 버퍼를 기다리지 않고 바로 공격
+		if (P2PendingKey == VK_NUMPAD1 && !bIsNum1KeyDown)
+		{
+			Player2->OnAttackInput(EAttackInput::Light);
+			bIsP2InputBuffering = false;
+		}
+		else if (P2PendingKey == VK_NUMPAD2 && !bIsNum2KeyDown)
+		{
+			Player2->OnAttackInput(EAttackInput::Heavy);
+			bIsP2InputBuffering = false;
+		}
+	}
+	// 새로운 입력 발생 (대기 상태)
+	else
+	{
+		if (bIsNum1KeyDown && bIsNum2KeyDown)
+		{
+			Player2->DoGuard();
+		}
+		else if(bIsNum1KeyDown)
+		{
+			bIsP2InputBuffering = true;
+			P2InputBufferTime = 0.0f;
+			P2PendingKey = VK_NUMPAD1;
+		}
+		else if (bIsNum2KeyDown)
+		{
+			bIsP2InputBuffering = true;
+			P2InputBufferTime = 0.0f;
+			P2PendingKey = VK_NUMPAD2;
+		}
+	}
+}
+
+void AAngryCoachPlayerController::ResetInputBuffer(bool& bIsInputBuffering, char& PendingKey, float& InputBufferTime)
+{
+	bIsInputBuffering = false;
+	PendingKey = 0;
+	InputBufferTime = 0.0f;
 }

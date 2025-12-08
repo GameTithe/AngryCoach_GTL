@@ -247,7 +247,8 @@ void ACharacter::UpdateCharacterState(float CurrentSpeedSq)
 {
 	// 높은 우선 순위 상태면 return
 	if (CurrentState == ECharacterState::Attacking ||
-		CurrentState == ECharacterState::Dead)
+		CurrentState == ECharacterState::Dead ||
+		CurrentState != ECharacterState::Damaged)
 	{
 		return;
 	}
@@ -274,4 +275,18 @@ bool ACharacter::CanAttack()
 
 void ACharacter::HitReation()
 {
+}
+
+void ACharacter::Revive()
+{
+	// 체력/상태 리셋
+	CurrentHealth = MaxHealth;
+	CurrentState = ECharacterState::Idle;
+
+	// Ragdoll 비활성화 및 포즈 리셋
+	if (SkeletalMeshComp)
+	{
+		SkeletalMeshComp->SetPhysicsAnimationState(EPhysicsAnimationState::AnimationDriven);
+		SkeletalMeshComp->ResetToBindPose();
+	}
 }

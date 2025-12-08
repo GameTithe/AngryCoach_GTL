@@ -8,6 +8,7 @@
 #include "AccessoryActor.h"
 #include "GorillaAccessoryActor.h"
 #include "CapsuleComponent.h"
+#include "CharacterMovementComponent.h"
 #include "GameplayStatics.h"
 #include "KnifeAccessoryActor.h"
 #include "PunchAccessoryActor.h"
@@ -20,11 +21,26 @@
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 #include "CloakAccessoryActor.h" 
 #include "FAudioDevice.h"
+#include "PlayerCameraManager.h"
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
 	// SkillComponent 생성
 	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
+	GuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
+	GorillaGuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
+	if (GuardMontage)
+	{
+		GuardMontage->bLoop = true;
+	}
+	if (GorillaGuardMontage)
+	{
+		GorillaGuardMontage->bLoop = true;
+	}
+	
+	Hit1Sound = RESOURCE.Load<USound>("Data/Audio/HIT1.wav");
+	Hit2Sound = RESOURCE.Load<USound>("Data/Audio/HIT2.wav");
+	SkillSound = RESOURCE.Load<USound>("Data/Audio/SKILL.wav");
 	DieSound = RESOURCE.Load<USound>("Data/Audio/Die.wav");
 }
 
@@ -226,6 +242,26 @@ bool AAngryCoachCharacter::IsPlayingMontage() const
 	return AnimInstance->IsPlayingMontage();
 }
 
+bool AAngryCoachCharacter::PlayMontageSection(UAnimMontage* Montage, const FString& SectionName)
+{
+	if (!Montage->HasSections())
+	{
+		UE_LOG("몽타주에 섹션이 없습니다.");
+		return false;
+	}
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!MeshComp) return false ;
+	
+	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		return false;
+	}
+
+	return AnimInstance->JumpToSection(SectionName);	
+}
+
 // ===== 악세서리 =====
 
 void AAngryCoachCharacter::EquipAccessory(AAccessoryActor* Accessory)
@@ -259,6 +295,9 @@ void AAngryCoachCharacter::UnequipAccessory()
 	{
 		SkillComponent->SetDefaultSkills();
 	}
+
+	// 기존 악세서리 액터 파괴
+	CurrentAccessory->Destroy();
 
 	CurrentAccessory = nullptr;
 }
@@ -313,6 +352,10 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 			 * Skil별 데미지 적용
 			 */
 			BaseDamage = 15.0f;
+			if (SkillSound)
+			{
+				FAudioDevice::PlaySoundAtLocationOneShot(SkillSound, GetActorLocation());
+			}
 			break;
 		}
 	}
@@ -364,7 +407,8 @@ void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveC
 
 void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
-	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 5.0f, this, HitResult);
+	
+	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, BaseDamage, this, HitResult);
 	// UE_LOG("Owner : %p, damaged actor : %p", this, HitResult.HitActor);
 	// UE_LOG("Damage : %f", AppliedDamage);
 }
@@ -379,18 +423,59 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
 	float ActualDamage = DamageAmount;
 
-	// 오버킬 처리
-	// 남은 체력보다 데미지가 크면 남은 체력이 실질적인 데미지
-	ActualDamage = FMath::Min(ActualDamage, CurrentHealth);
-	CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
+	GWorld->GetPlayerCameraManager()->StartCameraShake(
+		0.3, 0.3, 0.3, DamageAmount
+		);
+
+	if (ActualDamage < 10.f)
+	{
+		if (Hit1Sound)
+		{
+			FAudioDevice::PlaySoundAtLocationOneShot(Hit1Sound, GetActorLocation());
+		}
+	}
+	else
+	{
+		if (Hit2Sound)
+		{
+			FAudioDevice::PlaySoundAtLocationOneShot(Hit2Sound, GetActorLocation());
+		}
+	}
+
+	if (!IsGuard())
+	{
+		// 오버킬 처리
+		// 남은 체력보다 데미지가 크면 남은 체력이 실질적인 데미지
+		ActualDamage = FMath::Min(ActualDamage, CurrentHealth);
+		CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
+		HitReation();
+	}
+	else if (bCanPlayHitReactionMontage)
+	{
+		ActualDamage = 0.0f;
+		FVector KnockbackDirection = GetActorLocation() - HitResult.ImpactPoint;
+		KnockbackDirection.Z = 0.0f;
+		if (KnockbackDirection.IsZero())
+		{
+			KnockbackDirection = -GetActorForward();
+		}
+		else
+		{
+			KnockbackDirection.Normalize();
+		}
+
+		float KnockbackPower = 10.0f;
+		CharacterMovement->LaunchCharacter(KnockbackDirection * KnockbackPower, true, false);
+
+		// float KnockbackDistance = 0.2f;
+		// RootComponent->AddWorldOffset(KnockbackDirection);
+	}
 
 	if (CurrentHealth <= 0.0f)
 	{
 		CurrentState = ECharacterState::Dead;
 		Die();
-	}
-	
-	HitReation();
+	}	
 	
 	UE_LOG("[TakeDamage] Owner %p, insti %p cur %f", this, Instigator, CurrentHealth);
 	return ActualDamage;
@@ -398,7 +483,8 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 
 void AAngryCoachCharacter::HitReation()
 {
-	if (!HitReationMontage)
+	// bCanPlayHitReactionMontage가 true이고 HitReationMontage가 유효할 때만 몽타주 재생
+	if (!bCanPlayHitReactionMontage || !HitReationMontage)
 	{
 		return;
 	}
@@ -420,10 +506,60 @@ void AAngryCoachCharacter::ClearState()
 	CurrentState = ECharacterState::Idle;
 }
 
+void AAngryCoachCharacter::DoGuard()
+{
+	if (!GuardMontage)
+	{
+		return;
+	}
+
+	// 피격 중, 공격 중, 점프 중에는 가드 불가능
+	if (CurrentState == ECharacterState::Damaged ||
+		CurrentState == ECharacterState::Attacking ||
+		CurrentState == ECharacterState::Jumping)
+	{
+		return;
+	}
+
+	SetCurrentState(ECharacterState::Guard);
+	if (bCanPlayHitReactionMontage)
+	{
+		PlayMontage(GuardMontage);
+	}
+	else
+	{
+		PlayMontage(GorillaGuardMontage);
+	}
+}
+
+void AAngryCoachCharacter::StopGuard()
+{
+	if (!GuardMontage)
+	{
+		return;
+	}
+
+	SetCurrentState(ECharacterState::Idle);
+	StopCurrentMontage();
+}
+
 void AAngryCoachCharacter::DelegateBindToCachedShape()
 {
 	CachedAttackShape->OnComponentHit.AddDynamic(this, &AAngryCoachCharacter::OnHit);
 	UE_LOG("Delegate Bind");
+}
+
+void AAngryCoachCharacter::Revive()
+{
+	// 부모 클래스의 Revive 호출 (체력/상태 리셋, Ragdoll 비활성화)
+	Super::Revive();
+
+	// CapsuleComponent collision 복원 (기본값으로)
+	// 참고: Character 생성자에서 SetBlockComponent(false), SetGenerateOverlapEvents(false)로 설정됨
+	// Revive에서는 필요에 따라 다시 설정
+	// CapsuleComponent는 기본적으로 collision이 꺼져있으므로 그대로 둠
+
+	UE_LOG("[AngryCoachCharacter] Revived! HP=%f", CurrentHealth);
 }
 
 void AAngryCoachCharacter::Die()

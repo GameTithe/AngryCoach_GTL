@@ -238,9 +238,12 @@ void UProgressBarWidget::Render(ID2D1DeviceContext* Context)
     }
     else
     {
-        // 색상 모드
+        // 색상 모드 (위젯 Opacity 적용)
+        D2D1_COLOR_F ModifiedBgColor = BackgroundColor;
+        ModifiedBgColor.a *= Opacity;  // 위젯 Opacity 적용
+
         ID2D1SolidColorBrush* BrushBg = nullptr;
-        Context->CreateSolidColorBrush(BackgroundColor, &BrushBg);
+        Context->CreateSolidColorBrush(ModifiedBgColor, &BrushBg);
         if (BrushBg)
         {
             Context->FillRectangle(BgRect, BrushBg);
@@ -290,8 +293,9 @@ void UProgressBarWidget::Render(ID2D1DeviceContext* Context)
     }
     else if (!CurrentFgBitmap && ClampedProgress > 0.0f)
     {
-        // 색상 모드
+        // 색상 모드 (위젯 Opacity 적용)
         D2D1_COLOR_F CurrentFgColor = bIsLow ? LowColor : ForegroundColor;
+        CurrentFgColor.a *= Opacity;  // 위젯 Opacity 적용
 
         ID2D1SolidColorBrush* BrushFg = nullptr;
         Context->CreateSolidColorBrush(CurrentFgColor, &BrushFg);
@@ -305,8 +309,11 @@ void UProgressBarWidget::Render(ID2D1DeviceContext* Context)
     // === 테두리 그리기 ===
     if (BorderWidth > 0.0f)
     {
+        D2D1_COLOR_F ModifiedBorderColor = BorderColor;
+        ModifiedBorderColor.a *= Opacity;  // 위젯 Opacity 적용
+
         ID2D1SolidColorBrush* BrushBorder = nullptr;
-        Context->CreateSolidColorBrush(BorderColor, &BrushBorder);
+        Context->CreateSolidColorBrush(ModifiedBorderColor, &BrushBorder);
         if (BrushBorder)
         {
             Context->DrawRectangle(BgRect, BrushBorder, BorderWidth);

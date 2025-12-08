@@ -93,8 +93,6 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 	{
 		// 고릴라 애셋 경로 설정 및 텍스처 로드
 		// 참고: 이 애셋들은 현재 프로젝트에 존재하지 않으므로, 실제 파일 경로로 수정해야 합니다.
-		GorillaSkeletalMeshPath = "Data/FBX/Player/Animation/Gorilla/Gorilla.fbx";
-	
 		// 고릴라 텍스처 로드 (생성자에서 한 번만 로드)
 		GorillaSkinTexture = RESOURCE.Load<UTexture>(
 			(OwningCharacter->bIsCGC ?
@@ -102,14 +100,13 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 		("Data/FBX/Player/Animation/Gorilla/Texture/BSHRilla.png"))
 			);
 		if (!GorillaSkinTexture) UE_LOG("[AGorillaAccessoryActor] Failed to load GorillaSkinTexture.");
-	
+		
 		GorillaSkinNormal = RESOURCE.Load<UTexture>(
 			(OwningCharacter->bIsCGC ?
 		("Data/FBX/Player/Animation/Gorilla/Texture/ICGRillaNOrmal.png") :
 		("Data/FBX/Player/Animation/Gorilla/Texture/BSHRillaNOrmal.png"))
 			);
 		if (!GorillaSkinNormal) UE_LOG("[AGorillaAccessoryActor] Failed to load GorillaSkinNormal.");
-
 		if (!GorillaAnimGraph)
 		{
 			const FString GorillaAnimGraphPath = "Data/Graphs/Gorilla.graph";
@@ -139,21 +136,27 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 		("Data/FBX/Player/Textures/BSH.png"))
 			);
 		if (!DefaultSkinTexture) UE_LOG("[AGorillaAccessoryActor] Failed to load DefaultSkinTexture.");
-
+		
 		DefaultSkinNormal = RESOURCE.Load<UTexture>(
 			(OwningCharacter->bIsCGC ?
 		("Data/FBX/Player/Textures/ICG_NORMAL.png") :
 		("Data/FBX/Player/Textures/BSH_NORMAL.png"))
 			);
 		if (!DefaultSkinNormal) UE_LOG("[AGorillaAccessoryActor] Failed to load DefaultSkinNormal.");
-
+		
 		UE_LOG("[AGorillaAccessoryActor] Stored default character assets.");
 	}
 	// --- --- --- --- --- --- --- --- --- --- ---
-
+	
 	// --- 토글 로직 ---
 	bIsGorillaFormActive = !bIsGorillaFormActive; // 상태 먼저 전환
 
+	AAngryCoachCharacter* AngryCoachCharacter = Cast<AAngryCoachCharacter>(Character); // 캐스팅
+	if (!AngryCoachCharacter)
+	{
+		UE_LOG("[AGorillaAccessoryActor] Character is not AAngryCoachCharacter!");
+		return;
+	}
 	if (bIsGorillaFormActive) // 고릴라 형태로 변경
 	{
 		UE_LOG("[AGorillaAccessoryActor] Switching to Gorilla Form.");
@@ -162,6 +165,9 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 		CharacterMesh->SetPhysicsAsset(GorillaPhysicsAsset);
 		if (GorillaSkinTexture) CharacterMesh->SetMaterialTextureByUser(1, EMaterialTextureSlot::Diffuse, GorillaSkinTexture);
 		if (GorillaSkinNormal) CharacterMesh->SetMaterialTextureByUser(1, EMaterialTextureSlot::Normal, GorillaSkinNormal);
+		// HitReactionMontage 재생 여부 플래그를 false로 설정
+		AngryCoachCharacter->bCanPlayHitReactionMontage = false;
+		UE_LOG("[AGorillaAccessoryActor] Character HitReactionMontage disabled for Gorilla Form.");
 	}
 	else // 원래 형태로 복원
 	{
@@ -171,6 +177,9 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 		CharacterMesh->SetPhysicsAsset(DefaultPhysicsAsset);
 		if (DefaultSkinTexture) CharacterMesh->SetMaterialTextureByUser(1, EMaterialTextureSlot::Diffuse, DefaultSkinTexture);
 		if (DefaultSkinNormal) CharacterMesh->SetMaterialTextureByUser(1, EMaterialTextureSlot::Normal, DefaultSkinNormal);
+		// HitReactionMontage 재생 여부 플래그를 true로 설정
+		AngryCoachCharacter->bCanPlayHitReactionMontage = true;
+		UE_LOG("[AGorillaAccessoryActor] Character HitReactionMontage enabled for Original Form.");
 	}
 	// --- --- --- ---
 }
