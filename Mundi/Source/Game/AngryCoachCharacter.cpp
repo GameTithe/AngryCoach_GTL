@@ -8,6 +8,7 @@
 #include "AccessoryActor.h"
 #include "GorillaAccessoryActor.h"
 #include "CapsuleComponent.h"
+#include "CharacterMovementComponent.h"
 #include "GameplayStatics.h"
 #include "KnifeAccessoryActor.h"
 #include "PunchAccessoryActor.h"
@@ -454,8 +455,11 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 			KnockbackDirection.Normalize();
 		}
 
-		float KnockbackDistance = 0.5f;
-		RootComponent->AddWorldOffset(KnockbackDirection * KnockbackDistance);
+		float KnockbackPower = 10.0f;
+		CharacterMovement->LaunchCharacter(KnockbackDirection * KnockbackPower, true, false);
+
+		// float KnockbackDistance = 0.2f;
+		// RootComponent->AddWorldOffset(KnockbackDirection);
 	}
 
 	if (CurrentHealth <= 0.0f)
