@@ -58,7 +58,7 @@ public:
 
 	void SetCurrentState(ECharacterState NewState) { CurrentState = NewState; }
 	ECharacterState GetCurrentState() const { return CurrentState; }
-	bool IsAlive() const { return CurrentState != ECharacterState::Dead; }
+	bool IsAlive() const { return CurrentHealth > 0.0f; }
 	float GetHealthPercent() const;
 	void UpdateCharacterState(float CurrentSpeedSq = 0.0f);
 	bool CanAttack();

@@ -294,6 +294,8 @@ public:
 
     int32 GetBoneIndexByName(const FName& BoneName) const;
 
+    void SetRagDollEnabled(bool bEnabled);
+
     void ChangePhysicsState();
 
     /////////////////////////////////////////////////////////////
