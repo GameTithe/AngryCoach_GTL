@@ -809,6 +809,7 @@ function OnCharacterSelectStart()
 
         -- 초기 UI 상태 설정
         UpdateAccessoryUI(canvas)
+        UpdateReadyUI(canvas)  -- Ready 위젯 초기 상태 (둘 다 false이므로 숨김)
         canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
 
         -- 초기 악세사리 미리보기 장착
@@ -854,20 +855,15 @@ function UpdateAccessoryUI(canvas)
 end
 
 -- Ready 상태 UI 업데이트
+-- P1_Ready, P2_Ready 위젯의 visible = ready 상태
 function UpdateReadyUI(canvas)
     if not canvas then return end
 
-    -- P1 Ready 체크 표시 (SubUV Frame 1 = 체크됨)
-    canvas:SetWidgetVisible("p1_ready_check", p1Ready)
-    if p1Ready then
-        canvas:SetTextureSubUVFrame("p1_ready_check", 1)
-    end
+    -- P1 Ready 표시 (visible = p1Ready)
+    canvas:SetWidgetVisible("P1_Ready", p1Ready)
 
-    -- P2 Ready 체크 표시
-    canvas:SetWidgetVisible("p2_ready_check", p2Ready)
-    if p2Ready then
-        canvas:SetTextureSubUVFrame("p2_ready_check", 1)
-    end
+    -- P2 Ready 표시 (visible = p2Ready)
+    canvas:SetWidgetVisible("P2_Ready", p2Ready)
 
     -- 둘 다 Ready면 라운드 선택 화살표 표시 (인덱스에 따라)
     if p1Ready and p2Ready then
@@ -959,9 +955,13 @@ function SelectionInputLoop()
             end
 
             -- P1 Ready: T키 (쿨다운 적용)
-            if p1ReadyCooldown <= 0 and InputManager:IsKeyPressed("T") then
+            local tKeyPressed = InputManager:IsKeyPressed("T")
+            local numpad1Pressed = InputManager:IsKeyPressed(97)
+
+            if p1ReadyCooldown <= 0 and tKeyPressed then
                 p1Ready = not p1Ready
-                print("[GameMode] P1 Ready: " .. tostring(p1Ready))
+                print("[GameMode] P1 Ready toggled by T key: " .. tostring(p1Ready))
+                print("[GameMode]   - T pressed: " .. tostring(tKeyPressed) .. ", Numpad1 pressed: " .. tostring(numpad1Pressed))
                 UpdateReadyUI(canvas)
                 p1ReadyCooldown = READY_COOLDOWN_FRAMES
 
@@ -973,9 +973,10 @@ function SelectionInputLoop()
             end
 
             -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97, 쿨다운 적용)
-            if p2ReadyCooldown <= 0 and InputManager:IsKeyPressed(97) then
+            if p2ReadyCooldown <= 0 and numpad1Pressed then
                 p2Ready = not p2Ready
-                print("[GameMode] P2 Ready: " .. tostring(p2Ready))
+                print("[GameMode] P2 Ready toggled by Numpad1: " .. tostring(p2Ready))
+                print("[GameMode]   - T pressed: " .. tostring(tKeyPressed) .. ", Numpad1 pressed: " .. tostring(numpad1Pressed))
                 UpdateReadyUI(canvas)
                 p2ReadyCooldown = READY_COOLDOWN_FRAMES
 

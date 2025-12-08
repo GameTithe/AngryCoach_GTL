@@ -36,6 +36,10 @@ public:
     float Width = 0.0f;     // 0이면 뷰포트 전체
     float Height = 0.0f;
 
+    // === 디자인 해상도 (런타임 리사이즈용) ===
+    float DesignWidth = 1920.0f;
+    float DesignHeight = 1080.0f;
+
     // === 렌더링 순서 (캔버스 레벨) ===
     int32_t ZOrder = 0;     // 낮을수록 먼저 그려짐 (뒤에)
 
@@ -334,6 +338,13 @@ public:
     void SetSize(float W, float H) { Width = W; Height = H; }
     void SetVisible(bool bVis) { bVisible = bVis; }
     void SetZOrder(int32_t Z) { ZOrder = Z; }
+
+    /**
+     * @brief 뷰포트 크기 변경 시 모든 위젯 좌표/크기 재계산
+     * @param NewViewportWidth 새 뷰포트 너비
+     * @param NewViewportHeight 새 뷰포트 높이
+     */
+    void RecalculateWidgetScales(float NewViewportWidth, float NewViewportHeight);
 
     // ============================================
     // 업데이트 및 렌더링

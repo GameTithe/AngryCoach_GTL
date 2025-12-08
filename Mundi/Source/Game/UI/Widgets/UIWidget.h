@@ -159,11 +159,17 @@ public:
     // 위젯 식별자 (Lua에서 참조용)
     std::string Name;
 
-    // 위치 및 크기
+    // 위치 및 크기 (스케일링된 실제 값)
     float X = 0.0f;
     float Y = 0.0f;
     float Width = 100.0f;
     float Height = 30.0f;
+
+    // 디자인 해상도 기준 좌표/크기 (런타임 리사이즈용)
+    float DesignX = 0.0f;
+    float DesignY = 0.0f;
+    float DesignWidth = 100.0f;
+    float DesignHeight = 30.0f;
 
     // 회전 (도 단위, 중심점 기준)
     float Rotation = 0.0f;

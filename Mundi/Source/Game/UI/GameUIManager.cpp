@@ -192,10 +192,25 @@ void UGameUIManager::Shutdown()
 
 void UGameUIManager::SetViewport(float X, float Y, float Width, float Height)
 {
+    // 뷰포트 크기 변경 감지
+    bool bSizeChanged = (ViewportWidth != Width || ViewportHeight != Height);
+
     ViewportX = X;
     ViewportY = Y;
     ViewportWidth = Width;
     ViewportHeight = Height;
+
+    // 뷰포트 크기가 변경되면 모든 캔버스의 위젯 좌표/크기 재계산
+    if (bSizeChanged && Width > 0 && Height > 0)
+    {
+        for (auto& Pair : Canvases)
+        {
+            if (Pair.second)
+            {
+                Pair.second->RecalculateWidgetScales(Width, Height);
+            }
+        }
+    }
 }
 
 void UGameUIManager::ReleaseD2DResources()
@@ -459,6 +474,10 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
         return nullptr;
     }
 
+    // 캔버스에 디자인 해상도 저장 (런타임 리사이즈용)
+    canvas->DesignWidth = designWidth;
+    canvas->DesignHeight = designHeight;
+
     // 위젯 배열 읽기
     JSON widgetsArray;
     if (!FJsonSerializer::ReadArray(doc, "widgets", widgetsArray, JSON(), false))
@@ -647,9 +666,15 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
         // Z-Order 설정
         canvas->SetWidgetZOrder(widgetName.c_str(), zOrder);
 
-        // Animation 설정
+        // Animation 설정 및 디자인 좌표 저장
         if (UUIWidget* widget = canvas->FindWidget(widgetName.c_str()))
         {
+            // 디자인 좌표 저장 (런타임 리사이즈용)
+            widget->DesignX = rawX;
+            widget->DesignY = rawY;
+            widget->DesignWidth = rawW;
+            widget->DesignHeight = rawH;
+
             // Enter Animation
             JSON enterAnimObj;
             if (FJsonSerializer::ReadObject(widgetObj, "enterAnim", enterAnimObj, JSON(), false))

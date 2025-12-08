@@ -944,3 +944,32 @@ void UUICanvas::Render(ID2D1DeviceContext* D2DContext, float ViewportOffsetX, fl
     // Transform 복원
     D2DContext->SetTransform(OriginalTransform);
 }
+
+void UUICanvas::RecalculateWidgetScales(float NewViewportWidth, float NewViewportHeight)
+{
+    // 디자인 해상도 대비 새 뷰포트의 스케일 비율 계산
+    float scaleX = (DesignWidth > 0) ? NewViewportWidth / DesignWidth : 1.0f;
+    float scaleY = (DesignHeight > 0) ? NewViewportHeight / DesignHeight : 1.0f;
+
+    // 모든 위젯의 좌표/크기를 재계산
+    for (auto& Pair : Widgets)
+    {
+        UUIWidget* Widget = Pair.second.get();
+        if (!Widget) continue;
+
+        // 디자인 좌표/크기에서 새 스케일 적용
+        Widget->X = Widget->DesignX * scaleX;
+        Widget->Y = Widget->DesignY * scaleY;
+        Widget->Width = Widget->DesignWidth * scaleX;
+        Widget->Height = Widget->DesignHeight * scaleY;
+
+        // Original 값도 업데이트 (애니메이션 기준점)
+        if (Widget->bOriginalCaptured)
+        {
+            Widget->OriginalX = Widget->X;
+            Widget->OriginalY = Widget->Y;
+            Widget->OriginalWidth = Widget->Width;
+            Widget->OriginalHeight = Widget->Height;
+        }
+    }
+}

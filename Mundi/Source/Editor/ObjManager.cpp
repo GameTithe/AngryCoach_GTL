@@ -139,18 +139,42 @@ bool GetMtlDependencies(const FString& ObjPath, TArray<FWideString>& OutMtlFileP
 	}
 
 	fs::path BaseDir = fs::path(ObjPath).parent_path();
-	FString Line;
 
+	// 성능 최적화: 버퍼 미리 예약 (재할당 방지)
+	FString Line;
+	Line.reserve(512);
+
+	// mtllib는 보통 파일 앞부분에 있음. 정점/면 데이터 시작 후에는 더 이상 찾을 필요 없음
 	while (std::getline(InFile, Line))
 	{
-		// 라인 앞뒤의 공백을 제거하여 안정성을 높입니다.
-		Line.erase(0, Line.find_first_not_of(" \t\r\n"));
-		Line.erase(Line.find_last_not_of(" \t\r\n") + 1);
+		// 빈 줄 스킵 (trim 전에 체크)
+		if (Line.empty()) continue;
 
-		if (Line.rfind("mtllib ", 0) == 0) // "mtllib "으로 시작하는지 확인
+		// 라인 앞의 공백만 제거 (뒤쪽은 mtllib 경로에 영향 없음)
+		size_t firstNonSpace = Line.find_first_not_of(" \t\r\n");
+		if (firstNonSpace == FString::npos) continue;
+
+		char firstChar = Line[firstNonSpace];
+
+		// 정점 데이터(v, vt, vn) 또는 면 데이터(f)가 시작되면 mtllib 탐색 종료
+		// mtllib는 항상 이들보다 앞에 선언됨
+		if (firstChar == 'v' || firstChar == 'f')
+		{
+			break;  // 더 이상 mtllib가 나올 수 없음
+		}
+
+		// mtllib 체크 (앞 공백 제거 후)
+		if (Line.compare(firstNonSpace, 7, "mtllib ") == 0)
 		{
 			// "mtllib " 다음의 모든 문자열을 경로로 추출합니다.
-			FString MtlFileName = Line.substr(7);
+			FString MtlFileName = Line.substr(firstNonSpace + 7);
+			// 뒤쪽 공백 제거
+			size_t lastNonSpace = MtlFileName.find_last_not_of(" \t\r\n");
+			if (lastNonSpace != FString::npos)
+			{
+				MtlFileName = MtlFileName.substr(0, lastNonSpace + 1);
+			}
+
 			if (!MtlFileName.empty())
 			{
 				fs::path FullPath = fs::weakly_canonical(BaseDir / MtlFileName);
