@@ -93,10 +93,13 @@ void USkinnedMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle
 void USkinnedMeshComponent::DuplicateSubObjects()
 {
    Super::DuplicateSubObjects();
-   SkeletalMesh->CreateCPUSkinnedVertexBuffer(&CPUSkinnedVertexBuffer);
-   SkeletalMesh->CreateGPUSkinnedVertexBuffer(&GPUSkinnedVertexBuffer);
-   SkeletalMesh->CreateStructuredBuffer(&SkinningMatrixBuffer, &SkinningMatrixSRV, FinalSkinningMatrices.Num());
-   SkeletalMesh->CreateStructuredBuffer(&SkinningNormalMatrixBuffer, &SkinningNormalMatrixSRV, FinalSkinningNormalMatrices.Num());
+   if (SkeletalMesh)
+   {
+      SkeletalMesh->CreateCPUSkinnedVertexBuffer(&CPUSkinnedVertexBuffer);
+      SkeletalMesh->CreateGPUSkinnedVertexBuffer(&GPUSkinnedVertexBuffer);
+      SkeletalMesh->CreateStructuredBuffer(&SkinningMatrixBuffer, &SkinningMatrixSRV, FinalSkinningMatrices.Num());
+      SkeletalMesh->CreateStructuredBuffer(&SkinningNormalMatrixBuffer, &SkinningNormalMatrixSRV, FinalSkinningNormalMatrices.Num());
+   }
 }
 
 
