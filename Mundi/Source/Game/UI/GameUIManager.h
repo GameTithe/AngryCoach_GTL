@@ -62,6 +62,11 @@ public:
     float GetViewportWidth() const { return ViewportWidth; }
     float GetViewportHeight() const { return ViewportHeight; }
 
+    // UI 스케일 (뷰포트 / 디자인 해상도)
+    float GetUIScaleX() const { return ViewportWidth / DesignWidth; }
+    float GetUIScaleY() const { return ViewportHeight / DesignHeight; }
+    float GetUIScale() const { return std::min(GetUIScaleX(), GetUIScaleY()); }  // 비율 유지
+
     // ============================================
     // Canvas 시스템 (Lua 동적 UI)
     // ============================================
@@ -78,6 +83,13 @@ public:
      * @brief 이름으로 캔버스 찾기
      */
     UUICanvas* FindCanvas(const std::string& Name);
+
+    /**
+     * @brief 캔버스 포인터가 유효한지 확인
+     * @param Canvas 확인할 캔버스 포인터
+     * @return Canvases 맵에 존재하면 true
+     */
+    bool IsValidCanvas(UUICanvas* Canvas) const;
 
     /**
      * @brief 캔버스 삭제
@@ -105,6 +117,12 @@ public:
      * @return 생성된 캔버스 포인터 (실패 시 nullptr)
      */
     UUICanvas* LoadUIAsset(const std::string& FilePath);
+
+    /**
+     * @brief UI가 마우스 입력을 소비했는지 확인
+     * @return UI(버튼 등)가 입력을 처리했으면 true
+     */
+    bool IsUIConsumedInput() const { return bUIConsumedInput; }
 
 private:
     UGameUIManager() = default;
@@ -163,6 +181,10 @@ private:
     float ViewportWidth = 1920.0f;
     float ViewportHeight = 1080.0f;
 
+    // UI 기준 해상도 (디자인 해상도)
+    static constexpr float DesignWidth = 800.0f;
+    static constexpr float DesignHeight = 600.0f;
+
     // ============================================
     // Canvas 시스템
     // ============================================
@@ -179,4 +201,17 @@ private:
 
     // 정렬 갱신
     void UpdateCanvasSortOrder();
+
+    // 마우스 입력 처리
+    void ProcessMouseInput();
+
+    // 키보드/게임패드 입력 처리 (UI 포커스 네비게이션)
+    void ProcessKeyboardInput();
+
+    bool bUIConsumedInput = false;
+
+    // 키 반복 방지용 이전 프레임 상태
+    bool bPrevUpKey = false;
+    bool bPrevDownKey = false;
+    bool bPrevConfirmKey = false;
 };

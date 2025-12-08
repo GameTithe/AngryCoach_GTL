@@ -5,6 +5,7 @@
 class UAnimMontage;
 class USkillComponent;
 class AAccessoryActor;
+class USound;
 
 // 입력 타입 (컨트롤러 → 캐릭터)
 enum class EAttackInput
@@ -53,11 +54,15 @@ public:
 	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 
 	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
-	float GetHealthPercent() const;
+
+	void HitReation() override;
+	void ClearState() override;
 
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
+	// 죽었을 때 필요한 로직 모아둔 헬퍼
+	void Die();
 
 protected:
 	// 스킬/악세서리
@@ -65,6 +70,6 @@ protected:
 	AAccessoryActor* CurrentAccessory = nullptr;
 	UShapeComponent* CachedAttackShape = nullptr;
 
-	float MaxHealth = 100.0f;
-	float CurrentHealth = MaxHealth;
+	UAnimMontage* HitReationMontage = nullptr;
+	USound* DieSound = nullptr;
 };

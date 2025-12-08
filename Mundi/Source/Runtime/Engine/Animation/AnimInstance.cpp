@@ -1015,8 +1015,8 @@ void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
     TArray<FPendingAnimNotify> PendingNotifies;
     float DeltaMove = DeltaSeconds * MontageState->PlayRate;
 
-    UE_LOG("[TriggerMontageNotifies] Prev=%.4f, DeltaMove=%.4f, CurrentPos=%.4f",
-        PreviousMontagePlayTime, DeltaMove, MontageState->Position);
+    // UE_LOG("[TriggerMontageNotifies] Prev=%.4f, DeltaMove=%.4f, CurrentPos=%.4f",
+    //     PreviousMontagePlayTime, DeltaMove, MontageState->Position);
 
     Montage->GetAnimNotify(PreviousMontagePlayTime, DeltaMove, PendingNotifies);
 
@@ -1032,8 +1032,8 @@ void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
     {
         const FAnimNotifyEvent& Event = *Pending.Event;
 
-        UE_LOG("[TriggerMontageNotifies] Montage Notify Triggered: %s at %.4f",
-            Event.NotifyName.ToString().c_str(), Event.TriggerTime);
+        // UE_LOG("[TriggerMontageNotifies] Montage Notify Triggered: %s at %.4f",
+        //     Event.NotifyName.ToString().c_str(), Event.TriggerTime);
 
         if (OwningComponent)
         {

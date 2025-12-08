@@ -35,6 +35,33 @@ void UCharacterMovementComponent::TickComponent(float DeltaSeconds)
 
 	if (!UpdatedComponent || !CharacterOwner) return;
 
+	// 강제 이동 중인 경우 (스킬 사용 등)
+	if (bForceMovement)
+	{
+		ForcedMovementTimer += DeltaSeconds;
+
+		// 타이머가 Duration을 초과하면 강제 이동 종료
+		if (ForcedMovementTimer >= ForcedMovementDuration)
+		{
+			ClearForcedMovement();
+		}
+		else
+		{
+			// 강제 속도로 이동
+			Velocity = ForcedVelocity;
+			FHitResult Hit;
+			SafeMoveUpdatedComponent(Velocity * DeltaSeconds, Hit);
+
+			// 충돌 시 강제 이동 종료
+			if (Hit.bBlockingHit)
+			{
+				ClearForcedMovement();
+			} 
+			return;
+		}
+	}
+
+	// 일반 이동 로직
 	if (bIsFalling)
 	{
 		PhysFalling(DeltaSeconds);
@@ -336,6 +363,11 @@ void UCharacterMovementComponent::PhysFalling(float DeltaSecond)
 			bIsFalling = false;
 			CurrentJumpCount = 0;  // 점프 횟수 리셋
 
+			// 여기다 놓으면 안좋음
+			// StopJump처리가 애매해서 땜빵식 코드
+			// 캐릭터 클래스에서 처리하는게 좋다.
+			CharacterOwner->SetCurrentState(ECharacterState::Idle);			
+
 			// 바닥으로 스냅 (SkinWidth 여유를 두고 이동)
 			const float SkinWidth = 0.00125f;
 			float SnapDistance = FloorHit.Distance - SkinWidth;
@@ -528,4 +560,20 @@ FPhysScene* UCharacterMovementComponent::GetPhysScene() const
 		}
 	}
 	return nullptr;
+}
+
+void UCharacterMovementComponent::SetForcedMovement(const FVector& InVelocity, float Duration)
+{
+	bForceMovement = true;
+	ForcedVelocity = InVelocity;
+	ForcedMovementDuration = Duration;
+	ForcedMovementTimer = 0.0f;
+}
+
+void UCharacterMovementComponent::ClearForcedMovement()
+{
+	bForceMovement = false;
+	ForcedVelocity = FVector::Zero();
+	ForcedMovementDuration = 0.0f;
+	ForcedMovementTimer = 0.0f;
 }

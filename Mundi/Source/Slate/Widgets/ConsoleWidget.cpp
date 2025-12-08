@@ -64,7 +64,7 @@ void UConsoleWidget::Initialize()
 	HelpCommandList.Add("STAT NONE");
 	HelpCommandList.Add("STAT LIGHT");
 	HelpCommandList.Add("STAT SHADOW");
-
+	
 	// Add welcome messages
 	AddLog("=== Console Widget Initialized ===");
 	AddLog("Console initialized. Type 'HELP' for available commands.");

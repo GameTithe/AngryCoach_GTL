@@ -39,6 +39,7 @@ public:
 
 	virtual void AttackBegin();
 	virtual void AttackEnd();
+	virtual void ClearState();
 
 	void OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;

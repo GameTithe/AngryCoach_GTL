@@ -4,6 +4,7 @@
 #include "SelectionManager.h"
 #include "FViewport.h"
 #include "PlayerCameraManager.h"
+#include "GameModeBase.h"
 #include <ObjManager.h>
 #include "FAudioDevice.h"
 #include <sol/sol.hpp>
@@ -12,6 +13,7 @@
 
 #ifdef _GAME
 #include "Source/Game/UI/GameUIManager.h"
+#include "Source/Game/AngryCoachGameMode.h"
 #endif
 
 float UGameEngine::ClientWidth = 1024.0f;
@@ -86,43 +88,7 @@ LRESULT CALLBACK UGameEngine::WndProc(HWND hWnd, UINT message, WPARAM wParam, LP
     // Input first
     INPUT.ProcessMessage(hWnd, message, wParam, lParam);
 
-#ifdef _GAME
-    // Game UI 입력 처리
-    switch (message)
-    {
-    case WM_MOUSEMOVE:
-    {
-        float MouseX = static_cast<float>(LOWORD(lParam));
-        float MouseY = static_cast<float>(HIWORD(lParam));
-        UGameUIManager::Get().OnMouseMove(MouseX, MouseY);
-        break;
-    }
-    case WM_LBUTTONDOWN:
-    {
-        float MouseX = static_cast<float>(LOWORD(lParam));
-        float MouseY = static_cast<float>(HIWORD(lParam));
-        UGameUIManager::Get().OnMouseDown(MouseX, MouseY);
-        break;
-    }
-    case WM_LBUTTONUP:
-    {
-        float MouseX = static_cast<float>(LOWORD(lParam));
-        float MouseY = static_cast<float>(HIWORD(lParam));
-        UGameUIManager::Get().OnMouseUp(MouseX, MouseY);
-        break;
-    }
-    case WM_KEYDOWN:
-    {
-        UGameUIManager::Get().OnKeyDown(static_cast<uint32_t>(wParam));
-        break;
-    }
-    case WM_KEYUP:
-    {
-        UGameUIManager::Get().OnKeyUp(static_cast<uint32_t>(wParam));
-        break;
-    }
-    }
-#endif
+    // Note: Game UI 입력은 GameUIManager::Update()에서 InputManager를 통해 처리됨
 
     switch (message)
     {
@@ -141,6 +107,8 @@ LRESULT CALLBACK UGameEngine::WndProc(HWND hWnd, UINT message, WPARAM wParam, LP
             {
                 GEngine.GameViewport.get()->Resize(0, 0, NewWidth, NewHeight);
             }
+            // GameUIManager 뷰포트도 업데이트
+            UGameUIManager::Get().SetViewport(0, 0, ClientWidth, ClientHeight);
 #endif
             // Save CLIENT AREA size (will be converted back to window size on load)
             EditorINI["WindowWidth"] = std::to_string(NewWidth);
@@ -215,6 +183,30 @@ bool UGameEngine::CreateMainWindow(HINSTANCE hInstance)
 
 bool UGameEngine::Startup(HINSTANCE hInstance)
 {
+#ifdef _GAME
+    // Standalone 빌드: exe가 있는 폴더를 작업 디렉토리로 설정
+    // 이렇게 해야 상대 경로(Data/...)가 올바르게 동작함
+    {
+        wchar_t exePath[MAX_PATH];
+        if (GetModuleFileNameW(nullptr, exePath, MAX_PATH))
+        {
+            // exe 파일명 제거하고 디렉토리만 추출
+            wchar_t* lastSlash = wcsrchr(exePath, L'\\');
+            if (lastSlash) *lastSlash = L'\0';
+
+            SetCurrentDirectoryW(exePath);
+            UE_LOG("[GameEngine] Working directory set to: %ls\n", exePath);
+        }
+
+        // 현재 작업 디렉토리 로그
+        wchar_t cwd[MAX_PATH];
+        if (GetCurrentDirectoryW(MAX_PATH, cwd))
+        {
+            UE_LOG("[GameEngine] Current working directory: %ls\n", cwd);
+        }
+    }
+#endif
+
     LoadIniFile();
 
     if (!CreateMainWindow(hInstance))
@@ -222,6 +214,10 @@ bool UGameEngine::Startup(HINSTANCE hInstance)
 
     // 디바이스 리소스 및 렌더러 생성
     RHIDevice.Initialize(HWnd);
+#ifdef _GAME
+    // GPU 프로파일러 초기화
+    FGPUProfiler::GetInstance().Initialize(&RHIDevice);
+#endif
     Renderer = std::make_unique<URenderer>(&RHIDevice);
 
     // Initialize audio device for game runtime
@@ -249,8 +245,9 @@ bool UGameEngine::Startup(HINSTANCE hInstance)
     GWorld->bPie = true;
     ///////////////////////////////////
 
-    // 시작 scene(level)을 직접 로드 
-    const FString StartupScenePath = GDataDir + "/Scenes/PlayScene.scene";
+    // 시작 scene(level)을 직접 로드
+    const FString StartupScenePath = GDataDir + "/Scenes/DemoScene.scene";
+
     if (!GWorld->LoadLevelFromFile(UTF8ToWide(StartupScenePath)))
     {
         UE_LOG("Failed to load startup scene: %s", StartupScenePath.c_str());
@@ -259,10 +256,43 @@ bool UGameEngine::Startup(HINSTANCE hInstance)
 
     // 로드된 월드의 모든 액터에 대해 BeginPlay() 호출
     TArray<AActor*> LevelActors = GWorld->GetLevel()->GetActors();
+
     for (AActor* Actor : LevelActors)
     {
         Actor->BeginPlay();
     }
+
+#ifdef _GAME
+    // GameMode 스폰 (Standalone 빌드에서 필요)
+    if (GWorld->GetGameMode() == nullptr)
+    {
+        AGameModeBase* GM = GWorld->SpawnActor<AAngryCoachGameMode>(FTransform());
+        GWorld->SetGameMode(GM);
+        MessageBoxW(nullptr, L"GameMode spawned: AAngryCoachGameMode", L"Debug", MB_OK);
+    }
+    else
+    {
+        MessageBoxW(nullptr, L"GameMode already exists in scene! AAngryCoachGameMode NOT spawned.", L"Warning", MB_OK | MB_ICONWARNING);
+    }
+
+    // GameMode의 StartPlay 호출 (게임 흐름 시작: Match → Intro → StartPage → ...)
+    if (AGameModeBase* GameMode = GWorld->GetGameMode())
+    {
+        MessageBoxW(nullptr, L"Calling GameMode->StartPlay()", L"Debug", MB_OK);
+        GameMode->StartPlay();
+    }
+    else
+    {
+        MessageBoxW(nullptr, L"GameMode is NULL! Cannot call StartPlay.", L"Error", MB_OK | MB_ICONERROR);
+    }
+
+    // Note: 마우스 커서는 UI 화면에서 보여야 하므로 시작 시에는 숨기지 않음
+    // 실제 전투 시작 시 Lua(GameMode.lua)에서 숨기기 처리
+
+    // GameUIManager 뷰포트 설정 (Standalone에서는 전체 창이 게임 뷰포트)
+    UGameUIManager::Get().SetViewport(0, 0, ClientWidth, ClientHeight);
+    UE_LOG("[GameEngine] GameUIManager viewport set to: %.0fx%.0f\n", ClientWidth, ClientHeight);
+#endif
 
     bPlayActive = true;
     bRunning = true;
@@ -280,7 +310,12 @@ void UGameEngine::Tick(float DeltaSeconds)
     }
     INPUT.Update();
 
-    FAudioDevice::Update(); 
+#ifdef _GAME
+    // Game UI 업데이트 (입력 처리, 애니메이션 등)
+    UGameUIManager::Get().Update(DeltaSeconds);
+#endif
+
+    FAudioDevice::Update();
 }
 
 void UGameEngine::Render()
@@ -304,6 +339,11 @@ void UGameEngine::Render()
             Renderer->RenderSceneForView(GWorld, &CurrentViewInfo, GameViewport.get());
         }
     }
+
+#ifdef _GAME
+    // Game UI 렌더링 (3D 씬 위에 오버레이)
+    UGameUIManager::Get().Render();
+#endif
 
     Renderer->EndFrame();
 }
@@ -393,6 +433,11 @@ void UGameEngine::Shutdown()
     // IMPORTANT: Explicitly release Renderer before RHIDevice destructor runs
     // Renderer may hold references to D3D resources
     Renderer.reset();
+
+#ifdef _GAME
+    // GPU 프로파일러 종료 (RHIDevice 해제 전에 호출)
+    FGPUProfiler::GetInstance().Shutdown();
+#endif
 
     // Explicitly release D3D11RHI resources before global destruction
     RHIDevice.Release();

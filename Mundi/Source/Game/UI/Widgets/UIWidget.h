@@ -13,7 +13,8 @@ enum class EUIWidgetType : uint8_t
     Rect,
     ProgressBar,
     Texture,
-    Text
+    Text,
+    Button
 };
 
 /**
@@ -104,6 +105,18 @@ struct FWidgetAnimation
     float TargetOpacity = 1.0f;
     bool bAnimatingOpacity = false;
 
+    // 진동 애니메이션
+    float ShakeIntensity = 0.0f;      // 진동 강도 (픽셀)
+    float ShakeFrequency = 15.0f;     // 진동 빈도 (Hz)
+    float ShakeDuration = 0.0f;       // 진동 지속 시간 (0이면 무한)
+    float ShakeElapsed = 0.0f;        // 경과 시간
+    float ShakePhaseX = 0.0f;         // X축 위상 오프셋 (불규칙성)
+    float ShakePhaseY = 0.0f;         // Y축 위상 오프셋
+    float ShakeBaseX = 0.0f;          // 진동 기준 위치 X
+    float ShakeBaseY = 0.0f;          // 진동 기준 위치 Y
+    bool bShaking = false;
+    bool bShakeDecay = true;          // 시간에 따라 감쇠
+
     // 공통
     float Duration = 0.0f;
     float Elapsed = 0.0f;
@@ -112,7 +125,7 @@ struct FWidgetAnimation
     bool IsAnimating() const
     {
         return bAnimatingPosition || bAnimatingSize ||
-               bAnimatingRotation || bAnimatingOpacity;
+               bAnimatingRotation || bAnimatingOpacity || bShaking;
     }
 
     void Reset()
@@ -122,6 +135,13 @@ struct FWidgetAnimation
         bAnimatingRotation = false;
         bAnimatingOpacity = false;
         Elapsed = 0.0f;
+    }
+
+    void ResetShake()
+    {
+        bShaking = false;
+        ShakeElapsed = 0.0f;
+        ShakeIntensity = 0.0f;
     }
 };
 
@@ -186,6 +206,11 @@ public:
     virtual void Update(float DeltaTime);
 
     /**
+     * @brief Shake 애니메이션 업데이트 (별도 호출)
+     */
+    void UpdateShake(float DeltaTime);
+
+    /**
      * @brief 애니메이션 중인지 확인
      */
     bool IsAnimating() const { return Animation.IsAnimating(); }
@@ -194,8 +219,24 @@ public:
 
     void MoveTo(float TargetX, float TargetY, float Duration, EEasingType Easing = EEasingType::Linear);
     void SizeTo(float TargetW, float TargetH, float Duration, EEasingType Easing = EEasingType::Linear);
+    void SizeToCentered(float TargetW, float TargetH, float Duration, EEasingType Easing = EEasingType::Linear);
+    void SizeToCenteredByScale(float ScaleX, float ScaleY, float Duration, EEasingType Easing = EEasingType::Linear);
     void RotateTo(float TargetAngle, float Duration, EEasingType Easing = EEasingType::Linear);
     void FadeTo(float TargetOpacity, float Duration, EEasingType Easing = EEasingType::Linear);
+
+    /**
+     * @brief 진동 애니메이션 시작
+     * @param Intensity 진동 강도 (픽셀)
+     * @param Duration 지속 시간 (0이면 무한)
+     * @param Frequency 진동 빈도 (Hz, 기본 15)
+     * @param bDecay 시간에 따라 감쇠할지 여부
+     */
+    void StartShake(float Intensity, float Duration = 0.0f, float Frequency = 15.0f, bool bDecay = true);
+
+    /**
+     * @brief 진동 애니메이션 중지
+     */
+    void StopShake();
 
     /**
      * @brief 모든 애니메이션 즉시 중지

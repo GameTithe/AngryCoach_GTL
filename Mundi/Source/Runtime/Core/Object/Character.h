@@ -7,6 +7,18 @@ class USkeletalMeshComponent;
 class UCharacterMovementComponent;
 class USkillComponent;
 
+enum class ECharacterState : uint8
+{
+	Idle,
+	Walking,
+	Running,
+	Jumping,
+	Attacking,
+	Damaged,
+	Guard,
+	Dead
+};
+
 UCLASS(DisplayName = "캐릭터", Description = "캐릭터 액터 (프레임워크)")
 class ACharacter : public APawn
 {
@@ -44,15 +56,27 @@ public:
 	void AttackBegin() override;
 	void AttackEnd() override;
 
-	void Attack();
+	void SetCurrentState(ECharacterState NewState) { CurrentState = NewState; }
+	ECharacterState GetCurrentState() const { return CurrentState; }
+	bool IsAlive() const { return CurrentState != ECharacterState::Dead; }
+	float GetHealthPercent() const;
+	void UpdateCharacterState(float CurrentSpeedSq = 0.0f);
+	bool CanAttack();
+	virtual void HitReation();
 
 protected:
 	UCapsuleComponent* CapsuleComponent = nullptr;
 	UCharacterMovementComponent* CharacterMovement = nullptr;
 
 	USkillComponent* SkillComponent;
-	class AAccessoryActor* CurrentAccessory = nullptr; 
+	class AAccessoryActor* CurrentAccessory = nullptr;
 
+	ECharacterState CurrentState = ECharacterState::Idle;
+
+	FVector LastFrameLocation = FVector::Zero();
+	
 	float BaseDamage = 10.0f;
+	float MaxHealth = 20.0f;
+	float CurrentHealth = MaxHealth;
 
 };

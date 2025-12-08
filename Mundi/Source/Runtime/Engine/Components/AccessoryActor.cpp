@@ -34,7 +34,7 @@ AAccessoryActor::AAccessoryActor()
 	// 악세서리 스킬 생성 및 등록
 	UAccessoryLightAttackSkill* LightSkill = NewObject<UAccessoryLightAttackSkill>();
 	UAccessoryHeavyAttackSkill* HeavySkill = NewObject<UAccessoryHeavyAttackSkill>();
-
+	
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 }
@@ -66,7 +66,7 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			if (auto* Shape = Cast<UShapeComponent>(Comp))
 			{
 				FString Tag = Shape->GetTag();
-				if (Shape->ObjectName == FName("Attack"))					
+				if (Shape->ObjectName == FName("AttackShape"))					
 				{
 					AttackShape = Shape;
 				}
@@ -100,11 +100,11 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 }
 
 void AAccessoryActor::PlayTryParticle()
-{
+{	
 	if (TryAttackParticle)
 	{
 		TryAttackParticle->ActivateSystem();
-		UE_LOG("Play Try Particle");
+		// UE_LOG("Play Try Particle");
 	}
 	else
 	{
@@ -116,7 +116,7 @@ void AAccessoryActor::StopTryParticle()
 {
 	if (TryAttackParticle)
 	{
-		TryAttackParticle->DeactivateSystem();  
+		TryAttackParticle->StopSpawning();  // 새 파티클 생성 중지, 기존 파티클은 자연스럽게 소멸
 		UE_LOG("Stop Try Particle");
 	}
 	else
@@ -142,7 +142,7 @@ void AAccessoryActor::StopHitParticle()
 {
 	if (HitAttackParticle)
 	{
-		HitAttackParticle->DeactivateSystem();
+		HitAttackParticle->StopSpawning();  // 새 파티클 생성 중지, 기존 파티클은 자연스럽게 소멸
 		UE_LOG("Stop Hit Particle");
 	}
 	else
@@ -256,7 +256,9 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	if (AttackShape)
 	{
 		OwnerCharacter->SetAttackShape(AttackShape);
-	}
+		// 자신을 공격하는 걸 방지하기 위해서 owner 설정
+		AttackShape->SetOwner(OwnerCharacter);
+	}	
 }
 
 void AAccessoryActor::Unequip()

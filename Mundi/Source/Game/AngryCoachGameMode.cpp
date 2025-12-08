@@ -20,8 +20,7 @@ AAngryCoachGameMode::~AAngryCoachGameMode()
 
 void AAngryCoachGameMode::StartPlay()
 {
-	Login();
-	PostLogin(AngryCoachController);
+	Super::StartPlay();
 }
 
 APlayerController* AAngryCoachGameMode::Login()
@@ -42,7 +41,7 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 		if (Player1)
 		{
 			Player1->SetActorLocation(FVector(0, -5, 2));
-			Player1->PossessedBy(AngryCoachController);  // 컨트롤러 등록 (이동 활성화)
+			Player1->PossessedBy(AngryCoachController);
 		}
 	}
 
@@ -55,21 +54,19 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 		{
 			Player2->bIsCGC = false;
 			Player2->SetActorLocation(FVector(0, 5, 2));
-			Player2->PossessedBy(AngryCoachController);  // 컨트롤러 등록 (이동 활성화)
+			Player2->PossessedBy(AngryCoachController);
 		}
 	}
 
 	// 카메라 액터 스폰
 	FTransform CameraTransform;
-	CameraTransform.Translation = FVector(-5, 0, 3);
+	CameraTransform.Translation = FVector(-15, 0, 5);
 	GameCamera = GetWorld()->SpawnActor<ACameraActor>(CameraTransform);
 	if (GameCamera)
 	{
-		// 두 캐릭터 중심을 바라보도록 초기 설정
-		GameCamera->SetCameraPitch(-30.0f);
+		GameCamera->SetCameraPitch(-15.0f);
 		GameCamera->SetCameraYaw(0.0f);
- 
-		// PlayerCameraManager에 등록
+
 		if (auto* PCM = GWorld->GetPlayerCameraManager())
 		{
 			PCM->SetViewCamera(GameCamera->GetCameraComponent());
