@@ -26,6 +26,12 @@ public:
     // 타격 성공 Particle
     UParticleSystemComponent* HitAttackParticle;
 
+    // 전기 타격 Particle (일회성 스폰용)
+    UParticleSystemComponent* ElectricHitParticle;
+
+    // 기본 Particle
+    UParticleSystemComponent* BaseEffectParticle;
+
     UShapeComponent* AttackShape = nullptr;
 
     // === 악세서리 데이터 ===
@@ -49,6 +55,9 @@ public:
 
     void PlayHitParticle();
     void StopHitParticle();
+
+    void SpawnHitParticleAtLocation(const FVector& Location);
+    void SpawnElectricHitParticleAtLocation(const FVector& Location);
 
 protected:
     // 자식 클래스에서 호출하는 헬퍼 함수

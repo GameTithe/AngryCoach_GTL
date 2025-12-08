@@ -3,6 +3,7 @@
 #include "Actor.h"
 #include "Pawn.h"
 #include "SkeletalMeshComponent.h"
+#include <AccessoryActor.h>
 
 IMPLEMENT_CLASS(UAnimNotify_CallFunction)
 void UAnimNotify_CallFunction::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
@@ -18,6 +19,10 @@ void UAnimNotify_CallFunction::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
         if (APawn* Pawn = Cast<APawn>(Owner))
         {            
             Pawn->ProcessEvent(FunctionName);
+        }
+        if (AAccessoryActor* AccessoryActor = Cast< AAccessoryActor>(Owner))
+        {
+            AccessoryActor->ProcessEvent(FunctionName);
         }
     }
     

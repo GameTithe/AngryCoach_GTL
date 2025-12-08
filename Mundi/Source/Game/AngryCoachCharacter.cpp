@@ -364,6 +364,13 @@ void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveC
 void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
 	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 5.0f, this, HitResult);
+
+	// 대미지를 입혔을 때 전기 파티클 생성
+	if (AppliedDamage > 0.0f && CurrentAccessory && HitResult.HitActor)
+	{
+		CurrentAccessory->SpawnElectricHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
+	}
+
 	// UE_LOG("Owner : %p, damaged actor : %p", this, HitResult.HitActor);
 	// UE_LOG("Damage : %f", AppliedDamage);
 }
@@ -390,7 +397,8 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	}
 	
 	HitReation();
-	
+	//CurrentAccessory->PlayHitParticle();
+	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
 	UE_LOG("[TakeDamage] Owner %p, insti %p cur %f", this, Instigator, CurrentHealth);
 	return ActualDamage;
 }

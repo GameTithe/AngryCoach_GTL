@@ -31,6 +31,15 @@ AAccessoryActor::AAccessoryActor()
 	HitAttackParticle->ObjectName = FName("HitAttackParticle");
 	HitAttackParticle->SetupAttachment(RootComponent);
 
+	ElectricHitParticle = CreateDefaultSubobject<UParticleSystemComponent>("ElectricHitParticle");
+	ElectricHitParticle->ObjectName = FName("ElectricHitParticle");
+	ElectricHitParticle->SetupAttachment(RootComponent);
+	ElectricHitParticle->bAutoActivate = false;
+
+	BaseEffectParticle = CreateDefaultSubobject<UParticleSystemComponent>("BaseEffectParticle");
+	BaseEffectParticle->ObjectName = FName("BaseEffectParticle");
+	BaseEffectParticle->SetupAttachment(RootComponent);
+
 	// 악세서리 스킬 생성 및 등록
 	UAccessoryLightAttackSkill* LightSkill = NewObject<UAccessoryLightAttackSkill>();
 	UAccessoryHeavyAttackSkill* HeavySkill = NewObject<UAccessoryHeavyAttackSkill>();
@@ -50,6 +59,8 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		AccessoryMesh = nullptr;
 		TryAttackParticle = nullptr;
 		HitAttackParticle = nullptr;
+		ElectricHitParticle = nullptr;
+		BaseEffectParticle = nullptr;
 		OwningCharacter = nullptr;
 		AttackShape = nullptr;
 
@@ -83,9 +94,17 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				{
 					TryAttackParticle = Particle;
 				}
+				else if (ParticleName.find("ElectricHit") != std::string::npos)
+				{
+					ElectricHitParticle = Particle;
+				}
 				else if (ParticleName.find("HitAttack") != std::string::npos)
 				{
 					HitAttackParticle = Particle;
+				}
+				else if (ParticleName.find("BaseEffect") != std::string::npos)
+				{
+					BaseEffectParticle = Particle;
 				}
 			}
 		}
@@ -98,7 +117,7 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	}
 }
-
+REGISTER_FUNCTION_NOTIFY(AAccessoryActor, PlayTryParticle)
 void AAccessoryActor::PlayTryParticle()
 {	
 	if (TryAttackParticle)
@@ -112,6 +131,7 @@ void AAccessoryActor::PlayTryParticle()
 	}
 }
 
+REGISTER_FUNCTION_NOTIFY(AAccessoryActor, StopTryParticle)
 void AAccessoryActor::StopTryParticle()
 {
 	if (TryAttackParticle)
@@ -151,6 +171,42 @@ void AAccessoryActor::StopHitParticle()
 	}
 }
 
+void AAccessoryActor::SpawnHitParticleAtLocation(const FVector& Location)
+{
+	if (!HitAttackParticle)
+	{
+		UE_LOG("SpawnHitParticle: HitAttackParticle is null");
+		return;
+	}
+
+	// 위치 이동
+	HitAttackParticle->SetWorldLocation(Location);
+
+	// 리셋 후 활성화 (한 번만 재생)
+	HitAttackParticle->ResetAndActivate();
+
+	UE_LOG("Spawned hit particle at (%.1f, %.1f, %.1f)",
+	       Location.X, Location.Y, Location.Z);
+}
+
+void AAccessoryActor::SpawnElectricHitParticleAtLocation(const FVector& Location)
+{
+	if (!ElectricHitParticle)
+	{
+		UE_LOG("SpawnElectricHitParticle: ElectricHitParticle is null");
+		return;
+	}
+
+	// 위치 이동
+	ElectricHitParticle->SetWorldLocation(Location);
+
+	// 리셋 후 활성화 (한 번만 재생)
+	ElectricHitParticle->ResetAndActivate();
+
+	UE_LOG("Spawned electric hit particle at (%.1f, %.1f, %.1f)",
+	       Location.X, Location.Y, Location.Z);
+}
+
 void AAccessoryActor::SetAttackShapeNameAndAttach(const FName& Name)
 {
 	if (!RootComponent || !AttackShape)
@@ -171,6 +227,7 @@ void AAccessoryActor::DuplicateSubObjects()
 	AccessoryMesh = nullptr;
 	TryAttackParticle = nullptr;
 	HitAttackParticle = nullptr;
+	ElectricHitParticle = nullptr;
 	OwningCharacter = nullptr;
 
 	// 복제된 컴포넌트들을 다시 찾아서 포인터 재설정
@@ -191,11 +248,15 @@ void AAccessoryActor::DuplicateSubObjects()
 		}
 		else if (auto* Particle = Cast<UParticleSystemComponent>(Comp))
 		{
-			// Particle은 2개가 있으므로 ObjectName으로 구분
+			// Particle은 여러 개가 있으므로 ObjectName으로 구분
 			FString ParticleName = Particle->ObjectName.ToString();
 			if (ParticleName.find("TryAttack") != std::string::npos)
 			{
 				TryAttackParticle = Particle;
+			}
+			else if (ParticleName.find("ElectricHit") != std::string::npos)
+			{
+				ElectricHitParticle = Particle;
 			}
 			else if (ParticleName.find("HitAttack") != std::string::npos)
 			{
