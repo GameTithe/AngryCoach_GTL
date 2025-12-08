@@ -31,8 +31,15 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 	AActor::Tick(DeltaSeconds);
 
 	// 각 플레이어 입력 처리
-	ProcessPlayer1Input(DeltaSeconds);
-	ProcessPlayer2Input(DeltaSeconds);
+	// 생존한 경우만 입력받음
+	if (Player1->IsAlive())
+	{
+		ProcessPlayer1Input(DeltaSeconds);
+	}
+	if (Player2->IsAlive())
+	{
+		ProcessPlayer2Input(DeltaSeconds);
+	}
 
 	// 카메라 위치 업데이트
 	UpdateCameraPosition(DeltaSeconds);
@@ -40,16 +47,28 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 
 void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 {
-	if (!Player1) return;
+	if (!Player1) return;	
 
 	UInputManager& InputManager = UInputManager::GetInstance();
 	FVector InputDir = FVector::Zero();
 
 	// WASD 이동
-	if (InputManager.IsKeyDown('W')) { InputDir.X += 1.0f; }
-	if (InputManager.IsKeyDown('S')) { InputDir.X -= 1.0f; }
-	if (InputManager.IsKeyDown('D')) { InputDir.Y += 1.0f; }
-	if (InputManager.IsKeyDown('A')) { InputDir.Y -= 1.0f; }
+	if (InputManager.IsKeyDown('W'))
+	{
+		InputDir.X += 1.0f;
+	}
+	if (InputManager.IsKeyDown('S'))
+	{
+		InputDir.X -= 1.0f;
+	}
+	if (InputManager.IsKeyDown('D'))
+	{
+		InputDir.Y += 1.0f;		
+	}
+	if (InputManager.IsKeyDown('A'))
+	{
+		InputDir.Y -= 1.0f;		
+	}
 
 	if (!InputDir.IsZero() && !Player1->IsPlayingMontage())
 	{
@@ -77,18 +96,9 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		Player1->Jump();
 	}
 
-	// T - 약공, Y - 강공, U - 스킬
-	if (InputManager.IsKeyPressed('T'))
+	if (Player1->CanAttack())
 	{
-		Player1->OnAttackInput(EAttackInput::Light);
-	}
-	if (InputManager.IsKeyPressed('Y'))
-	{
-		Player1->OnAttackInput(EAttackInput::Heavy);
-	}
-	if (InputManager.IsKeyPressed('U'))
-	{
-		Player1->OnAttackInput(EAttackInput::Skill);
+		ProcessPlayer1Attack(DeltaTime);
 	}
 }
 
@@ -131,18 +141,9 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 		Player2->Jump();
 	}
 
-	// Numpad1 - 약공, Numpad2 - 강공, Numpad3 - 스킬
-	if (InputManager.IsKeyPressed(VK_NUMPAD1))
+	if (Player2->CanAttack())
 	{
-		Player2->OnAttackInput(EAttackInput::Light);
-	}
-	if (InputManager.IsKeyPressed(VK_NUMPAD2))
-	{
-		Player2->OnAttackInput(EAttackInput::Heavy);
-	}
-	if (InputManager.IsKeyPressed(VK_NUMPAD3))
-	{
-		Player2->OnAttackInput(EAttackInput::Skill);
+		ProcessPlayer2Attack(DeltaTime);
 	}
 }
 
@@ -165,4 +166,40 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 	FVector CurrentPos = GameCamera->GetActorLocation();
 	FVector NewPos = FMath::Lerp(CurrentPos, TargetCameraPos, CameraLerpSpeed * DeltaTime);
 	GameCamera->SetActorLocation(NewPos);
+}
+
+void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
+{
+	UInputManager& InputManager = UInputManager::GetInstance();
+	// T - 약공, Y - 강공, U - 스킬
+	if (InputManager.IsKeyPressed('T'))
+	{
+		Player1->OnAttackInput(EAttackInput::Light);
+	}
+	if (InputManager.IsKeyPressed('Y'))
+	{
+		Player1->OnAttackInput(EAttackInput::Heavy);
+	}
+	if (InputManager.IsKeyPressed('U'))
+	{
+		Player1->OnAttackInput(EAttackInput::Skill);
+	}
+}
+
+void AAngryCoachPlayerController::ProcessPlayer2Attack(float DeltaTime)
+{
+	UInputManager& InputManager = UInputManager::GetInstance();
+	// Numpad1 - 약공, Numpad2 - 강공, Numpad3 - 스킬
+	if (InputManager.IsKeyPressed(VK_NUMPAD1))
+	{
+		Player2->OnAttackInput(EAttackInput::Light);
+	}
+	if (InputManager.IsKeyPressed(VK_NUMPAD2))
+	{
+		Player2->OnAttackInput(EAttackInput::Heavy);
+	}
+	if (InputManager.IsKeyPressed(VK_NUMPAD3))
+	{
+		Player2->OnAttackInput(EAttackInput::Skill);
+	}
 }

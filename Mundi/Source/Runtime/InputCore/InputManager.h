@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <cmath>
+#include <Xinput.h>
 
 #include "Object.h"
 #include "Vector.h"
@@ -16,6 +17,54 @@ enum EMouseButton
     XButton1 = 3,
     XButton2 = 4,
     MaxMouseButtons = 5
+};
+
+// 게임패드 버튼 상수
+enum class EGamepadButton : uint16
+{
+    DPadUp       = XINPUT_GAMEPAD_DPAD_UP,
+    DPadDown     = XINPUT_GAMEPAD_DPAD_DOWN,
+    DPadLeft     = XINPUT_GAMEPAD_DPAD_LEFT,
+    DPadRight    = XINPUT_GAMEPAD_DPAD_RIGHT,
+    Start        = XINPUT_GAMEPAD_START,
+    Back         = XINPUT_GAMEPAD_BACK,
+    LeftThumb    = XINPUT_GAMEPAD_LEFT_THUMB,
+    RightThumb   = XINPUT_GAMEPAD_RIGHT_THUMB,
+    LeftShoulder = XINPUT_GAMEPAD_LEFT_SHOULDER,
+    RightShoulder= XINPUT_GAMEPAD_RIGHT_SHOULDER,
+    A            = XINPUT_GAMEPAD_A,
+    B            = XINPUT_GAMEPAD_B,
+    X            = XINPUT_GAMEPAD_X,
+    Y            = XINPUT_GAMEPAD_Y
+};
+
+// 입력 장치 타입
+enum class EInputDeviceType : uint8
+{
+    None,
+    KeyboardMouse,
+    Gamepad0,
+    Gamepad1,
+    Gamepad2,
+    Gamepad3
+};
+
+// 게임패드 상태 구조체
+struct FGamepadState
+{
+    bool bConnected = false;
+    XINPUT_STATE CurrentState = {};
+    XINPUT_STATE PreviousState = {};
+
+    // 스틱 데드존 적용된 값 (-1.0 ~ 1.0)
+    float LeftStickX = 0.0f;
+    float LeftStickY = 0.0f;
+    float RightStickX = 0.0f;
+    float RightStickY = 0.0f;
+
+    // 트리거 값 (0.0 ~ 1.0)
+    float LeftTrigger = 0.0f;
+    float RightTrigger = 0.0f;
 };
 
 class UInputManager : public UObject
@@ -60,6 +109,53 @@ public:
 
     // 마우스 휠 함수들
     float GetMouseWheelDelta() const { return MouseWheelDelta; }
+
+    // === 게임패드 함수들 ===
+
+    // 게임패드 연결 상태
+    bool IsGamepadConnected(int GamepadIndex) const;
+    int GetConnectedGamepadCount() const;
+
+    // 어떤 게임패드에서 입력이 왔는지 확인 (-1이면 입력 없음)
+    int32 GetGamepadWithAnyButtonPressed() const;
+    int32 GetGamepadWithAnyInput() const;  // 버튼 + 스틱 + 트리거
+
+    // 게임패드 버튼 (특정 게임패드)
+    bool IsGamepadButtonDown(int GamepadIndex, EGamepadButton Button) const;
+    bool IsGamepadButtonPressed(int GamepadIndex, EGamepadButton Button) const;
+    bool IsGamepadButtonReleased(int GamepadIndex, EGamepadButton Button) const;
+
+    // 게임패드 스틱 (-1.0 ~ 1.0, 데드존 적용됨)
+    float GetGamepadLeftStickX(int GamepadIndex) const;
+    float GetGamepadLeftStickY(int GamepadIndex) const;
+    float GetGamepadRightStickX(int GamepadIndex) const;
+    float GetGamepadRightStickY(int GamepadIndex) const;
+
+    // 게임패드 트리거 (0.0 ~ 1.0)
+    float GetGamepadLeftTrigger(int GamepadIndex) const;
+    float GetGamepadRightTrigger(int GamepadIndex) const;
+
+    // 진동 설정 (0.0 ~ 1.0)
+    void SetGamepadVibration(int GamepadIndex, float LeftMotor, float RightMotor);
+    void StopGamepadVibration(int GamepadIndex);
+
+    // 데드존 설정
+    void SetStickDeadzone(float Deadzone) { StickDeadzone = Deadzone; }
+    float GetStickDeadzone() const { return StickDeadzone; }
+    void SetTriggerThreshold(float Threshold) { TriggerThreshold = Threshold; }
+    float GetTriggerThreshold() const { return TriggerThreshold; }
+
+    // === 게임패드 → 키보드 자동 매핑 ===
+    // 활성화하면 게임패드 입력이 자동으로 키보드 입력으로 인식됨
+    // Gamepad 0 → Player 1 (WASD + 액션키)
+    // Gamepad 1 → Player 2 (화살표 + 액션키)
+    void SetGamepadToKeyboardMapping(bool bEnable) { bGamepadToKeyboardMapping = bEnable; }
+    bool IsGamepadToKeyboardMappingEnabled() const { return bGamepadToKeyboardMapping; }
+
+    // 스틱 → 키 매핑 임계값 (기본 0.5)
+    void SetStickToKeyThreshold(float Threshold) { StickToKeyThreshold = Threshold; }
+    float GetStickToKeyThreshold() const { return StickToKeyThreshold; }
+
     // 디버그 로그 토글
     void SetDebugLoggingEnabled(bool bEnabled) { bEnableDebugLogging = bEnabled; }
     bool IsDebugLoggingEnabled() const { return bEnableDebugLogging; }
@@ -82,11 +178,18 @@ public:
     using ViewportCheckCallback = bool(*)(const FVector2D&);
     void SetViewportCheckCallback(ViewportCheckCallback Callback) { ViewportChecker = Callback; }
 
+    // 게임플레이 입력 활성화/비활성화 (WASD, 점프 등)
+    // 시스템 입력(F11 등)은 항상 작동
+    void SetGameplayInputEnabled(bool bEnabled) { bGameplayInputEnabled = bEnabled; }
+    bool IsGameplayInputEnabled() const { return bGameplayInputEnabled; }
+
 private:
     // 내부 헬퍼 함수들
     void UpdateMousePosition(int X, int Y);
     void UpdateMouseButton(EMouseButton Button, bool bPressed);
     void UpdateKeyState(int KeyCode, bool bPressed);
+    void UpdateGamepadStates();
+    float ApplyStickDeadzone(SHORT Value, float Deadzone) const;
 
     // 윈도우 핸들
     HWND WindowHandle;
@@ -118,4 +221,22 @@ private:
 
     // 뷰포트 윈도우 체크 콜백
     ViewportCheckCallback ViewportChecker = nullptr;
+
+    // 게임플레이 입력 활성화 여부 (WASD, 점프 등)
+    bool bGameplayInputEnabled = true;
+
+    // === 게임패드 상태 ===
+    static constexpr int MaxGamepads = 4;
+    FGamepadState GamepadStates[MaxGamepads];
+
+    // 데드존 설정
+    float StickDeadzone = 0.24f;   // Xbox 권장 데드존 (XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE / 32767)
+    float TriggerThreshold = 0.12f; // 트리거 임계값 (XINPUT_GAMEPAD_TRIGGER_THRESHOLD / 255)
+
+    // 게임패드 → 키보드 매핑 설정
+    bool bGamepadToKeyboardMapping = true;  // 기본 활성화
+    float StickToKeyThreshold = 0.5f;       // 스틱이 이 값 이상이면 키 입력으로 인식
+
+    // 게임패드 입력이 특정 키에 매핑되는지 확인 (내부 헬퍼)
+    bool IsGamepadMappedToKey(int KeyCode, bool bCheckPressed = false, bool bCheckReleased = false) const;
 };

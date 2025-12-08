@@ -746,6 +746,13 @@ void UClothComponent::BuildClothMesh()
 
 void UClothComponent::CreateClothFabric()
 {
+	nv::cloth::Factory* factory = FClothManager::GetInstance().GetFactory();
+	if (!factory)
+	{
+		UE_LOG("Failed to create cloth fabric: Factory is null!");
+		return;
+	}
+
 	ClothMeshDesc meshDesc;
 	meshDesc.setToDefault();
 
@@ -759,7 +766,7 @@ void UClothComponent::CreateClothFabric()
 
 	physx::PxVec3 gravity(0, 0, -981.0f); // cm/s^2
 
-	fabric = NvClothCookFabricFromMesh(FClothManager::GetInstance().GetFactory(), meshDesc, gravity, &phaseTypeInfo, false);
+	fabric = NvClothCookFabricFromMesh(factory, meshDesc, gravity, &phaseTypeInfo, false);
 
 	if (!fabric)
 	{

@@ -1,4 +1,4 @@
-﻿
+
 #include "pch.h"
 #include "SkeletalMeshComponent.h"
 #include "Source/Runtime/Engine/Animation/AnimDateModel.h"
@@ -230,33 +230,7 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
         // P 키: PhysicsState 전환 (AnimationDriven <-> PhysicsDriven) - 플레이어만
         if (InputManager.IsKeyPressed('P'))
         {
-            // 플레이어 컨트롤러가 제어하는 Pawn인지 확인
-            bool bIsPlayerControlled = false;
-            if (AActor* Owner = GetOwner())
-            {
-                if (APawn* OwnerPawn = Cast<APawn>(Owner))
-                {
-                    if (AController* Controller = OwnerPawn->GetController())
-                    {
-                        bIsPlayerControlled = Cast<APlayerController>(Controller) != nullptr;
-                    }
-                }
-            }
-
-            if (bIsPlayerControlled)
-            {
-                if (PhysicsState == EPhysicsAnimationState::AnimationDriven)
-                {
-                    SetPhysicsAnimationState(EPhysicsAnimationState::PhysicsDriven);
-                    UE_LOG("[SkeletalMeshComponent] PhysicsState changed to: PhysicsDriven (Ragdoll)");
-                }
-                else
-                {
-                    SetPhysicsAnimationState(EPhysicsAnimationState::AnimationDriven);
-                    ResetToBindPose();
-                    UE_LOG("[SkeletalMeshComponent] PhysicsState changed to: AnimationDriven");
-                }
-            }
+            ChangePhysicsState();
         }
 
         // 현재 속도 상태를 주기적으로 로그 (5초마다)
@@ -963,6 +937,37 @@ int32 USkeletalMeshComponent::GetBoneIndexByName(const FName& BoneName) const
     return Skeleton.FindBoneIndex(BoneName);
 }
 
+void USkeletalMeshComponent::ChangePhysicsState()
+{
+    // 플레이어 컨트롤러가 제어하는 Pawn인지 확인
+    bool bIsPlayerControlled = false;
+    if (AActor* Owner = GetOwner())
+    {
+        if (APawn* OwnerPawn = Cast<APawn>(Owner))
+        {
+            if (AController* Controller = OwnerPawn->GetController())
+            {
+                bIsPlayerControlled = Cast<APlayerController>(Controller) != nullptr;
+            }
+        }
+    }
+
+    if (bIsPlayerControlled)
+    {
+        if (PhysicsState == EPhysicsAnimationState::AnimationDriven)
+        {
+            SetPhysicsAnimationState(EPhysicsAnimationState::PhysicsDriven);
+            UE_LOG("[SkeletalMeshComponent] PhysicsState changed to: PhysicsDriven (Ragdoll)");
+        }
+        else
+        {
+            SetPhysicsAnimationState(EPhysicsAnimationState::AnimationDriven);
+            ResetToBindPose();
+            UE_LOG("[SkeletalMeshComponent] PhysicsState changed to: AnimationDriven");
+        }
+    }
+}
+
 // ============================================================
 // Socket Section
 // ============================================================
@@ -1479,4 +1484,52 @@ void USkeletalMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandl
             InOutHandle["PhysicsAssetOverridePath"] = "";
         }
     }
+}
+
+void USkeletalMeshComponent::SetAnimGraph(UAnimationGraph* InAnimGraph)
+{
+	// Do nothing if the graph is the same
+	if (AnimGraph == InAnimGraph)
+	{
+		return;
+	}
+
+	AnimGraph = InAnimGraph;
+
+	// AnimInstance and StateMachine must be recreated and recompiled with the new graph
+	if (AnimInstance)
+	{
+		// Clean up old state machine
+		if (UAnimationStateMachine* OldStateMachine = AnimInstance->GetStateMachine())
+		{
+			DeleteObject(OldStateMachine);
+		}
+
+		// Create new state machine for the existing anim instance
+		UAnimationStateMachine* NewStateMachine = NewObject<UAnimationStateMachine>();
+		AnimInstance->SetStateMachine(NewStateMachine);
+
+		// Re-compile with the new graph
+		if (AnimGraph)
+		{
+			FAnimBlueprintCompiler::Compile(
+				AnimGraph,
+				AnimInstance,
+				NewStateMachine
+			);
+			UE_LOG("[USkeletalMeshComponent] Re-compiled AnimInstance with new AnimGraph.");
+		}
+		else
+		{
+			// If the new graph is null, the state machine will be empty.
+			UE_LOG("[USkeletalMeshComponent] Set a null AnimGraph. AnimInstance is now empty.");
+		}
+	}
+	else
+	{
+		// If there was no AnimInstance, we probably don't need to create one here at runtime.
+		// This case might need more logic depending on game design, but for now,
+		// we just set the graph pointer. The next BeginPlay or relevant event would init the instance.
+		UE_LOG("[USkeletalMeshComponent] SetAnimGraph called, but no AnimInstance exists yet.");
+	}
 }

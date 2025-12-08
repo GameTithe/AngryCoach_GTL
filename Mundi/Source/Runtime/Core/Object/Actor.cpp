@@ -22,7 +22,7 @@ END_PROPERTIES()*/
 AActor::AActor()
 {
 	ObjectName = "DefaultActor";
-	CustomTimeDillation = 1.0f;
+	CustomTimeDillation = 1.0f; 
 }
 
 AActor::~AActor()

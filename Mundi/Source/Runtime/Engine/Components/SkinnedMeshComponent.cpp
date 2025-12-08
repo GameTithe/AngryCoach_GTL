@@ -93,13 +93,17 @@ void USkinnedMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle
 void USkinnedMeshComponent::DuplicateSubObjects()
 {
    Super::DuplicateSubObjects();
-   if (SkeletalMesh)
+
+   // SkeletalMesh가 없으면 버퍼 생성 건너뜀 (프리팹에 메쉬가 설정되지 않은 경우)
+   if (!SkeletalMesh)
    {
-      SkeletalMesh->CreateCPUSkinnedVertexBuffer(&CPUSkinnedVertexBuffer);
-      SkeletalMesh->CreateGPUSkinnedVertexBuffer(&GPUSkinnedVertexBuffer);
-      SkeletalMesh->CreateStructuredBuffer(&SkinningMatrixBuffer, &SkinningMatrixSRV, FinalSkinningMatrices.Num());
-      SkeletalMesh->CreateStructuredBuffer(&SkinningNormalMatrixBuffer, &SkinningNormalMatrixSRV, FinalSkinningNormalMatrices.Num());
+       return;
    }
+
+   SkeletalMesh->CreateCPUSkinnedVertexBuffer(&CPUSkinnedVertexBuffer);
+   SkeletalMesh->CreateGPUSkinnedVertexBuffer(&GPUSkinnedVertexBuffer);
+   SkeletalMesh->CreateStructuredBuffer(&SkinningMatrixBuffer, &SkinningMatrixSRV, FinalSkinningMatrices.Num());
+   SkeletalMesh->CreateStructuredBuffer(&SkinningNormalMatrixBuffer, &SkinningNormalMatrixSRV, FinalSkinningNormalMatrices.Num());
 }
 
 

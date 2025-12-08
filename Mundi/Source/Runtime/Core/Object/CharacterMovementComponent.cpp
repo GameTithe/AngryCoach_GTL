@@ -15,7 +15,7 @@ UCharacterMovementComponent::UCharacterMovementComponent()
 	JumpZVelocity = 4.0;
 
 	BrackingDeceleration = 20.0f; // 입력이 없을 때 감속도
-	GroundFriction = 8.0f; //바닥 마찰 계수 
+	GroundFriction = 8.0f; //바닥 마찰 계수
 }
 
 UCharacterMovementComponent::~UCharacterMovementComponent()
@@ -362,6 +362,11 @@ void UCharacterMovementComponent::PhysFalling(float DeltaSecond)
 			Velocity.Z = 0.0f;
 			bIsFalling = false;
 			CurrentJumpCount = 0;  // 점프 횟수 리셋
+
+			// 여기다 놓으면 안좋음
+			// StopJump처리가 애매해서 땜빵식 코드
+			// 캐릭터 클래스에서 처리하는게 좋다.
+			CharacterOwner->SetCurrentState(ECharacterState::Idle);			
 
 			// 바닥으로 스냅 (SkinWidth 여유를 두고 이동)
 			const float SkinWidth = 0.00125f;

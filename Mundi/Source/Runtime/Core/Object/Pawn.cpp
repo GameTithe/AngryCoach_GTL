@@ -51,7 +51,7 @@ void APawn::UnPossessed()
 void APawn::AddMovementInput(FVector Direction, float Scale)
 {
 	Direction.Z = 0.0f;
-	InternalMovementInputVector += Direction * Scale;
+	InternalMovementInputVector += Direction * Scale;	
 }
 
 float APawn::TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator)
@@ -74,6 +74,10 @@ void APawn::AttackBegin()
 }
 
 void APawn::AttackEnd()
+{
+}
+
+void APawn::ClearState()
 {
 }
 

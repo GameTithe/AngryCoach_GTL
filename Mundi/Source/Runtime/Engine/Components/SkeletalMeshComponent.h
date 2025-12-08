@@ -70,10 +70,7 @@ public:
     /**
      * @brief 애니메이션 그래프 설정 
      */
-    void SetAnimGraph(UAnimationGraph* InAnimGraph) 
-    { 
-        AnimGraph = InAnimGraph;
-    }
+    void SetAnimGraph(UAnimationGraph* InAnimGraph);
 
     /**
      * @brief 애니메이션 재생 시작/중지
@@ -296,6 +293,8 @@ public:
     void SyncAnimationFromBodies();                      // 래그돌 포즈 → 본 트랜스폼 반영
 
     int32 GetBoneIndexByName(const FName& BoneName) const;
+
+    void ChangePhysicsState();
 
     /////////////////////////////////////////////////////////////
     // Socket Section

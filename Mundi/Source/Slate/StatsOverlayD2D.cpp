@@ -211,7 +211,7 @@ void UStatsOverlayD2D::Draw()
 	const float Space = 8.0f;   // 패널간의 간격
 	const float PanelWidth = 250.0f;
 	const float PanelHeight = 48.0f;
-	float NextY = 70.0f;
+	float NextY = 140.0f;  // 아래로 이동 (기존 70.0f)
 
 	if (bShowFPS)
 	{

@@ -1,8 +1,14 @@
 ﻿#include "pch.h"
 #include "AngryCoachCharacter.h"
+
+#include <types.hpp>
+
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
 #include "AccessoryActor.h"
+#include "GorillaAccessoryActor.h"
+#include "CapsuleComponent.h"
+#include "GameplayStatics.h"
 #include "KnifeAccessoryActor.h"
 #include "PunchAccessoryActor.h"
 #include "ShapeComponent.h"
@@ -17,6 +23,7 @@
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
 	// SkillComponent 생성
+	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
 }
 
 AAngryCoachCharacter::~AAngryCoachCharacter()
@@ -63,6 +70,21 @@ void AAngryCoachCharacter::BeginPlay()
 			
 			CloakAccessory->GetRootComponent()->SetOwner(this);
 		}
+
+		// FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		// AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		// if (GorillaAccessory)
+		// {
+		// 	EquipAccessory(GorillaAccessory);
+		//
+		// 	if (SkillComponent)
+		// 	{
+		// 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+		// 	}
+		// 	
+		// 	GorillaAccessory->GetRootComponent()->SetOwner(this);
+		// }
 	}
 }
 
@@ -268,26 +290,35 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 
 	if (Slot != ESkillSlot::None)
 	{
-		SkillComponent->HandleInput(Slot);
+		SkillComponent->HandleInput(Slot);		
 	}
 }
 
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackBegin)
 void AAngryCoachCharacter::AttackBegin()
 {
+	if (CurrentState == ECharacterState::Damaged ||
+		CurrentState == ECharacterState::Attacking ||
+		CurrentState == ECharacterState::Jumping)
+	{
+		return;
+	}
+	
 	if (CachedAttackShape)
 	{
 		CachedAttackShape->SetBlockComponent(true);
+		SetCurrentState(ECharacterState::Attacking);
 		UE_LOG("attack begine");
 	}
 }
 
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackEnd)
 void AAngryCoachCharacter::AttackEnd()
-{
+{	
 	if (CachedAttackShape)
 	{
 		CachedAttackShape->SetBlockComponent(false);
+		SetCurrentState(ECharacterState::Idle);
 		UE_LOG("attack end");
 	}
 }
@@ -304,7 +335,9 @@ void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveC
 
 void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
-	UE_LOG("OnHit");
+	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 5.0f, this, HitResult);
+	// UE_LOG("Owner : %p, damaged actor : %p", this, HitResult.HitActor);
+	// UE_LOG("Damage : %f", AppliedDamage);
 }
 
 float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator)
@@ -321,24 +354,66 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	// 남은 체력보다 데미지가 크면 남은 체력이 실질적인 데미지
 	ActualDamage = FMath::Min(ActualDamage, CurrentHealth);
 	CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
+
+	if (CurrentHealth <= 0.0f)
+	{
+		CurrentState = ECharacterState::Dead;
+		Die();
+	}
 	
+	HitReation();
+	
+	UE_LOG("[TakeDamage] Owner %p, insti %p cur %f", this, Instigator, CurrentHealth);
 	return ActualDamage;
 }
 
-float AAngryCoachCharacter::GetHealthPercent() const
+void AAngryCoachCharacter::HitReation()
 {
-	if (MaxHealth <= KINDA_SMALL_NUMBER)
+	if (!HitReationMontage)
 	{
-		UE_LOG("최대 체력이 0 이하입니다.");
-		return 0.0f;
+		return;
 	}
-	
-	float HeathPercent = CurrentHealth / MaxHealth;
-	return HeathPercent;
+	Super::HitReation();
+	// 재생중인 몽타주 정지
+	if (IsPlayingMontage())
+	{
+		StopCurrentMontage();
+	}
+
+	SetCurrentState(ECharacterState::Damaged);
+	PlayMontage(HitReationMontage);
+}
+
+REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, ClearState)
+void AAngryCoachCharacter::ClearState()
+{
+	Super::ClearState();
+	CurrentState = ECharacterState::Idle;
 }
 
 void AAngryCoachCharacter::DelegateBindToCachedShape()
 {
 	CachedAttackShape->OnComponentHit.AddDynamic(this, &AAngryCoachCharacter::OnHit);
 	UE_LOG("Delegate Bind");
+}
+
+void AAngryCoachCharacter::Die()
+{
+	// Ragdoll
+	if (SkeletalMeshComp)
+	{
+		SkeletalMeshComp->ChangePhysicsState();
+	}
+	// Collision
+	if (CachedAttackShape)
+	{
+		CachedAttackShape->SetBlockComponent(false);
+		CachedAttackShape->SetGenerateOverlapEvents(false);
+	}
+
+	if (CapsuleComponent)
+	{
+		CapsuleComponent->SetBlockComponent(false);
+		CapsuleComponent->SetGenerateOverlapEvents(false);
+	}
 }

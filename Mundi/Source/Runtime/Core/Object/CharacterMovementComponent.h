@@ -30,7 +30,7 @@ public:
 	float GroundFriction; //바닥 마찰 계수
 
 	UPROPERTY(EditAnywhere, Category="[컴포넌트]")
-	float MaxIteration;
+	int32 MaxIteration = 2;
 
 	//TODO
 	//float MaxWalkSpeedCrouched = 6.0f;

@@ -29,6 +29,13 @@ public:
     int32_t SubImages_Horizontal = 1;  // NX (가로 타일 수)
     int32_t SubImages_Vertical = 1;    // NY (세로 타일 수)
 
+    // === SubUV 자동 애니메이션 ===
+    bool bSubUVAnimating = false;      // 자동 애니메이션 중인지
+    float SubUVFrameRate = 10.0f;      // 초당 프레임 수 (FPS)
+    float SubUVElapsedTime = 0.0f;     // 경과 시간
+    int32_t CurrentSubUVFrame = 0;     // 현재 프레임
+    bool bSubUVLoop = true;            // 루프 여부
+
     // === 색상 틴트 ===
     // 기본 흰색 (원본 색상 유지)
     D2D1_COLOR_F Tint;
@@ -50,6 +57,11 @@ public:
      * @brief 렌더링
      */
     void Render(ID2D1DeviceContext* Context) override;
+
+    /**
+     * @brief 업데이트 (SubUV 자동 애니메이션 처리)
+     */
+    void Update(float DeltaTime) override;
 
     // === Lua용 setter ===
     void SetUV(float u0, float v0, float u1, float v1);
@@ -84,6 +96,24 @@ public:
      * @brief 전체 프레임 수 반환
      */
     int32_t GetTotalFrames() const { return SubImages_Horizontal * SubImages_Vertical; }
+
+    // === SubUV 자동 애니메이션 ===
+    /**
+     * @brief SubUV 자동 애니메이션 시작
+     * @param FrameRate 초당 프레임 수 (FPS)
+     * @param bLoop 루프 여부
+     */
+    void StartSubUVAnimation(float FrameRate = 10.0f, bool bLoop = true);
+
+    /**
+     * @brief SubUV 자동 애니메이션 정지
+     */
+    void StopSubUVAnimation();
+
+    /**
+     * @brief SubUV 애니메이션 중인지 여부
+     */
+    bool IsSubUVAnimating() const { return bSubUVAnimating; }
 
     /**
      * @brief WIC 팩토리 정리 (프로그램 종료 시 호출)

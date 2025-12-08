@@ -67,6 +67,18 @@ struct FUIEditorWidget
     int32_t SubUV_Frame = 0;
     bool bAdditive = false;
 
+    // Button
+    std::string HoveredTexturePath;
+    std::string PressedTexturePath;
+    std::string DisabledTexturePath;
+    float NormalAlpha = 1.0f;       // Normal 상태 투명도
+    float HoveredAlpha = 1.0f;      // Hovered 상태 투명도
+    float PressedAlpha = 1.0f;      // Pressed 상태 투명도
+    float DisabledAlpha = 0.5f;     // Disabled 상태 투명도
+    float HoverScale = 1.0f;        // 호버 시 스케일 (1.0 = 없음, 1.1 = 10% 확대)
+    float HoverScaleDuration = 0.1f; // 스케일 애니메이션 시간
+    bool bInteractable = true;
+
     // Animation
     FEditorAnimConfig EnterAnim;
     FEditorAnimConfig ExitAnim;
@@ -85,6 +97,10 @@ struct FUIAsset
 {
     std::string Name;
     std::vector<FUIEditorWidget> Widgets;
+
+    // 디자인 해상도 (캔버스 크기)
+    float CanvasWidth = 1920.0f;
+    float CanvasHeight = 1080.0f;
 
     // 직렬화
     bool SaveToFile(const std::string& Path) const;
@@ -201,4 +217,19 @@ private:
 
     // 에셋 경로
     std::filesystem::path UIAssetPath;
+
+    // 텍스처 검색 필터 (콤보박스별로 분리)
+    char TextureSearchFilter[256] = "";
+    char FGTextureSearchFilter[256] = "";
+    char BGTextureSearchFilter[256] = "";
+
+    // Properties 패널 입력 버퍼 (선택 변경 시 동기화 필요)
+    char WidgetNameBuffer[256] = "";
+    char BindingKeyBuffer[256] = "";
+    int32_t LastSelectedWidgetIndex = -1;  // 선택 변경 감지용
+
+    // 검색 가능한 텍스처 콤보박스 헬퍼
+    bool TextureComboWithSearch(const char* label, std::string& outPath,
+                                 const TArray<FString>& texturePaths,
+                                 char* searchBuffer, size_t bufferSize);
 };
