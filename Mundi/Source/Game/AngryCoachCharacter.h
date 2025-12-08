@@ -32,6 +32,7 @@ public:
 	void PlayMontage(UAnimMontage* Montage);
 	void StopCurrentMontage(float BlendOutTime = 0.2f);
 	bool IsPlayingMontage() const;
+	bool PlayMontageSection(UAnimMontage* Montage, const FString& SectionName);
 
 	// ===== 악세서리 =====
 	void EquipAccessory(AAccessoryActor* Accessory);
@@ -58,6 +59,11 @@ public:
 	void HitReation() override;
 	void ClearState() override;
 
+	void DoGuard();
+	void StopGuard();
+
+	bool IsGuard() const { return CurrentState == ECharacterState::Guard; }
+
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
@@ -71,5 +77,6 @@ protected:
 	UShapeComponent* CachedAttackShape = nullptr;
 
 	UAnimMontage* HitReationMontage = nullptr;
+	UAnimMontage* GuardMontage = nullptr;
 	USound* DieSound = nullptr;
 };

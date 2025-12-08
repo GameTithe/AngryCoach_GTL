@@ -827,6 +827,7 @@ bool UAnimInstance::JumpToSection(const FString& SectionName)
         return false;
     }
 
+    
     MontageState->CurrentSectionIndex = Index;
     MontageState->Position = 0.0f;
     PreviousMontagePlayTime = 0.0f;

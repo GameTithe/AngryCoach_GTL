@@ -25,6 +25,8 @@ AAngryCoachCharacter::AAngryCoachCharacter()
 {
 	// SkillComponent 생성
 	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
+	GuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
+	GuardMontage->bLoop = true;
 	DieSound = RESOURCE.Load<USound>("Data/Audio/Die.wav");
 }
 
@@ -225,6 +227,26 @@ bool AAngryCoachCharacter::IsPlayingMontage() const
 	return AnimInstance->IsPlayingMontage();
 }
 
+bool AAngryCoachCharacter::PlayMontageSection(UAnimMontage* Montage, const FString& SectionName)
+{
+	if (!Montage->HasSections())
+	{
+		UE_LOG("몽타주에 섹션이 없습니다.");
+		return false;
+	}
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!MeshComp) return false ;
+	
+	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		return false;
+	}
+
+	return AnimInstance->JumpToSection(SectionName);	
+}
+
 // ===== 악세서리 =====
 
 void AAngryCoachCharacter::EquipAccessory(AAccessoryActor* Accessory)
@@ -378,18 +400,39 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
 	float ActualDamage = DamageAmount;
 
-	// 오버킬 처리
-	// 남은 체력보다 데미지가 크면 남은 체력이 실질적인 데미지
-	ActualDamage = FMath::Min(ActualDamage, CurrentHealth);
-	CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
+	
+
+	if (!IsGuard())
+	{
+		// 오버킬 처리
+		// 남은 체력보다 데미지가 크면 남은 체력이 실질적인 데미지
+		ActualDamage = FMath::Min(ActualDamage, CurrentHealth);
+		CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
+		HitReation();
+	}
+	else
+	{
+		ActualDamage = 0.0f;
+		FVector KnockbackDirection = GetActorLocation() - HitResult.ImpactPoint;
+		KnockbackDirection.Z = 0.0f;
+		if (KnockbackDirection.IsZero())
+		{
+			KnockbackDirection = -GetActorForward();
+		}
+		else
+		{
+			KnockbackDirection.Normalize();
+		}
+
+		float KnockbackDistance = 0.5f;
+		RootComponent->AddWorldOffset(KnockbackDirection * KnockbackDistance);
+	}
 
 	if (CurrentHealth <= 0.0f)
 	{
 		CurrentState = ECharacterState::Dead;
 		Die();
-	}
-	
-	HitReation();
+	}	
 	
 	UE_LOG("[TakeDamage] Owner %p, insti %p cur %f", this, Instigator, CurrentHealth);
 	return ActualDamage;
@@ -417,6 +460,36 @@ void AAngryCoachCharacter::ClearState()
 {
 	Super::ClearState();
 	CurrentState = ECharacterState::Idle;
+}
+
+void AAngryCoachCharacter::DoGuard()
+{
+	if (!GuardMontage)
+	{
+		return;
+	}
+
+	// 피격 중, 공격 중, 점프 중에는 가드 불가능
+	if (CurrentState == ECharacterState::Damaged ||
+		CurrentState == ECharacterState::Attacking ||
+		CurrentState == ECharacterState::Jumping)
+	{
+		return;
+	}
+
+	SetCurrentState(ECharacterState::Guard);
+	PlayMontage(GuardMontage);
+}
+
+void AAngryCoachCharacter::StopGuard()
+{
+	if (!GuardMontage)
+	{
+		return;
+	}
+
+	SetCurrentState(ECharacterState::Idle);
+	StopCurrentMontage();
 }
 
 void AAngryCoachCharacter::DelegateBindToCachedShape()
