@@ -434,7 +434,7 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 		CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
 		HitReation();
 	}
-	else
+	else if (bCanPlayHitReactionMontage)
 	{
 		ActualDamage = 0.0f;
 		FVector KnockbackDirection = GetActorLocation() - HitResult.ImpactPoint;
@@ -464,7 +464,8 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 
 void AAngryCoachCharacter::HitReation()
 {
-	if (!HitReationMontage)
+	// bCanPlayHitReactionMontage가 true이고 HitReationMontage가 유효할 때만 몽타주 재생
+	if (!bCanPlayHitReactionMontage || !HitReationMontage)
 	{
 		return;
 	}

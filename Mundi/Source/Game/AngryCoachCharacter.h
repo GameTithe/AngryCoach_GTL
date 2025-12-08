@@ -63,7 +63,8 @@ public:
 	void StopGuard();
 
 	bool IsGuard() const { return CurrentState == ECharacterState::Guard; }
-
+	
+	bool bCanPlayHitReactionMontage = true; // New flag to control hit reaction montage playback
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
