@@ -7,6 +7,7 @@
 #include "CameraActor.h"
 #include "FAudioDevice.h"
 #include "PlayerCameraManager.h"
+#include "InputManager.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 
 AAngryCoachGameMode::AAngryCoachGameMode()
