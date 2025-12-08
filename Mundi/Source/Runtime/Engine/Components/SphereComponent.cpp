@@ -10,14 +10,14 @@ USphereComponent::USphereComponent()
 
 void USphereComponent::OnRegister(UWorld* InWorld)
 {
-    //Super::OnRegister(InWorld);
-    //
-    //if (SphereRadius == 0)
-    //{
-    //    SphereRadius = FMath::Max(WorldAABB.GetHalfExtent().X, WorldAABB.GetHalfExtent().Y, WorldAABB.GetHalfExtent().Z);
-    //}
-
     Super::OnRegister(InWorld);
+
+    // 사용자가 명시적으로 SphereRadius를 설정한 경우(기본값 0.5f가 아닌 경우) 덮어쓰지 않음
+    constexpr float DefaultRadius = 0.5f;
+    if (FMath::Abs(SphereRadius - DefaultRadius) > 1e-6f)
+    {
+        return;
+    }
 
     if (AActor* Owner = GetOwner())
     {
@@ -39,7 +39,7 @@ void USphereComponent::OnRegister(UWorld* InWorld)
         float LocalRadiusY = S.Y > Eps ? WorldHalfExtent.Y / S.Y : WorldHalfExtent.Y;
         float LocalRadiusZ = S.Z > Eps ? WorldHalfExtent.Z / S.Z : WorldHalfExtent.Z;
 
-        SphereRadius = FMath::Max(LocalRadiusX, FMath::Max(LocalRadiusY, LocalRadiusZ)); 
+        SphereRadius = FMath::Max(LocalRadiusX, FMath::Max(LocalRadiusY, LocalRadiusZ));
     }
 }
 
