@@ -17,18 +17,21 @@ void UGorillaSpecialAttackSkill::Activate(AActor* Caster)
 	{
 		return;
 	}
-	
+
 	AGorillaAccessoryActor* GA = Cast<AGorillaAccessoryActor>(SourceAccessory);
 	if (GA)
 	{
 		if (!GA->GetIsGorillaForm())
 		{
+			// 변신: 몽타주 재생 (파티클 포함)
 			AAngryCoachCharacter* Character = SourceAccessory->GetOwningCharacter();
 			Character->PlayMontage(Montage);
 		}
 		else
 		{
+			// 변신 해제: 파티클 없이 즉시 해제
 			GA->ToggleGorillaForm();
+			UE_LOG("[GorillaSpecialAttack] Toggle to human form (no montage)");
 		}
 	}
 }

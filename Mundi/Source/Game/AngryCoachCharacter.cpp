@@ -59,57 +59,57 @@ void AAngryCoachCharacter::BeginPlay()
 	// 기본 펀치 악세서리 장착 (이미 장착된 게 없을 때만)
 	if (GWorld && !CurrentAccessory)
 	{
-		//FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		//ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		//
-		//if (CloakAccessory)
-		//{
-		//	EquipAccessory(CloakAccessory);
-		//	FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		//	ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		//
-		//	if (CloakAccessory)
-		//	{
-		//		EquipAccessory(CloakAccessory);
-		//
-		//		if (SkillComponent)
-		//		{
-		//			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
-		//		}
-		//
-		//		CloakAccessory->GetRootComponent()->SetOwner(this);
-		//	}
-		//}
-
-		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		
-		if (KnifeAccessory)
+		if (CloakAccessory)
 		{
-			EquipAccessory(KnifeAccessory);
+			EquipAccessory(CloakAccessory);
+			FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+			ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		
-			if (SkillComponent)
+			if (CloakAccessory)
 			{
-				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+				EquipAccessory(CloakAccessory);
+		
+				if (SkillComponent)
+				{
+					SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
+				}
+		
+				CloakAccessory->GetRootComponent()->SetOwner(this);
 			}
-			
-			KnifeAccessory->GetRootComponent()->SetOwner(this);
 		}
+
+		//FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		//AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		//if (KnifeAccessory)
+		//{
+		//	EquipAccessory(KnifeAccessory);
+		//
+		//	if (SkillComponent)
+		//	{
+		//		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+		//	}
+		//	
+		//	KnifeAccessory->GetRootComponent()->SetOwner(this);
+		//}
 			  
-		 // FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		 // AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		 //FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		 //AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		 //
-		 // if (GorillaAccessory)
-		 // {
-		 // 	EquipAccessory(GorillaAccessory);
+		 //if (GorillaAccessory)
+		 //{
+		 //	EquipAccessory(GorillaAccessory);
 		 //
-		 // 	if (SkillComponent)
-		 // 	{
-		 // 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-		 // 	}
-		 // 	
-		 // 	GorillaAccessory->GetRootComponent()->SetOwner(this);
-		 // }
+		 //	if (SkillComponent)
+		 //	{
+		 //		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+		 //	}
+		 //	
+		 //	GorillaAccessory->GetRootComponent()->SetOwner(this);
+		 //}
 	}
 }
 
