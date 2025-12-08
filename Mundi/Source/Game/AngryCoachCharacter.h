@@ -39,7 +39,8 @@ public:
 	void EquipAccessory(AAccessoryActor* Accessory);
 	void UnequipAccessory();
 	AAccessoryActor* GetCurrentAccessory() const { return CurrentAccessory; }
-	void SetAttackShape(UShapeComponent* Shape);
+	void AddAttackShape(UShapeComponent* Shape);
+	void ClearAttackShapes();
 
 	// ===== 스킬 =====
     void OnAttackInput(EAttackInput Input);
@@ -87,7 +88,7 @@ protected:
     // 스킬/악세서리
     USkillComponent* SkillComponent = nullptr;
     AAccessoryActor* CurrentAccessory = nullptr;
-    UShapeComponent* CachedAttackShape = nullptr;
+    TArray<UShapeComponent*> CachedAttackShapes;
 
     // 현재 공격 슬롯(약/강/스페셜 분기용)
     ESkillSlot CurrentAttackSlot = ESkillSlot::None;

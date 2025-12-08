@@ -292,21 +292,29 @@ void AAngryCoachCharacter::UnequipAccessory()
 	CurrentAccessory = nullptr;
 }
 
-void AAngryCoachCharacter::SetAttackShape(UShapeComponent* Shape)
+void AAngryCoachCharacter::AddAttackShape(UShapeComponent* Shape)
 {
 	if (!Shape)
 	{
 		return;
 	}
-	
-	if (CachedAttackShape == Shape)
+
+	// 이미 등록된 shape인지 확인
+	if (CachedAttackShapes.Contains(Shape))
 	{
 		return;
 	}
 
-	CachedAttackShape = Shape;
+	CachedAttackShapes.Add(Shape);
 
-	DelegateBindToCachedShape();
+	// 델리게이트 바인딩
+	Shape->OnComponentBeginOverlap.AddDynamic(this, &AAngryCoachCharacter::OnBeginOverlap);
+	UE_LOG("AttackShape added and delegate bound. Total shapes: %d", CachedAttackShapes.Num());
+}
+
+void AAngryCoachCharacter::ClearAttackShapes()
+{
+	CachedAttackShapes.Empty();
 }
 
 // ===== 스킬 =====
@@ -369,37 +377,49 @@ void AAngryCoachCharacter::AttackBegin()
 	}
 
 	HitActors.Empty();
-	if (CachedAttackShape)
+	if (CachedAttackShapes.Num() > 0)
 	{
-		CachedAttackShape->SetGenerateOverlapEvents(true);
+		for (UShapeComponent* Shape : CachedAttackShapes)
+		{
+			if (Shape)
+			{
+				Shape->SetGenerateOverlapEvents(true);
+			}
+		}
 		SetCurrentState(ECharacterState::Attacking);
-		UE_LOG("attack begine");
+		UE_LOG("attack begin - %d shapes activated", CachedAttackShapes.Num());
 	}
 }
 
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackEnd)
 void AAngryCoachCharacter::AttackEnd()
-{	
-    if (CachedAttackShape)
+{
+    if (CachedAttackShapes.Num() > 0)
     {
-        CachedAttackShape->SetGenerateOverlapEvents(false);
+        for (UShapeComponent* Shape : CachedAttackShapes)
+        {
+            if (Shape)
+            {
+                Shape->SetGenerateOverlapEvents(false);
+            }
+        }
         SetCurrentState(ECharacterState::Idle);
-        UE_LOG("attack end");
+        UE_LOG("attack end - %d shapes deactivated", CachedAttackShapes.Num());
     }
     // 공격 종료 시 슬롯 리셋
-    CurrentAttackSlot = ESkillSlot::None;	
+    CurrentAttackSlot = ESkillSlot::None;
 }
 
 void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
-	if (!HitActors.IsEmpty() && HitActors.Contains(HitResult.HitActor))
+	if (HitActors.Contains(HitResult.HitActor))
 	{
 		return;
-		UE_LOG("dsadsadas");
 	}
-	
+
+	HitActors.Add(HitResult.HitActor);
 	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 1.0f, this, HitResult);
-	UE_LOG("OnBeginOverlap");
+	UE_LOG("OnBeginOverlap - Hit: %p", HitResult.HitActor);
 }
 
 void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
@@ -553,9 +573,7 @@ void AAngryCoachCharacter::StopGuard()
 
 void AAngryCoachCharacter::DelegateBindToCachedShape()
 {
-	// CachedAttackShape->OnComponentHit.AddDynamic(this, &AAngryCoachCharacter::OnHit);
-	CachedAttackShape->OnComponentBeginOverlap.AddDynamic(this, &AAngryCoachCharacter::OnBeginOverlap);
-	UE_LOG("Delegate Bind");
+	// 이제 AddAttackShape에서 개별적으로 바인딩합니다
 }
 
 void AAngryCoachCharacter::Revive()
@@ -578,11 +596,14 @@ void AAngryCoachCharacter::Die()
 	{
 		SkeletalMeshComp->SetRagDollEnabled(true);
 	}
-	// Collision
-	if (CachedAttackShape)
+	// Collision - 모든 AttackShape 비활성화
+	for (UShapeComponent* Shape : CachedAttackShapes)
 	{
-		CachedAttackShape->SetBlockComponent(false);
-		CachedAttackShape->SetGenerateOverlapEvents(false);
+		if (Shape)
+		{
+			Shape->SetBlockComponent(false);
+			Shape->SetGenerateOverlapEvents(false);
+		}
 	}
 
 	if (CapsuleComponent)

@@ -5,6 +5,7 @@
 #include "GorillaHeavyAttackSkill.h"
 #include "GorillaSpecialAttackSkill.h"
 #include "SkeletalMeshComponent.h"
+#include "SphereComponent.h"
 #include "BlueprintGraph/AnimationGraph.h"
 #include "Source/Runtime/AssetManagement/SkeletalMesh.h"
 #include "Source/Runtime/AssetManagement/Texture.h" // UTexture
@@ -28,20 +29,10 @@ AGorillaAccessoryActor::AGorillaAccessoryActor()
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
-	
-	// if (!GorillaPhysicsAsset)
-	// {
-	// 	const FString GorillaPhysicsAssetPath = "Data/Physics/Gorilla_Physics.phys.json";
-	// 	GorillaPhysicsAsset = RESOURCE.Load<UPhysicsAsset>(GorillaPhysicsAssetPath);
-	// 	if (GorillaPhysicsAsset)
-	// 	{
-	// 		UE_LOG("[AGorillaAccessoryActor] Loaded Gorilla Physics Asset from: %s", GorillaPhysicsAssetPath.c_str());
-	// 	}
-	// 	else
-	// 	{
-	// 		UE_LOG("[AGorillaAccessoryActor] FAILED to load Gorilla Physics Asset from: %s", GorillaPhysicsAssetPath.c_str());
-	// 	}
-	// }
+
+	// 양손 AttackShape 생성 (왼손/오른손)
+	CreateAttackShape<USphereComponent>(FName("LeftAttackShape"));
+	CreateAttackShape<USphereComponent>(FName("RightAttackShape"));
 }
 
 void AGorillaAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
