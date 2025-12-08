@@ -6,6 +6,7 @@
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
 #include "AccessoryActor.h"
+#include "AngryCoachPlayerController.h"
 #include "GorillaAccessoryActor.h"
 #include "CapsuleComponent.h"
 #include "CharacterMovementComponent.h"
@@ -373,7 +374,6 @@ void AAngryCoachCharacter::AttackBegin()
 	{
 		CachedAttackShape->SetGenerateOverlapEvents(true);
 		SetCurrentState(ECharacterState::Attacking);
-		UE_LOG("attack begine");
 	}
 }
 
@@ -384,7 +384,6 @@ void AAngryCoachCharacter::AttackEnd()
     {
         CachedAttackShape->SetGenerateOverlapEvents(false);
         SetCurrentState(ECharacterState::Idle);
-        UE_LOG("attack end");
     }
     // 공격 종료 시 슬롯 리셋
     CurrentAttackSlot = ESkillSlot::None;	
@@ -395,16 +394,13 @@ void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiv
 	if (!HitActors.IsEmpty() && HitActors.Contains(HitResult.HitActor))
 	{
 		return;
-		UE_LOG("dsadsadas");
 	}
 	
-	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 1.0f, this, HitResult);
-	UE_LOG("OnBeginOverlap");
+	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, BaseDamage, this, HitResult);
 }
 
 void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
-	UE_LOG("OnEndOverlap");
 }
 
 void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
@@ -466,12 +462,9 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 			KnockbackDirection.Normalize();
 		}
 
-		float KnockbackPower = 10.0f;
 		CharacterMovement->LaunchCharacter(KnockbackDirection * KnockbackPower, true, false);
+		EnableGamePadVibration();
 
-
-		// float KnockbackDistance = 0.2f;
-		// RootComponent->AddWorldOffset(KnockbackDirection);
 	}
 
 	if (CurrentHealth <= 0.0f)
@@ -479,12 +472,10 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 		Die();
 	}	
 	
-	// HitReation();
 
 	//CurrentAccessory->PlayHitParticle();
 	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
 
-	UE_LOG("[TakeDamage] Owner %p, insti %p cur %f", this, Instigator, CurrentHealth);
 	return ActualDamage;
 }
 
@@ -555,7 +546,6 @@ void AAngryCoachCharacter::DelegateBindToCachedShape()
 {
 	// CachedAttackShape->OnComponentHit.AddDynamic(this, &AAngryCoachCharacter::OnHit);
 	CachedAttackShape->OnComponentBeginOverlap.AddDynamic(this, &AAngryCoachCharacter::OnBeginOverlap);
-	UE_LOG("Delegate Bind");
 }
 
 void AAngryCoachCharacter::Revive()
@@ -599,6 +589,17 @@ void AAngryCoachCharacter::Die()
 	SetCurrentState(ECharacterState::Dead);
 	// 낙사처리를 위해서 내부에서 체력 0으로 처리
 	CurrentHealth = 0.0f;
+}
+
+void AAngryCoachCharacter::EnableGamePadVibration()
+{
+	if(AController* Controller = GetController())
+	{
+		if (AAngryCoachPlayerController* AngryController = Cast<AAngryCoachPlayerController>(Controller))
+		{
+			AngryController->SetGamePadVibration(true, this, VibrationDuration);
+		}
+	}
 }
 
 bool AAngryCoachCharacter::IsBelowKillZ()
