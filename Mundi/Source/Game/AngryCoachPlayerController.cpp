@@ -185,7 +185,7 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 
 	// 두 캐릭터 사이 거리에 따라 카메라 거리 조절 (미터 단위)
 	float Distance = FVector::Distance(P1Pos, P2Pos);
-	float ZoomFactor = FMath::Max(1.0f, Distance / 5.0f);  // 5m 이상 떨어지면 줌아웃
+	float ZoomFactor = FMath::Max(1.0f, Distance / 10.0f);  // 10m 이상 떨어지면 줌아웃
 
 	FVector TargetCameraPos = CenterPos + CameraOffset * ZoomFactor;
 
@@ -226,7 +226,7 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 
 		// 2. 동적 비네트 (Vignette)
 		float CameraMovementDistance = (NewPos - CurrentPos).Size();
-		float VignetteIntensity = FMath::Clamp(CameraMovementDistance / 0.15f, 0.0f, 0.8f);  
+		float VignetteIntensity = FMath::Clamp(CameraMovementDistance / 0.1f, 0.0f, 0.8f);  
 		float VignetteRadius = 0.5f;
 		float VignetteSoftness = 1.f;
 		float VignetteRoundness = 2.0f;
