@@ -3,6 +3,8 @@
 #include "Vector.h"
 #include "Name.h"
 #include "Color.h"
+#include "PathUtils.h"
+#include "Source/Runtime/Core/Misc/JsonSerializer.h" // JSON 직렬화 추가
 
 #define  INDEX_NONE -1
 // 직렬화 포맷 (FVertexDynamic와 역할이 달라서 분리됨)
@@ -306,6 +308,56 @@ struct FSkeletalMeshSocket
     }
 };
 
+// JSON 직렬화를 위한 헬퍼 함수들
+inline void to_json(JSON& j, const FVector& P) {
+    j = JSON::Make(JSON::Class::Object);
+    j["X"] = P.X;
+    j["Y"] = P.Y;
+    j["Z"] = P.Z;
+}
+inline void from_json(const JSON& j, FVector& P) {
+    P.X = static_cast<float>(j.at("X").ToFloat());
+    P.Y = static_cast<float>(j.at("Y").ToFloat());
+    P.Z = static_cast<float>(j.at("Z").ToFloat());
+}
+
+inline void to_json(JSON& j, const FQuat& Q) {
+    j = JSON::Make(JSON::Class::Object);
+    j["X"] = Q.X;
+    j["Y"] = Q.Y;
+    j["Z"] = Q.Z;
+    j["W"] = Q.W;
+}
+inline void from_json(const JSON& j, FQuat& Q) {
+    Q.X = static_cast<float>(j.at("X").ToFloat());
+    Q.Y = static_cast<float>(j.at("Y").ToFloat());
+    Q.Z = static_cast<float>(j.at("Z").ToFloat());
+    Q.W = static_cast<float>(j.at("W").ToFloat());
+}
+
+inline void to_json(JSON& j, const FSkeletalMeshSocket& S) {
+    j = JSON::Make(JSON::Class::Object);
+    j["SocketName"] = S.SocketName;
+    j["BoneName"] = S.BoneName;
+
+    JSON loc, rot, scale;
+    to_json(loc, S.RelativeLocation);
+    to_json(rot, S.RelativeRotation);
+    to_json(scale, S.RelativeScale);
+
+    j["RelativeLocation"] = loc;
+    j["RelativeRotation"] = rot;
+    j["RelativeScale"] = scale;
+}
+
+inline void from_json(const JSON& j, FSkeletalMeshSocket& S) {
+    S.SocketName = j.at("SocketName").ToString();
+    S.BoneName = j.at("BoneName").ToString();
+    from_json(j.at("RelativeLocation"), S.RelativeLocation);
+    from_json(j.at("RelativeRotation"), S.RelativeRotation);
+    from_json(j.at("RelativeScale"), S.RelativeScale);
+}
+
 struct FSkeleton
 {
     FString Name; // 스켈레톤 이름
@@ -408,13 +460,13 @@ struct FSkeleton
                 Ar << bone;
             }
 
-            // 소켓 저장
-            uint32 socketCount = static_cast<uint32>(Skeleton.Sockets.size());
-            Ar << socketCount;
-            for (auto& socket : Skeleton.Sockets)
-            {
-                Ar << socket;
-            }
+            // 소켓 저장은 이제 JSON으로 별도 관리하므로 제거
+            // uint32 socketCount = static_cast<uint32>(Skeleton.Sockets.size());
+            // Ar << socketCount;
+            // for (auto& socket : Skeleton.Sockets)
+            // {
+            //     Ar << socket;
+            // }
         }
         else if (Ar.IsLoading())
         {
@@ -435,30 +487,31 @@ struct FSkeleton
                 Skeleton.BoneNameToIndex[Skeleton.Bones[i].Name] = i;
             }
 
-            // 소켓 로드 (하위 호환성: 기존 캐시에 소켓 데이터가 없을 수 있음)
-            try
-            {
-                uint32 socketCount;
-                Ar << socketCount;
-                // 소켓 개수가 비정상적으로 크면 기존 포맷으로 간주
-                if (socketCount > 10000)
-                {
-                    Skeleton.Sockets.clear();
-                }
-                else
-                {
-                    Skeleton.Sockets.resize(socketCount);
-                    for (auto& socket : Skeleton.Sockets)
-                    {
-                        Ar << socket;
-                    }
-                }
-            }
-            catch (...)
-            {
-                // 기존 캐시 파일은 소켓 데이터가 없음 - 무시
-                Skeleton.Sockets.clear();
-            }
+            // 소켓 로딩은 이제 JSON에서 별도 처리하므로 제거
+            Skeleton.Sockets.clear();
+            // try
+            // {
+            //     uint32 socketCount;
+            //     Ar << socketCount;
+            //     // 소켓 개수가 비정상적으로 크면 기존 포맷으로 간주
+            //     if (socketCount > 10000)
+            //     {
+            //         Skeleton.Sockets.clear();
+            //     }
+            //     else
+            //     {
+            //         Skeleton.Sockets.resize(socketCount);
+            //         for (auto& socket : Skeleton.Sockets)
+            //         {
+            //             Ar << socket;
+            //         }
+            //     }
+            // }
+            // catch (...)
+            // {
+            //     // 기존 캐시 파일은 소켓 데이터가 없음 - 무시
+            //     Skeleton.Sockets.clear();
+            // }
         }
         return Ar;
     }

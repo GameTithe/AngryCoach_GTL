@@ -57,6 +57,29 @@ bool USkeletalMesh::Load(const FString& InFilePath, ID3D11Device* InDevice)
         }
     }
 
+    // Load associated sockets
+    FString socketPath = InFilePath + ".socket.json";
+    if (std::filesystem::exists(socketPath))
+    {
+        JSON socketJson;
+        if (FJsonSerializer::LoadJsonFromFile(socketJson, UTF8ToWide(socketPath)))
+        {
+            // JSON 배열을 순회하며 소켓 파싱
+            Data->Skeleton.Sockets.clear();
+            for (const auto& socketObj : socketJson.ArrayRange())
+            {
+                FSkeletalMeshSocket socket;
+                from_json(socketObj, socket);
+                Data->Skeleton.Sockets.Add(socket);
+            }
+            UE_LOG("Loaded %d sockets for SkeletalMesh '%s'", Data->Skeleton.Sockets.Num(), InFilePath.c_str());
+        }
+        else
+        {
+            UE_LOG("Failed to parse .socket.json file for SkeletalMesh '%s'", InFilePath.c_str());
+        }
+    }
+
     // GPU 버퍼 생성
     CreateIndexBuffer(Data, InDevice);
     VertexCount = static_cast<uint32>(Data->Vertices.size());

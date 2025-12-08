@@ -2845,10 +2845,32 @@ bool SSkeletalMeshViewerWindow::SaveSkeletonData(ViewerState* State)
 
     try
     {
+        // 1. 바이너리 저장 (메쉬 데이터)
         FWindowsBinWriter Writer(CacheFilePath);
-        // const_cast because MeshData is accessed const but serialization may need non-const
         Writer << *const_cast<FSkeletalMeshData*>(MeshData);
         Writer.Close();
+
+        // 2. 소켓 데이터를 JSON으로 별도 저장 (원본 FBX 경로 기준)
+        FString SocketJsonPath = MeshData->PathFileName + ".socket.json";
+        const TArray<FSkeletalMeshSocket>& Sockets = MeshData->Skeleton.Sockets;
+
+        JSON SocketArray = JSON::Make(JSON::Class::Array);
+
+        for (const auto& Socket : Sockets)
+        {
+            JSON SocketObj;
+            to_json(SocketObj, Socket);
+            SocketArray.append(SocketObj);
+        }
+
+        if (!FJsonSerializer::SaveJsonToFile(SocketArray, UTF8ToWide(SocketJsonPath.c_str())))
+        {
+            UE_LOG("Failed to save socket data to: %s", SocketJsonPath.c_str());
+        }
+        else
+        {
+            UE_LOG("Socket data saved to: %s", SocketJsonPath.c_str());
+        }
 
         UE_LOG("Skeleton data saved to: %s", CacheFilePath.c_str());
         State->bSocketTransformChanged = false;
