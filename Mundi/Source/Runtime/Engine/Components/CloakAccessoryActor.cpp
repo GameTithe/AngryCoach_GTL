@@ -15,6 +15,9 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 	AccessoryName = "Cloak";
 	Description = "Speed boost and double jump";
 
+	// Tick 활성화 (Wind 업데이트를 위해)
+	bCanEverTick = true;
+
 	// Cloth 컴포넌트 생성
 	ClothComponent = CreateDefaultSubobject<UClothComponent>("ClothComponent");
 	if (ClothComponent)
@@ -75,6 +78,56 @@ void ACloakAccessoryActor::Unequip()
 	}
 
 	Super::Unequip();
+}
+
+void ACloakAccessoryActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// 캐릭터가 있고 ClothComponent가 있을 때만 Wind 업데이트
+	if (OwningCharacter && ClothComponent)
+	{
+		// 캐릭터의 현재 속도 가져오기
+		UCharacterMovementComponent* Movement = OwningCharacter->GetCharacterMovement();
+		if (Movement)
+		{
+			FVector CharacterVelocity = Movement->GetVelocity();
+			UpdateWindFromVelocity(CharacterVelocity);
+		}
+	}
+}
+
+void ACloakAccessoryActor::UpdateWindFromVelocity(const FVector& CharacterVelocity)
+{
+	if (!ClothComponent || !OwningCharacter)
+		return;
+
+	// 속도가 거의 0이면 바람 없음
+	float VelocityMagnitude = CharacterVelocity.Size();
+	if (VelocityMagnitude < 0.5f)
+	{
+		ClothComponent->SetWindVelocity(FVector::Zero());
+		return;
+	}
+
+	// 2D 속도만 사용 (XY 평면, Z축 제외)
+	FVector Velocity2D = FVector(CharacterVelocity.X, CharacterVelocity.Y, 0.0f);
+
+	// 속도의 반대 방향으로 바람 설정
+	//FVector WindDirection = -Velocity2D.GetSafeNormal();
+	//FVector WindDirection = FVector(-Velocity2D.X, Velocity2D.Y, 0.0f).GetSafeNormal();
+	FVector WindDirection = FVector(10.0, 0.0f, 0.0f).GetSafeNormal();
+
+	// 바람 강도 설정 (속도에 비례)
+	float WindScale = 5.5f;
+	float WindMagnitude = Velocity2D.Size() * WindScale;
+
+	FVector FinalWind = WindDirection * WindMagnitude;
+
+	// 디버그 로그 (필요시)
+	// UE_LOG(LogTemp, Warning, TEXT("Velocity: %s, Wind: %s"), *CharacterVelocity.ToString(), *FinalWind.ToString());
+
+	ClothComponent->SetWindVelocity(FVector(0,20,0));
 }
 
 void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)

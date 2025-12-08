@@ -25,8 +25,14 @@ public:
 	void Equip(AAngryCoachCharacter* OwnerCharacter) override;
 	void Unequip() override;
 
+	// Tick 오버라이드 - Wind 업데이트
+	void Tick(float DeltaTime) override;
+
 	void DuplicateSubObjects() override;
 	void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
+	// Wind 설정 함수
+	void UpdateWindFromVelocity(const FVector& CharacterVelocity);
 
 private:
 	// 원래 값 저장 (Unequip 시 복원용)
