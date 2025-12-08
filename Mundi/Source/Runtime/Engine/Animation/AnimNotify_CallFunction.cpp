@@ -16,8 +16,8 @@ void UAnimNotify_CallFunction::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
     if (FunctionName.IsValid())
     {
         if (APawn* Pawn = Cast<APawn>(Owner))
-        {
-            Pawn->AttackBegin();
+        {            
+            Pawn->ProcessEvent(FunctionName);
         }
     }
     

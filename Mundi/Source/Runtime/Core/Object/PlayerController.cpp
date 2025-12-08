@@ -210,15 +210,6 @@ void APlayerController::Tick(float DeltaSeconds)
         }
     }
 
-	// 공격 입력 (할당된 장치 사용)
-	if (IsActionPressed(Action_Attack))
-	{
-		if (ACharacter* Character = Cast<ACharacter>(GetPawn()))
-		{
-			Character->Attack();
-		}
-	}
-
 	// 입력 처리 (Move)
 	ProcessMovementInput(DeltaSeconds);
 

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_StandAlone|x64">
@@ -315,6 +315,7 @@
     <ClCompile Include="Source\Runtime\Engine\Components\GorillaAccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\GorillaHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\GorillaLightAttackSkill.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\GorillaSpecialAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\KnifeAccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\KnifeHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\KnifeLightAttackSkill.cpp" />
@@ -778,7 +779,7 @@
     <ClCompile Include="Generated\UKnifeHeavyAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UKnifeLightAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UKnifeSpecialAttackSkill.generated.cpp" />
-  </ItemGroup>
+  <ClCompile Include="Generated\UGorillaSpecialAttackSkill.generated.cpp" /></ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -1013,6 +1014,7 @@
     <ClInclude Include="Source\Runtime\Engine\Components\GorillaAccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\GorillaHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\GorillaLightAttackSkill.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\GorillaSpecialAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\KnifeAccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\KnifeHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\KnifeLightAttackSkill.h" />
@@ -1341,7 +1343,7 @@
     <ClInclude Include="Generated\UKnifeHeavyAttackSkill.generated.h" />
     <ClInclude Include="Generated\UKnifeLightAttackSkill.generated.h" />
     <ClInclude Include="Generated\UKnifeSpecialAttackSkill.generated.h" />
-  </ItemGroup>
+  <ClInclude Include="Generated\UGorillaSpecialAttackSkill.generated.h" /></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />

@@ -46,10 +46,22 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 	FVector InputDir = FVector::Zero();
 
 	// WASD 이동
-	if (InputManager.IsKeyDown('W')) { InputDir.X += 1.0f; }
-	if (InputManager.IsKeyDown('S')) { InputDir.X -= 1.0f; }
-	if (InputManager.IsKeyDown('D')) { InputDir.Y += 1.0f; }
-	if (InputManager.IsKeyDown('A')) { InputDir.Y -= 1.0f; }
+	if (InputManager.IsKeyDown('W'))
+	{
+		InputDir.X += 1.0f;
+	}
+	if (InputManager.IsKeyDown('S'))
+	{
+		InputDir.X -= 1.0f;
+	}
+	if (InputManager.IsKeyDown('D'))
+	{
+		InputDir.Y += 1.0f;		
+	}
+	if (InputManager.IsKeyDown('A'))
+	{
+		InputDir.Y -= 1.0f;		
+	}
 
 	if (!InputDir.IsZero())
 	{
@@ -89,6 +101,11 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 	if (InputManager.IsKeyPressed('U'))
 	{
 		Player1->OnAttackInput(EAttackInput::Skill);
+	}
+
+	if (InputManager.IsKeyReleased('I'))
+	{
+		Player1->StopJumping();
 	}
 }
 

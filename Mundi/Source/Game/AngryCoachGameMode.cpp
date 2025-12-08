@@ -52,6 +52,7 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 		Player2 = Cast<AAngryCoachCharacter>(P2Actor);
 		if (Player2)
 		{
+			Player2->bIsCGC = false;
 			Player2->SetActorLocation(FVector(0, 5, 2));
 			Player2->PossessedBy(AngryCoachController);
 		}
