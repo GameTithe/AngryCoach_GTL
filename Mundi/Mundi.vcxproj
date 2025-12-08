@@ -312,6 +312,7 @@
     <ClCompile Include="Source\Runtime\Engine\Components\CloakAccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\CloakHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\CloakLightAttackSkill.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\CloakSpecialAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\GorillaAccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\GorillaHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\GorillaLightAttackSkill.cpp" />
@@ -326,6 +327,7 @@
     <ClCompile Include="Source\Runtime\Engine\Components\ClothComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\DefaultHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\DefaultLightAttackSkill.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\PunchSpecialAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\SkillBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\SkillComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_DOF.cpp" />
@@ -779,6 +781,8 @@
     <ClCompile Include="Generated\UKnifeHeavyAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UKnifeLightAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UKnifeSpecialAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UPunchSpecialAttackSkill.generated.cpp" />
+    <ClCompile Include="Generated\UCloakSpecialAttackSkill.generated.cpp" />
   <ClCompile Include="Generated\UGorillaSpecialAttackSkill.generated.cpp" /></ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
@@ -1011,6 +1015,7 @@
     <ClInclude Include="Source\Runtime\Engine\Components\CloakAccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\CloakHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\CloakLightAttackSkill.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\CloakSpecialAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\GorillaAccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\GorillaHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\GorillaLightAttackSkill.h" />
@@ -1032,6 +1037,7 @@
     <ClInclude Include="Source\Runtime\Engine\Components\ParticleSystemComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\PawnMovementComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\ProjectileMovementComponent.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\PunchSpecialAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\RotatingMovementComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\BoxComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\BoneAnchorComponent.h" />
@@ -1343,7 +1349,9 @@
     <ClInclude Include="Generated\UKnifeHeavyAttackSkill.generated.h" />
     <ClInclude Include="Generated\UKnifeLightAttackSkill.generated.h" />
     <ClInclude Include="Generated\UKnifeSpecialAttackSkill.generated.h" />
-  <ClInclude Include="Generated\UGorillaSpecialAttackSkill.generated.h" /></ItemGroup>
+    <ClInclude Include="Generated\UGorillaSpecialAttackSkill.generated.h" />
+    <ClInclude Include="Generated\UPunchSpecialAttackSkill.generated.h" />
+  <ClInclude Include="Generated\UCloakSpecialAttackSkill.generated.h" /></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />

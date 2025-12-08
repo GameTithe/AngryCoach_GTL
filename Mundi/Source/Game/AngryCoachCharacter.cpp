@@ -18,11 +18,14 @@
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
 #include "Source/Runtime/Engine/Skill/SkillTypes.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "CloakAccessoryActor.h" 
+#include "FAudioDevice.h"
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
 	// SkillComponent 생성
 	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
+	DieSound = RESOURCE.Load<USound>("Data/Audio/Die.wav");
 }
 
 AAngryCoachCharacter::~AAngryCoachCharacter()
@@ -53,21 +56,49 @@ void AAngryCoachCharacter::BeginPlay()
 		// 	PunchAccessory->GetRootComponent()->SetOwner(this);
 		// }
 
-		//AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
+		// AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
 		 
-		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		
-		if (KnifeAccessory)
+		FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+
+		if (CloakAccessory)
 		{
-			EquipAccessory(KnifeAccessory);
+			EquipAccessory(CloakAccessory);
+		 FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		 AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		
+		 if (KnifeAccessory)
+		 {
+		 	EquipAccessory(KnifeAccessory);
 		
 			if (SkillComponent)
 			{
-				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+				SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
 			}
+			
+			CloakAccessory->GetRootComponent()->SetOwner(this);
 		}
 
+		// FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		// AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		// if (GorillaAccessory)
+		// {
+		// 	EquipAccessory(GorillaAccessory);
+		//
+		// 	if (SkillComponent)
+		// 	{
+		// 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+		// 	}
+		// 	
+		// 	GorillaAccessory->GetRootComponent()->SetOwner(this);
+		// }
+		 	if (SkillComponent)
+		 	{
+		 		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+		 	}
+		 }
+		//
 		// FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
 		// AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		//
@@ -412,5 +443,10 @@ void AAngryCoachCharacter::Die()
 	{
 		CapsuleComponent->SetBlockComponent(false);
 		CapsuleComponent->SetGenerateOverlapEvents(false);
+	}
+
+	if (DieSound)
+	{
+		FAudioDevice::PlaySoundAtLocationOneShot(DieSound, GetActorLocation());
 	}
 }

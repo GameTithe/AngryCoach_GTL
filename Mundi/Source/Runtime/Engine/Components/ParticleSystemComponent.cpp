@@ -588,11 +588,14 @@ void UParticleSystemComponent::BuildMeshParticleBatch(TArray<FDynamicEmitterData
 
             FMeshParticleInstanceData& Instance = Instances[WrittenInstances++];
 
-            FQuat RotationQuatZ = FQuat::FromAxisAngle(FVector(0.0f, 0.0f, 1.0f), Particle->Rotation.Z);
-            FQuat RotationQuatY = FQuat::FromAxisAngle(FVector(0.0f, 1.0f, 0.0f), Particle->Rotation.Y);
-            FQuat RotationQuatX = FQuat::FromAxisAngle(FVector(1.0f, 0.0f, 0.0f), Particle->Rotation.X);
+            // ZYX 순서로 Euler → Quaternion 변환 (ToEulerZYXDeg와 일치)
+            FQuat ParticleRotation = FQuat::MakeFromEulerZYX(FVector(
+                RadiansToDegrees(Particle->Rotation.X),
+                RadiansToDegrees(Particle->Rotation.Y),
+                RadiansToDegrees(Particle->Rotation.Z)
+            ));
 
-            FTransform ParticleTransform(Particle->Location, RotationQuatX* RotationQuatY* RotationQuatZ, Particle->Size);
+            FTransform ParticleTransform(Particle->Location, ParticleRotation, Particle->Size);
             FMatrix ParticleWorld = ParticleTransform.ToMatrix();
             if (MeshData->bUseLocalSpace)
             {

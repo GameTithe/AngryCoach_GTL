@@ -33,6 +33,7 @@ public:
 	// ParticleSystem 활성화/비활성화 제어
 	void ActivateSystem() { bTickEnabled = true; bSuppressSpawning = false; }
 	void DeactivateSystem() { bTickEnabled = false; bSuppressSpawning = true; }
+	void StopSpawning() { bSuppressSpawning = true; } // 새 파티클 생성만 중지, 기존 파티클은 자연스럽게 소멸
 	void ResetAndActivate() { InitParticles(); ActivateSystem(); SetActive(true); }
 
 	// 일시정지 (렌더링은 유지, 시뮬레이션만 멈춤)

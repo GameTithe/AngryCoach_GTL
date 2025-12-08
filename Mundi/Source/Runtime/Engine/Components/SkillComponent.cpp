@@ -49,7 +49,7 @@ void USkillComponent::OverrideSkills(const TMap<ESkillSlot, USkillBase*>& NewSki
 	// 기존에 가지고 있던 스킬 목록 비우기
 	ActiveSkills.Empty();
 
-	// 악세서리 스킬만 등록 (맨몸 스킬은 등록하지 않음)
+	// 악세서리 스킬만 등록 (몸몸 스킬은 등록하지 않음)
 	BuildSkillInstances(NewSkill, InAccessory);
 	//BuildSkillInstances(DefualtSkill, nullptr);
  }

@@ -34,7 +34,7 @@ AAccessoryActor::AAccessoryActor()
 	// 악세서리 스킬 생성 및 등록
 	UAccessoryLightAttackSkill* LightSkill = NewObject<UAccessoryLightAttackSkill>();
 	UAccessoryHeavyAttackSkill* HeavySkill = NewObject<UAccessoryHeavyAttackSkill>();
-
+	
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 }
@@ -116,8 +116,8 @@ void AAccessoryActor::StopTryParticle()
 {
 	if (TryAttackParticle)
 	{
-		TryAttackParticle->DeactivateSystem();  
-		// UE_LOG("Stop Try Particle");
+		TryAttackParticle->StopSpawning();  // 새 파티클 생성 중지, 기존 파티클은 자연스럽게 소멸
+		UE_LOG("Stop Try Particle");
 	}
 	else
 	{
@@ -142,7 +142,7 @@ void AAccessoryActor::StopHitParticle()
 {
 	if (HitAttackParticle)
 	{
-		HitAttackParticle->DeactivateSystem();
+		HitAttackParticle->StopSpawning();  // 새 파티클 생성 중지, 기존 파티클은 자연스럽게 소멸
 		UE_LOG("Stop Hit Particle");
 	}
 	else

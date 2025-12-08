@@ -35,6 +35,33 @@ void UCharacterMovementComponent::TickComponent(float DeltaSeconds)
 
 	if (!UpdatedComponent || !CharacterOwner) return;
 
+	// 강제 이동 중인 경우 (스킬 사용 등)
+	if (bForceMovement)
+	{
+		ForcedMovementTimer += DeltaSeconds;
+
+		// 타이머가 Duration을 초과하면 강제 이동 종료
+		if (ForcedMovementTimer >= ForcedMovementDuration)
+		{
+			ClearForcedMovement();
+		}
+		else
+		{
+			// 강제 속도로 이동
+			Velocity = ForcedVelocity;
+			FHitResult Hit;
+			SafeMoveUpdatedComponent(Velocity * DeltaSeconds, Hit);
+
+			// 충돌 시 강제 이동 종료
+			if (Hit.bBlockingHit)
+			{
+				ClearForcedMovement();
+			} 
+			return;
+		}
+	}
+
+	// 일반 이동 로직
 	if (bIsFalling)
 	{
 		PhysFalling(DeltaSeconds);
@@ -533,4 +560,20 @@ FPhysScene* UCharacterMovementComponent::GetPhysScene() const
 		}
 	}
 	return nullptr;
+}
+
+void UCharacterMovementComponent::SetForcedMovement(const FVector& InVelocity, float Duration)
+{
+	bForceMovement = true;
+	ForcedVelocity = InVelocity;
+	ForcedMovementDuration = Duration;
+	ForcedMovementTimer = 0.0f;
+}
+
+void UCharacterMovementComponent::ClearForcedMovement()
+{
+	bForceMovement = false;
+	ForcedVelocity = FVector::Zero();
+	ForcedMovementDuration = 0.0f;
+	ForcedMovementTimer = 0.0f;
 }
