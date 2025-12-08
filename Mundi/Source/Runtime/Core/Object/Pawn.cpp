@@ -77,6 +77,10 @@ void APawn::AttackEnd()
 {
 }
 
+void APawn::ClearState()
+{
+}
+
 void APawn::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
 }

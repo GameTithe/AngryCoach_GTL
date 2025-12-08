@@ -22,6 +22,7 @@
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
 	// SkillComponent 생성
+	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
 }
 
 AAngryCoachCharacter::~AAngryCoachCharacter()
@@ -356,12 +357,35 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 		CurrentState = ECharacterState::Dead;
 		Die();
 	}
-
-	SetCurrentState(ECharacterState::Damaged);
-	AttackEnd();
+	
+	HitReation();
 	
 	UE_LOG("[TakeDamage] Owner %p, insti %p cur %f", this, Instigator, CurrentHealth);
 	return ActualDamage;
+}
+
+void AAngryCoachCharacter::HitReation()
+{
+	if (!HitReationMontage)
+	{
+		return;
+	}
+	Super::HitReation();
+	// 재생중인 몽타주 정지
+	if (IsPlayingMontage())
+	{
+		StopCurrentMontage();
+	}
+
+	SetCurrentState(ECharacterState::Damaged);
+	PlayMontage(HitReationMontage);
+}
+
+REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, ClearState)
+void AAngryCoachCharacter::ClearState()
+{
+	Super::ClearState();
+	CurrentState = ECharacterState::Idle;
 }
 
 void AAngryCoachCharacter::DelegateBindToCachedShape()

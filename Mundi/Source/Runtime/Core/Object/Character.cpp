@@ -271,3 +271,7 @@ bool ACharacter::CanAttack()
 		CurrentState != ECharacterState::Jumping &&
 		CurrentState != ECharacterState::Damaged;
 }
+
+void ACharacter::HitReation()
+{
+}
