@@ -199,6 +199,8 @@ void UCharacterMovementComponent::PhysWalking(float DeltaSecond)
 			 */
 			if (Hit.Distance < 0.001f)
 			{
+				// 시작부터 파고든 경우: 우선 디패너트레이션 시도
+				ResolvePenetration(Hit);
 				// 동작은 하는데 벽에 끼이는 문제 있음
 				// 쓰고 싶으면 좀 더 깎아야함
 				// ResolvePenetration(Hit);
@@ -466,9 +468,15 @@ bool UCharacterMovementComponent::SafeMoveUpdatedComponent(const FVector& Delta,
 	if (bHit && OutHit.bBlockingHit)
 	{
 		// 충돌 지점 직전까지만 이동 (약간의 여유 거리)
-		const float SkinWidth = 0.00125f;
-		float SafeDistance = FMath::Max(0.0f, OutHit.Distance - SkinWidth);
-		FVector SafeLocation = Start + Delta.GetNormalized() * SafeDistance;
+        const float SkinWidth = 0.00125f;
+        float SafeDistance = FMath::Max(0.0f, OutHit.Distance - SkinWidth);
+        if (SafeDistance <= KINDA_SMALL_NUMBER)
+        {
+            // 시작부터 파고든 경우: 강제 디패너트레이션
+            ResolvePenetration(OutHit);
+            return false;
+        }
+        FVector SafeLocation = Start + Delta.GetSafeNormal() * SafeDistance;
 		UpdatedComponent->SetWorldLocation(SafeLocation);
 		return false;
 	}
