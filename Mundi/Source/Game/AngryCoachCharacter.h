@@ -5,6 +5,7 @@
 class UAnimMontage;
 class USkillComponent;
 class AAccessoryActor;
+class USound;
 
 // 입력 타입 (컨트롤러 → 캐릭터)
 enum class EAttackInput
@@ -70,4 +71,5 @@ protected:
 	UShapeComponent* CachedAttackShape = nullptr;
 
 	UAnimMontage* HitReationMontage = nullptr;
+	USound* DieSound = nullptr;
 };
