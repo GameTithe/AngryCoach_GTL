@@ -75,7 +75,7 @@ private:
     // 헬퍼 함수
     void SetAttackShapeNameAndAttach(const FName& Name);
 
-    // 파티클 자동 종료용 타이머
+    // 파티클 자동 종료용 타이머6
     float HitParticleElapsedTime = 0.0f; 
 
     float ElectricParticleElapsedTime = 0.0f;

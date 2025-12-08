@@ -33,6 +33,7 @@ public:
 	void PlayMontage(UAnimMontage* Montage);
 	void StopCurrentMontage(float BlendOutTime = 0.2f);
 	bool IsPlayingMontage() const;
+	bool PlayMontageSection(UAnimMontage* Montage, const FString& SectionName);
 
 	// ===== 악세서리 =====
 	void EquipAccessory(AAccessoryActor* Accessory);
@@ -60,6 +61,12 @@ public:
 	void HitReation() override;
 	void ClearState() override;
 
+	void DoGuard();
+	void StopGuard();
+
+	bool IsGuard() const { return CurrentState == ECharacterState::Guard; }
+	
+	bool bCanPlayHitReactionMontage = true; // New flag to control hit reaction montage playback
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
@@ -76,5 +83,10 @@ protected:
     ESkillSlot CurrentAttackSlot = ESkillSlot::None;
 
 	UAnimMontage* HitReationMontage = nullptr;
+	UAnimMontage* GuardMontage = nullptr;
+	UAnimMontage* GorillaGuardMontage = nullptr;
+	USound* Hit1Sound = nullptr;
+	USound* Hit2Sound = nullptr;
+	USound* SkillSound = nullptr;
 	USound* DieSound = nullptr;
 };

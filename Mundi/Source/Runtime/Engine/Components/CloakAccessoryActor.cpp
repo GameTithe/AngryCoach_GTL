@@ -8,6 +8,7 @@
 #include "CloakHeavyAttackSkill.h"
 #include "CloakLightAttackSkill.h"
 #include "CloakSpecialAttackSkill.h"
+#include "ParticleSystemComponent.h"
 
 ACloakAccessoryActor::ACloakAccessoryActor()
 {
@@ -24,6 +25,10 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 	{
 		ClothComponent->SetupAttachment(RootComponent);
 	}
+
+	PassiveEffectParticle = CreateDefaultSubobject<UParticleSystemComponent>("PassiveEffectParticle");
+	PassiveEffectParticle->ObjectName = FName("PassiveEffectParticle");
+	PassiveEffectParticle->SetupAttachment(RootComponent);
  
 	// Default 스킬 사용
 	GrantedSkills.clear();

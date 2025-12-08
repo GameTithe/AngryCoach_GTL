@@ -5,6 +5,7 @@
 #include "World.h"
 #include "CameraComponent.h"
 #include "CameraActor.h"
+#include "FAudioDevice.h"
 #include "PlayerCameraManager.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 
@@ -12,6 +13,8 @@ AAngryCoachGameMode::AAngryCoachGameMode()
 {
 	DefaultPawnClass = nullptr; // 직접 스폰할 거라 비활성화
 	PlayerControllerClass = nullptr; // 직접 생성할 거라 비활성화
+	
+	MainSound = RESOURCE.Load<USound>("Data/Audio/MAINSOUND.wav");
 }
 
 AAngryCoachGameMode::~AAngryCoachGameMode()
@@ -21,6 +24,10 @@ AAngryCoachGameMode::~AAngryCoachGameMode()
 void AAngryCoachGameMode::StartPlay()
 {
 	Super::StartPlay();
+	if (MainSound)
+	{
+		FAudioDevice::PlaySound3D(MainSound, {0,0, 0,}, 0.1f, true);
+	}
 }
 
 APlayerController* AAngryCoachGameMode::Login()

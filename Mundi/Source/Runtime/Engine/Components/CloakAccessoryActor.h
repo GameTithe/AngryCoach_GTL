@@ -34,6 +34,8 @@ public:
 	// Wind 설정 함수
 	void UpdateWindFromVelocity(const FVector& CharacterVelocity);
 
+	UParticleSystemComponent* PassiveEffectParticle;
+
 private:
 	// 원래 값 저장 (Unequip 시 복원용)
 	float OriginalMaxWalkSpeed = 0.0f;

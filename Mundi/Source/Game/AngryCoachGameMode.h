@@ -27,4 +27,6 @@ private:
 	AAngryCoachCharacter* Player1 = nullptr;
 	AAngryCoachCharacter* Player2 = nullptr;
 	ACameraActor* GameCamera = nullptr;
+
+	USound* MainSound = nullptr;
 };

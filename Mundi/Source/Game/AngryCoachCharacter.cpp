@@ -25,6 +25,20 @@ AAngryCoachCharacter::AAngryCoachCharacter()
 {
 	// SkillComponent 생성
 	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
+	GuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
+	GorillaGuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
+	if (GuardMontage)
+	{
+		GuardMontage->bLoop = true;
+	}
+	if (GorillaGuardMontage)
+	{
+		GorillaGuardMontage->bLoop = true;
+	}
+	
+	Hit1Sound = RESOURCE.Load<USound>("Data/Audio/HIT1.wav");
+	Hit2Sound = RESOURCE.Load<USound>("Data/Audio/HIT2.wav");
+	SkillSound = RESOURCE.Load<USound>("Data/Audio/SKILL.wav");
 	DieSound = RESOURCE.Load<USound>("Data/Audio/Die.wav");
 }
 
@@ -43,42 +57,42 @@ void AAngryCoachCharacter::BeginPlay()
 	// 기본 펀치 악세서리 장착 (이미 장착된 게 없을 때만)
 	if (GWorld && !CurrentAccessory)
 	{
-		//FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		//ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		//
-		//if (CloakAccessory)
-		//{
-		//	EquipAccessory(CloakAccessory);
-		//	FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		//	ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		//
-		//	if (CloakAccessory)
-		//	{
-		//		EquipAccessory(CloakAccessory);
-		//
-		//		if (SkillComponent)
-		//		{
-		//			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
-		//		}
-		//
-		//		CloakAccessory->GetRootComponent()->SetOwner(this);
-		//	}
-		//}
-
-		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		
-		if (KnifeAccessory)
+		if (CloakAccessory)
 		{
-			EquipAccessory(KnifeAccessory);
+			EquipAccessory(CloakAccessory);
+			FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+			ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		
-			if (SkillComponent)
+			if (CloakAccessory)
 			{
-				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+				EquipAccessory(CloakAccessory);
+		
+				if (SkillComponent)
+				{
+					SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
+				}
+		
+				CloakAccessory->GetRootComponent()->SetOwner(this);
 			}
-			
-			KnifeAccessory->GetRootComponent()->SetOwner(this);
 		}
+
+		//FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		//AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		//if (KnifeAccessory)
+		//{
+		//	EquipAccessory(KnifeAccessory);
+		//
+		//	if (SkillComponent)
+		//	{
+		//		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+		//	}
+		//	
+		//	KnifeAccessory->GetRootComponent()->SetOwner(this);
+		//}
 			  
 		// FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
 		// AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
@@ -206,6 +220,26 @@ bool AAngryCoachCharacter::IsPlayingMontage() const
 	return AnimInstance->IsPlayingMontage();
 }
 
+bool AAngryCoachCharacter::PlayMontageSection(UAnimMontage* Montage, const FString& SectionName)
+{
+	if (!Montage->HasSections())
+	{
+		UE_LOG("몽타주에 섹션이 없습니다.");
+		return false;
+	}
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!MeshComp) return false ;
+	
+	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		return false;
+	}
+
+	return AnimInstance->JumpToSection(SectionName);	
+}
+
 // ===== 악세서리 =====
 
 void AAngryCoachCharacter::EquipAccessory(AAccessoryActor* Accessory)
@@ -293,6 +327,10 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 			 * Skil별 데미지 적용
 			 */
 			BaseDamage = 15.0f;
+			if (SkillSound)
+			{
+				FAudioDevice::PlaySoundAtLocationOneShot(SkillSound, GetActorLocation());
+			}
 			break;
 		}
 	}
@@ -348,8 +386,8 @@ void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveC
 
 void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
-	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 5.0f, this, HitResult);
-	  
+	
+	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, BaseDamage, this, HitResult);
 	// UE_LOG("Owner : %p, damaged actor : %p", this, HitResult.HitActor);
 	// UE_LOG("Damage : %f", AppliedDamage);
 }
@@ -364,16 +402,52 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
 	float ActualDamage = DamageAmount;
 
-	// 오버킬 처리
-	// 남은 체력보다 데미지가 크면 남은 체력이 실질적인 데미지
-	ActualDamage = FMath::Min(ActualDamage, CurrentHealth);
-	CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
+	if (ActualDamage < 10.f)
+	{
+		if (Hit1Sound)
+		{
+			FAudioDevice::PlaySoundAtLocationOneShot(Hit1Sound, GetActorLocation());
+		}
+	}
+	else
+	{
+		if (Hit2Sound)
+		{
+			FAudioDevice::PlaySoundAtLocationOneShot(Hit2Sound, GetActorLocation());
+		}
+	}
+
+	if (!IsGuard())
+	{
+		// 오버킬 처리
+		// 남은 체력보다 데미지가 크면 남은 체력이 실질적인 데미지
+		ActualDamage = FMath::Min(ActualDamage, CurrentHealth);
+		CurrentHealth = FMath::Max(CurrentHealth - ActualDamage, 0.0f);
+		HitReation();
+	}
+	else if (bCanPlayHitReactionMontage)
+	{
+		ActualDamage = 0.0f;
+		FVector KnockbackDirection = GetActorLocation() - HitResult.ImpactPoint;
+		KnockbackDirection.Z = 0.0f;
+		if (KnockbackDirection.IsZero())
+		{
+			KnockbackDirection = -GetActorForward();
+		}
+		else
+		{
+			KnockbackDirection.Normalize();
+		}
+
+		float KnockbackDistance = 0.5f;
+		RootComponent->AddWorldOffset(KnockbackDirection * KnockbackDistance);
+	}
 
 	if (CurrentHealth <= 0.0f)
 	{
 		CurrentState = ECharacterState::Dead;
 		Die();
-	}
+	}	
 	
 	HitReation();
 
@@ -386,7 +460,8 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 
 void AAngryCoachCharacter::HitReation()
 {
-	if (!HitReationMontage)
+	// bCanPlayHitReactionMontage가 true이고 HitReationMontage가 유효할 때만 몽타주 재생
+	if (!bCanPlayHitReactionMontage || !HitReationMontage)
 	{
 		return;
 	}
@@ -406,6 +481,43 @@ void AAngryCoachCharacter::ClearState()
 {
 	Super::ClearState();
 	CurrentState = ECharacterState::Idle;
+}
+
+void AAngryCoachCharacter::DoGuard()
+{
+	if (!GuardMontage)
+	{
+		return;
+	}
+
+	// 피격 중, 공격 중, 점프 중에는 가드 불가능
+	if (CurrentState == ECharacterState::Damaged ||
+		CurrentState == ECharacterState::Attacking ||
+		CurrentState == ECharacterState::Jumping)
+	{
+		return;
+	}
+
+	SetCurrentState(ECharacterState::Guard);
+	if (bCanPlayHitReactionMontage)
+	{
+		PlayMontage(GuardMontage);
+	}
+	else
+	{
+		PlayMontage(GorillaGuardMontage);
+	}
+}
+
+void AAngryCoachCharacter::StopGuard()
+{
+	if (!GuardMontage)
+	{
+		return;
+	}
+
+	SetCurrentState(ECharacterState::Idle);
+	StopCurrentMontage();
 }
 
 void AAngryCoachCharacter::DelegateBindToCachedShape()

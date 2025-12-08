@@ -247,7 +247,8 @@ void ACharacter::UpdateCharacterState(float CurrentSpeedSq)
 {
 	// 높은 우선 순위 상태면 return
 	if (CurrentState == ECharacterState::Attacking ||
-		CurrentState == ECharacterState::Dead)
+		CurrentState == ECharacterState::Dead ||
+		CurrentState != ECharacterState::Damaged)
 	{
 		return;
 	}
