@@ -55,6 +55,10 @@ local p1HP = MAX_HP
 local p2HP = MAX_HP
 local currentRoundNumber = 0  -- 현재 라운드 번호
 
+-- Portrait 진동용 이전 체력 비율 저장
+local prevP1HealthRatio = 1.0
+local prevP2HealthRatio = 1.0
+
 -- ============================================
 -- 악세사리 선택 관련
 -- ============================================
@@ -97,6 +101,7 @@ end
 -- 라운드 시작 시 플레이어 체력 초기화
 function ResetPlayerHP()
     ResetPlayersHP()  -- C++ 함수 호출
+    ResetPrevHealthRatios()  -- Portrait 진동용 이전 체력 비율 리셋
     print("[GameMode] Player HP reset")
 end
 
@@ -235,6 +240,58 @@ function UpdateHealthBars()
     end
 
     return p1Ratio, p2Ratio
+end
+
+-- ============================================
+-- Portrait 진동 효과 (피격 시)
+-- 카메라 셰이크와 비슷하게 데미지에 비례한 진동
+-- ============================================
+
+-- 데미지 비율에 따른 Portrait 진동 강도 계산
+-- 카메라 셰이크: StartCameraShake(0.3, 0.3, 0.3, DamageAmount)
+-- DamageAmount: Light=5, Heavy=10, Skill=15
+-- damageRatio: 0.05 (5%), 0.10 (10%), 0.15 (15%) 등
+function GetPortraitShakeParams(damageRatio)
+    -- 데미지 비율을 실제 데미지 수치로 환산 (MAX_HP 기준)
+    local damageAmount = damageRatio * MAX_HP
+
+    -- 카메라 셰이크와 비슷한 비율로 설정
+    -- 진동 강도: 데미지에 비례 (5~15 데미지 → 3~10 픽셀)
+    local intensity = math.max(3, math.min(15, damageAmount * 0.8))
+
+    -- 지속 시간: 카메라와 동일하게 0.3초 기본, 큰 데미지는 좀 더 길게
+    local duration = 0.3 + (damageAmount * 0.01)
+
+    -- 진동 빈도: 데미지에 비례 (카메라 셰이크처럼)
+    local frequency = math.max(10, math.min(25, damageAmount + 5))
+
+    return intensity, duration, frequency
+end
+
+-- Portrait 진동 트리거
+-- playerIndex: 1 = P1, 2 = P2
+-- damageRatio: 받은 데미지 비율 (0.0 ~ 1.0)
+function ShakePortraitOnDamage(playerIndex, damageRatio)
+    local canvas = UI.FindCanvas(battleUICanvasName)
+    if not canvas then return end
+
+    -- 최소 데미지 임계값 (너무 작은 데미지는 무시)
+    if damageRatio < 0.01 then return end
+
+    local widgetName = (playerIndex == 1) and "P1_Portrait" or "P2_Portrait"
+    local intensity, duration, frequency = GetPortraitShakeParams(damageRatio)
+
+    -- 진동 시작 (감쇠 적용)
+    canvas:ShakeWidget(widgetName, intensity, duration, frequency, true)
+
+    print(string.format("[GameMode] Portrait shake: P%d, damage=%.1f%%, intensity=%.1f, duration=%.2f, freq=%.1f",
+        playerIndex, damageRatio * 100, intensity, duration, frequency))
+end
+
+-- 이전 체력 비율 리셋 (라운드 시작 시 호출)
+function ResetPrevHealthRatios()
+    prevP1HealthRatio = 1.0
+    prevP2HealthRatio = 1.0
 end
 
 -- ============================================
@@ -550,10 +607,28 @@ function Tick(Delta)
         -- 체력바 UI 업데이트 및 KO 체크
         local p1Ratio, p2Ratio = UpdateHealthBars()
 
+        -- Portrait 진동 체크 (체력이 감소했을 때)
+        if p1Ratio < prevP1HealthRatio then
+            local damageRatio = prevP1HealthRatio - p1Ratio
+            ShakePortraitOnDamage(1, damageRatio)
+        end
+        if p2Ratio < prevP2HealthRatio then
+            local damageRatio = prevP2HealthRatio - p2Ratio
+            ShakePortraitOnDamage(2, damageRatio)
+        end
+
+        -- 이전 체력 비율 업데이트
+        prevP1HealthRatio = p1Ratio
+        prevP2HealthRatio = p2Ratio
+
         -- KO 체크 (한 쪽이라도 0 이하가 되면)
         if p1Ratio <= 0 or p2Ratio <= 0 then
             -- 전투 종료
             bBattleActive = false
+
+            -- KO 슬로모션 효과 (3초간 50% 속도)
+            SetSlomo(3.0, 0.5)
+            print("[GameMode] KO Slow-motion activated! (3s at 50% speed)")
 
             -- 타이머 진동 중지
             local canvas = UI.FindCanvas(battleUICanvasName)
