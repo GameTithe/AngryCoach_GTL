@@ -1819,6 +1819,26 @@ void FLuaManager::ExposeUIFunctions()
                     }
                 };
             }
+        },
+
+        // ======== 포커스 관리 ========
+
+        // 이름으로 버튼에 포커스 설정
+        "SetFocusByName", [](UUICanvas* Self, const std::string& ButtonName)
+        {
+            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->SetFocusByName(ButtonName);
+        },
+
+        // 다음 버튼으로 포커스 이동 (아래/오른쪽)
+        "MoveFocusNext", [](UUICanvas* Self)
+        {
+            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->MoveFocusNext();
+        },
+
+        // 이전 버튼으로 포커스 이동 (위/왼쪽)
+        "MoveFocusPrev", [](UUICanvas* Self)
+        {
+            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->MoveFocusPrev();
         }
     );
 

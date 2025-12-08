@@ -402,6 +402,13 @@ bool UGameUIManager::IsValidCanvas(UUICanvas* Canvas) const
 
 void UGameUIManager::RemoveCanvas(const std::string& Name)
 {
+    // 캔버스 삭제 전 콜백 정리 (Lua 상태 소멸 전 sol::protected_function 해제)
+    auto it = Canvases.find(Name);
+    if (it != Canvases.end() && it->second)
+    {
+        it->second->ClearAllCallbacks();
+    }
+
     Canvases.erase(Name);
     bCanvasesSortDirty = true;
 }
@@ -409,6 +416,17 @@ void UGameUIManager::RemoveCanvas(const std::string& Name)
 void UGameUIManager::RemoveAllCanvases()
 {
     UE_LOG("[UI] RemoveAllCanvases: Removing %d canvases\n", (int)Canvases.size());
+
+    // 먼저 모든 캔버스의 콜백을 정리 (Lua 상태 소멸 전 sol::protected_function 해제)
+    // 이렇게 하면 캔버스/버튼 소멸 시 lua_unref 크래시 방지
+    for (auto& Pair : Canvases)
+    {
+        if (Pair.second)
+        {
+            Pair.second->ClearAllCallbacks();
+        }
+    }
+
     Canvases.clear();
     SortedCanvases.clear();
     bCanvasesSortDirty = false;

@@ -153,6 +153,23 @@ void UUICanvas::RemoveAllWidgets()
     bWidgetsSortDirty = false;
 }
 
+void UUICanvas::ClearAllCallbacks()
+{
+    // 모든 버튼 위젯의 콜백을 정리
+    // Lua 상태가 소멸되기 전에 호출해야 sol::protected_function의 lua_unref 크래시 방지
+    for (auto& Pair : Widgets)
+    {
+        if (auto* Button = dynamic_cast<UButtonWidget*>(Pair.second.get()))
+        {
+            Button->OnClick = nullptr;
+            Button->OnHoverStart = nullptr;
+            Button->OnHoverEnd = nullptr;
+            Button->OnPressStart = nullptr;
+            Button->OnPressEnd = nullptr;
+        }
+    }
+}
+
 // ============================================
 // 위젯 속성 설정
 // ============================================

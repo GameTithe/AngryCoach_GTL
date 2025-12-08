@@ -53,6 +53,13 @@ void UIntroCutscene::Update(float DeltaTime)
 	case EIntroPhase::GtlWait:
 		if (PhaseTime >= WAIT_DURATION)
 		{
+			TransitionTo(EIntroPhase::TechEnter);
+		}
+		break;
+
+	case EIntroPhase::TechWait:
+		if (PhaseTime >= TECH_WAIT_DURATION)
+		{
 			TransitionTo(EIntroPhase::TeamLabelEnter);
 		}
 		break;
@@ -76,6 +83,20 @@ void UIntroCutscene::Update(float DeltaTime)
 		if (IsWidgetAnimationDone("gtl"))
 		{
 			TransitionTo(EIntroPhase::GtlWait);
+		}
+		break;
+
+	case EIntroPhase::TechEnter:
+		if (AreTechAnimationDone())
+		{
+			TransitionTo(EIntroPhase::TechExit);
+		}
+		break;
+
+	case EIntroPhase::TechExit:
+		if (AreTechAnimationDone())
+		{
+			TransitionTo(EIntroPhase::TechWait);
 		}
 		break;
 
@@ -181,6 +202,33 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 		}
 		break;
 
+	case EIntroPhase::TechEnter:
+		// phys, dx, power 동시 Enter
+		PlayWidgetEnter("phys");
+		PlayWidgetEnter("dx");
+		PlayWidgetEnter("power");
+		UE_LOG("[IntroCutscene] Tech widgets (phys, dx, power) entering...\n");
+		break;
+
+	case EIntroPhase::TechExit:
+		// phys, dx, power 동시 Exit
+		PlayWidgetExit("phys");
+		PlayWidgetExit("dx");
+		PlayWidgetExit("power");
+		UE_LOG("[IntroCutscene] Tech widgets (phys, dx, power) exiting...\n");
+		break;
+
+	case EIntroPhase::TechWait:
+		UE_LOG("[IntroCutscene] Tech wait (%.1f sec)...\n", TECH_WAIT_DURATION);
+		// Tech 위젯들 숨기기
+		if (Canvas)
+		{
+			Canvas->SetWidgetVisible("phys", false);
+			Canvas->SetWidgetVisible("dx", false);
+			Canvas->SetWidgetVisible("power", false);
+		}
+		break;
+
 	case EIntroPhase::TeamLabelEnter:
 		PlayWidgetEnter("team_label");
 		break;
@@ -243,6 +291,9 @@ void UIntroCutscene::InitializeWidgets()
 	// 모든 위젯 숨기기
 	Canvas->SetWidgetVisible("gtl", false);
 	Canvas->SetWidgetVisible("SubUV", false);  // SubUV 위젯도 숨김
+	Canvas->SetWidgetVisible("phys", false);
+	Canvas->SetWidgetVisible("dx", false);
+	Canvas->SetWidgetVisible("power", false);
 	Canvas->SetWidgetVisible("team_label", false);
 	Canvas->SetWidgetVisible("mb1", false);
 	Canvas->SetWidgetVisible("mb2", false);
@@ -311,6 +362,13 @@ bool UIntroCutscene::AreMembersAnimationDone()
 	       IsWidgetAnimationDone("mb2") &&
 	       IsWidgetAnimationDone("mb3") &&
 	       IsWidgetAnimationDone("mb4");
+}
+
+bool UIntroCutscene::AreTechAnimationDone()
+{
+	return IsWidgetAnimationDone("phys") &&
+	       IsWidgetAnimationDone("dx") &&
+	       IsWidgetAnimationDone("power");
 }
 
 void UIntroCutscene::Cleanup()

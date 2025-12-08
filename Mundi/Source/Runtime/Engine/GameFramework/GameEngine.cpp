@@ -409,6 +409,12 @@ void UGameEngine::MainLoop()
 
 void UGameEngine::Shutdown()
 {
+#ifdef _GAME
+    // GameUI 캔버스 먼저 정리 (Lua 콜백 해제)
+    // World/Lua 상태 삭제 전에 해야 dangling reference 방지
+    UGameUIManager::Get().RemoveAllCanvases();
+#endif
+
     // AudioDevice 종료 (반드시 ObjectFactory::DeleteAll 이전에 호출)
     // 컴포넌트들이 아직 Tick 중일 수 있으므로 먼저 오디오 시스템을 정지시켜야 함
     FAudioDevice::Shutdown();

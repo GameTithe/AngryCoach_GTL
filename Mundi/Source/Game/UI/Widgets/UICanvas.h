@@ -103,6 +103,12 @@ public:
      */
     void RemoveAllWidgets();
 
+    /**
+     * @brief 모든 버튼 콜백 정리 (Lua 상태 소멸 전 호출)
+     * Lua callback이 캡처한 sol::protected_function의 수명 문제 해결용
+     */
+    void ClearAllCallbacks();
+
     // ============================================
     // 위젯 속성 설정 (편의 함수)
     // ============================================

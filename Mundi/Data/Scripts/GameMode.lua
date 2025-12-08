@@ -255,9 +255,9 @@ function GetPortraitShakeParams(damageRatio)
     -- 데미지 비율을 실제 데미지 수치로 환산 (MAX_HP 기준)
     local damageAmount = damageRatio * MAX_HP
 
-    -- 카메라 셰이크와 비슷한 비율로 설정
-    -- 진동 강도: 데미지에 비례 (5~15 데미지 → 3~10 픽셀)
-    local intensity = math.max(3, math.min(15, damageAmount * 0.8))
+    -- 카메라 셰이크와 비슷한 비율로 설정 (민감도 5배)
+    -- 진동 강도: 데미지에 비례 (5~15 데미지 → 15~75 픽셀)
+    local intensity = math.max(15, math.min(75, damageAmount * 4.0))
 
     -- 지속 시간: 카메라와 동일하게 0.3초 기본, 큰 데미지는 좀 더 길게
     local duration = 0.3 + (damageAmount * 0.01)
@@ -1333,6 +1333,7 @@ function OnGameOver(result)
         canvas:SetWidgetVisible("P2", false)
         canvas:SetWidgetVisible("Win", false)
         canvas:SetWidgetVisible("restart_btn", false)
+        canvas:SetWidgetVisible("exit_btn", false)
 
         -- Ghost 위젯들도 숨김
         canvas:SetWidgetVisible("P1_ghost1", false)
@@ -1375,6 +1376,16 @@ function OnGameOver(result)
                 RestartMatch()
             end)
         end)
+
+        -- Exit 버튼 클릭 이벤트 설정
+        canvas:SetOnClick("exit_btn", function()
+            print("[GameMode] Exit button clicked from GameOver!")
+            StartCoroutine(function()
+                coroutine.yield(WaitForSeconds(0.01))
+                ExitGame()
+            end)
+        end)
+        print("[GameMode] exit_btn OnClick callback set")
 
         -- 커스텀 시퀀스 시작
         StartCoroutine(function()
@@ -1565,13 +1576,19 @@ function GameOverSequence(result)
     -- 잔상 효과 완료 대기
     coroutine.yield(WaitForSeconds(1.5))
 
-    -- 5. Restart 버튼 Enter Animation
+    -- 5. Restart/Exit 버튼 Enter Animation
     canvas = UI.FindCanvas(gameOverCanvasName)
     if not canvas then return end
 
     canvas:SetWidgetVisible("restart_btn", true)
+    canvas:SetWidgetVisible("exit_btn", true)
     canvas:PlayEnterAnimation("restart_btn")
-    print("[GameMode] restart_btn enter animation playing")
+    canvas:PlayEnterAnimation("exit_btn")
+    print("[GameMode] restart_btn/exit_btn enter animation playing")
+
+    -- 초기 포커스를 restart_btn에 설정 (키보드/게임패드 네비게이션용)
+    canvas:SetFocusByName("restart_btn")
+    print("[GameMode] Initial focus set to restart_btn")
 
     print("[GameMode] GameOver Sequence complete")
 
