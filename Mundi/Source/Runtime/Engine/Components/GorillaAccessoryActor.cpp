@@ -147,8 +147,7 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 		
 		UE_LOG("[AGorillaAccessoryActor] Stored default character assets.");
 	}
-	// --- --- --- --- --- --- --- --- --- --- ---
-	
+	// --- --- --- --- --- --- --- --- --- --- --- `	
 	// --- 토글 로직 ---
 	bIsGorillaFormActive = !bIsGorillaFormActive; // 상태 먼저 전환
 
@@ -163,7 +162,12 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 		UE_LOG("[AGorillaAccessoryActor] Switching to Gorilla Form.");
 		CharacterMesh->SetSkeletalMesh(GorillaSkeletalMeshPath);
 		CharacterMesh->SetAnimGraph(GorillaAnimGraph);
-		CharacterMesh->SetPhysicsAsset(GorillaPhysicsAsset);
+		CharacterMesh->SetPhysicsAsset(GorillaPhysicsAsset); 
+
+		// Particle Component 부착
+		//UParticleSystemComponent* Aura = NewObject<UParticleSystemComponent>(GorillaSkeletalMeshPath)
+
+
 		if (GorillaSkinTexture) CharacterMesh->SetMaterialTextureByUser(1, EMaterialTextureSlot::Diffuse, GorillaSkinTexture);
 		if (GorillaSkinNormal) CharacterMesh->SetMaterialTextureByUser(1, EMaterialTextureSlot::Normal, GorillaSkinNormal);
 		// HitReactionMontage 재생 여부 플래그를 false로 설정
@@ -181,6 +185,7 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 		// HitReactionMontage 재생 여부 플래그를 true로 설정
 		AngryCoachCharacter->bCanPlayHitReactionMontage = true;
 		UE_LOG("[AGorillaAccessoryActor] Character HitReactionMontage enabled for Original Form.");
+		 
 	}
 	// --- --- --- ---
 }
