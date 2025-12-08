@@ -16,6 +16,7 @@ enum class ECharacterState : uint8
 	Attacking,
 	Damaged,
 	Guard,
+	Knockback,
 	Dead
 };
 

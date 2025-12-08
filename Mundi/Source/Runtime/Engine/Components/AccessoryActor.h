@@ -81,7 +81,7 @@ private:
     float ElectricParticleElapsedTime = 0.0f;
     bool bElectricParticleActive = false;
 
-    const float ParticleLifetime = 3.3f;  // 파티클 유지 시간 (초)
+    const float ParticleLifetime = 1.0f;  // 파티클 유지 시간 (초)
 
 protected:
     AAngryCoachCharacter* OwningCharacter = nullptr;

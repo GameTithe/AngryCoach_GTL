@@ -28,6 +28,27 @@ void AAngryCoachPlayerController::SetGameCamera(ACameraActor* InCamera)
 	GameCamera->SetActorRotation(FVector{0.f, 30.f, 0.f});
 }
 
+void AAngryCoachPlayerController::SetGamePadVibration(bool bEnable, AAngryCoachCharacter* InPlayer, float VibTime)
+{
+	if (!InPlayer)
+	{
+		return;
+	}
+
+	if (Player1 == InPlayer)
+	{
+		GamePadIndex = 0;
+		P1VibrationTime = VibTime;
+		bEnableP1Vibration = bEnable;
+	}
+	else if (Player2 == InPlayer)
+	{
+		GamePadIndex = 1;
+		P2VibrationTime = VibTime;
+		bEnableP2Vibration = bEnable;
+	}
+}
+
 void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 {
 	// 부모의 Tick은 호출하지 않음 (기존 WASD 로직 무시)
@@ -54,6 +75,33 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 	if (Player2->IsAlive())
 	{
 		ProcessPlayer2Input(DeltaSeconds);
+	}
+
+	UpdateGamePadVibration(DeltaSeconds);
+	if (bEnableP1Vibration && P1VibrationTime <= 0.0f)
+	{
+		bEnableP1Vibration = false;
+		P1VibrationTime = 0.0f;
+		GamePadIndex = 0;
+		GamePadIndex = -1;
+		InputManager.StopGamepadVibration(0);
+	}
+	if (bEnableP2Vibration && P2VibrationTime <= 0.0f)
+	{
+		bEnableP2Vibration = false;
+		P2VibrationTime = 0.0f;
+		GamePadIndex = 0;
+		GamePadIndex = -1;
+		InputManager.StopGamepadVibration(1);
+	}
+	if (bEnableP1Vibration)
+	{
+		P1VibrationTime -= DeltaSeconds;
+	}
+
+	if (bEnableP2Vibration)
+	{
+		P2VibrationTime -= DeltaSeconds;
 	}
 
 	// 카메라 위치 업데이트
@@ -340,7 +388,7 @@ void AAngryCoachPlayerController::ProcessPlayer2Attack(float DeltaTime)
 	// 테스트용
 	if (InputManager.IsKeyPressed('M'))
 	{
-		Player2->OnAttackInput(EAttackInput::Skill);
+		Player2->OnAttackInput(EAttackInput::Light);
 		ResetInputBuffer(bIsP2InputBuffering, P2PendingKey, P2InputBufferTime);
 		return;
 	}
@@ -418,4 +466,19 @@ void AAngryCoachPlayerController::ResetInputBuffer(bool& bIsInputBuffering, char
 	bIsInputBuffering = false;
 	PendingKey = 0;
 	InputBufferTime = 0.0f;
+}
+
+void AAngryCoachPlayerController::UpdateGamePadVibration(float DeltaTime)
+{
+	UInputManager& InputManager = UInputManager::GetInstance();
+	
+	if (GamePadIndex == 0 && bEnableP1Vibration)
+	{
+		InputManager.SetGamepadVibration(GamePadIndex, P1VibrationTime, P1VibrationTime);
+	}
+
+	if (GamePadIndex == 1 && bEnableP2Vibration)
+	{
+		InputManager.SetGamepadVibration(GamePadIndex, P2VibrationTime, P2VibrationTime);
+	}
 }

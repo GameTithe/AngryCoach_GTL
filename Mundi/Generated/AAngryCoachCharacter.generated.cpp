@@ -35,8 +35,9 @@ const bool AAngryCoachCharacter::bPropertiesRegistered = []() {
 
 BEGIN_PROPERTIES(AAngryCoachCharacter)
     MARK_AS_COMPONENT("AAngryCoachCharacter", "Auto-generated AAngryCoachCharacter")
+    ADD_PROPERTY(float, KnockbackPower, "[캐릭터]", true)
+    ADD_PROPERTY(float, VibrationDuration, "[캐릭터]", true)
 END_PROPERTIES()
-
 
 // ===== Lua Binding =====
 
