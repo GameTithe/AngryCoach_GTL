@@ -42,8 +42,6 @@ AAngryCoachCharacter::AAngryCoachCharacter()
 	Hit2Sound = RESOURCE.Load<USound>("Data/Audio/HIT2.wav");
 	SkillSound = RESOURCE.Load<USound>("Data/Audio/SKILL.wav");
 	DieSound = RESOURCE.Load<USound>("Data/Audio/Die.wav");
-
-	
 }
 
 AAngryCoachCharacter::~AAngryCoachCharacter()
@@ -61,82 +59,62 @@ void AAngryCoachCharacter::BeginPlay()
 	// 기본 펀치 악세서리 장착 (이미 장착된 게 없을 때만)
 	if (GWorld && !CurrentAccessory)
 	{
-		// APunchAccessoryActor* PunchAccessory = GWorld->SpawnActor<APunchAccessoryActor>();
-		// if (PunchAccessory)
-		// {
-		// 	EquipAccessory(PunchAccessory);
+		//FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		//ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		//
-		// 	if (SkillComponent)
-		// 	{
-		// 		SkillComponent->OverrideSkills(PunchAccessory->GetGrantedSkills(), PunchAccessory);
-		// 	}
+		//if (CloakAccessory)
+		//{
+		//	EquipAccessory(CloakAccessory);
+		//	FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		//	ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		//
-		// 	PunchAccessory->GetRootComponent()->SetOwner(this);
-		// }
+		//	if (CloakAccessory)
+		//	{
+		//		EquipAccessory(CloakAccessory);
+		//
+		//		if (SkillComponent)
+		//		{
+		//			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
+		//		}
+		//
+		//		CloakAccessory->GetRootComponent()->SetOwner(this);
+		//	}
+		//}
 
-		// AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
-		 
-		// FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		// ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		//AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		//
-		// if (CloakAccessory)
-		// {
-		// 	EquipAccessory(CloakAccessory);
-		// 	 FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		// 	 AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//if (KnifeAccessory)
+		//{
+		//	EquipAccessory(KnifeAccessory);
 		//
-		// 	 if (KnifeAccessory)
-		// 	 {
-		//  		EquipAccessory(KnifeAccessory);
-		// 	
-		// 		if (SkillComponent)
-		// 		{
-		// 			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
-		// 		}
-		// 		
-		// 		CloakAccessory->GetRootComponent()->SetOwner(this);
-		// 	}
-		//
-		// // FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		// // AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		// //
-		// // if (GorillaAccessory)
-		// // {
-		// // 	EquipAccessory(GorillaAccessory);
-		// //
-		// // 	if (SkillComponent)
-		// // 	{
-		// // 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-		// // 	}
-		// // 	
-		// // 	GorillaAccessory->GetRootComponent()->SetOwner(this);
-		// // }
-		// 	
-		//  	if (SkillComponent)
-		//  	{
-		//  		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
-		//  	}
-		//  }
-
-		FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//	if (SkillComponent)
+		//	{
+		//		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+		//	}
+		//	
+		//	KnifeAccessory->GetRootComponent()->SetOwner(this);
+		//}
+			  
+		 FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		 AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		
-		if (GorillaAccessory)
-		{
-			EquipAccessory(GorillaAccessory);
+		 if (GorillaAccessory)
+		 {
+		 	EquipAccessory(GorillaAccessory);
 		
-			if (SkillComponent)
-			{
-				SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-			}
-			
-			GorillaAccessory->GetRootComponent()->SetOwner(this);
-		}
+		 	if (SkillComponent)
+		 	{
+		 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+		 	}
+		 	
+		 	GorillaAccessory->GetRootComponent()->SetOwner(this);
+		 }
 	}
 }
 
 void AAngryCoachCharacter::Tick(float DeltaSeconds)
-{	
+{
 	Super::Tick(DeltaSeconds);
 
 	if (!IsAlive())
@@ -334,8 +312,8 @@ void AAngryCoachCharacter::SetAttackShape(UShapeComponent* Shape)
 // ===== 스킬 =====
 void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 {
-	if (!SkillComponent)
-		return;
+    if (!SkillComponent)
+        return;
 
 	// TODO: 점프 중이면 JumpAttack, 콤보 중이면 다음 콤보 등 상태 체크
 	// 지금은 단순 매핑
@@ -372,10 +350,12 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 		}
 	}
 
-	if (Slot != ESkillSlot::None)
-	{
-		SkillComponent->HandleInput(Slot);		
-	}
+    if (Slot != ESkillSlot::None)
+    {
+        // 현재 공격 슬롯 기록 (이펙트 분기용)
+        CurrentAttackSlot = Slot;
+        SkillComponent->HandleInput(Slot);
+    }
 }
 
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackBegin)
@@ -399,12 +379,14 @@ void AAngryCoachCharacter::AttackBegin()
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackEnd)
 void AAngryCoachCharacter::AttackEnd()
 {	
-	if (CachedAttackShape)
-	{
-		CachedAttackShape->SetGenerateOverlapEvents(false);
-		SetCurrentState(ECharacterState::Idle);
-		UE_LOG("attack end");
-	}
+    if (CachedAttackShape)
+    {
+        CachedAttackShape->SetBlockComponent(false);
+        SetCurrentState(ECharacterState::Idle);
+        UE_LOG("attack end");
+    }
+    // 공격 종료 시 슬롯 리셋
+    CurrentAttackSlot = ESkillSlot::None;	
 }
 
 void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
@@ -489,6 +471,11 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 		Die();
 	}	
 	
+	HitReation();
+
+	//CurrentAccessory->PlayHitParticle();
+	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
+
 	UE_LOG("[TakeDamage] Owner %p, insti %p cur %f", this, Instigator, CurrentHealth);
 	return ActualDamage;
 }

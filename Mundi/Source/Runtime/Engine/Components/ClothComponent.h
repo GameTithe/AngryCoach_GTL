@@ -65,7 +65,7 @@ struct FClothSimulationSettings
 
 	// Tether constraints (거리 제약)
 	bool bUseTethers = true;                    // Tether 사용
-	float TetherStiffness = 0.5f;               // Tether 강성
+	float TetherStiffness = 0.2f;               // Tether 강성
 	float TetherScale = 1.2f;                   // Tether 스케일
 
 	// Fixed vertices (고정 정점)
@@ -126,6 +126,13 @@ public:
 	 */
 	void SetClothWeightAssetPath(const FString& InPath);
 	const FString& GetClothWeightAssetPath() const { return ClothWeightAssetPath; }
+
+	// Wind API
+	/**
+	 * @brief Wind 속도를 실시간으로 설정
+	 * @param InWindVelocity 바람 속도 벡터 (cm/s)
+	 */
+	void SetWindVelocity(const FVector& InWindVelocity);
 
 	/**
 	 * @brief ClothWeightAsset 파일에서 가중치 로드

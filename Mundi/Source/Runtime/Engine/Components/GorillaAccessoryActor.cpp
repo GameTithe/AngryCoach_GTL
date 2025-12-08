@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "GorillaAccessoryActor.h"
 #include "AngryCoachCharacter.h"
 #include "GorillaLightAttackSkill.h"
@@ -94,6 +94,7 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 		// 고릴라 애셋 경로 설정 및 텍스처 로드
 		// 참고: 이 애셋들은 현재 프로젝트에 존재하지 않으므로, 실제 파일 경로로 수정해야 합니다.
 		// 고릴라 텍스처 로드 (생성자에서 한 번만 로드)
+		GorillaSkeletalMeshPath = "Data/FBX/Player/Animation/Gorilla/Gorilla.fbx";
 		GorillaSkinTexture = RESOURCE.Load<UTexture>(
 			(OwningCharacter->bIsCGC ?
 		("Data/FBX/Player/Animation/Gorilla/Texture/ICGRilla.png") :
