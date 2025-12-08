@@ -70,6 +70,9 @@ public:
 	UPROPERTY(EditAnywhere, Category="[캐릭터]", Tooltip="밀려나는 강도를 정합니다.");
 	float KnockbackPower = 10.0f;
 	
+	// 애니메이션 노티파이용 함수
+	void ToggleGorillaFormOnAccessory();
+
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
