@@ -1,4 +1,4 @@
-
+﻿
 #include "pch.h"
 #include "SkeletalMeshComponent.h"
 #include "Source/Runtime/Engine/Animation/AnimDateModel.h"
@@ -643,7 +643,7 @@ void USkeletalMeshComponent::ForceRecomputePose()
     // {
     //     TIME_PROFILE(SkeletalAABB)
     //     // GetWorldAABB 함수에서 AABB를 갱신중 - 실제로는 const 함수라 갱신 안 됨, 반환값도 안 씀
-    //     GetWorldAABB();
+         GetWorldAABB();
     //     TIME_PROFILE_END(SkeletalAABB)
     // }
     

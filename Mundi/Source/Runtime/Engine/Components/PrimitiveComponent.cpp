@@ -163,9 +163,11 @@ void UPrimitiveComponent::OnRegister(UWorld* InWorld)
 
 void UPrimitiveComponent::OnUnregister()
 {
-    if (UWorld* World = GetWorld())
+    // PIE 종료 시 World가 이미 파괴 중일 수 있으므로
+    // GWorld가 유효하고 파괴 중이 아닐 때만 Partition 접근
+    if (GWorld && !GWorld->IsTearingDown())
     {
-        if (UWorldPartitionManager* Partition = World->GetPartitionManager())
+        if (UWorldPartitionManager* Partition = GWorld->GetPartitionManager())
         {
             Partition->Unregister(this);
         }

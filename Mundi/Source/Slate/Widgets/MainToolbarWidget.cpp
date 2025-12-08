@@ -497,6 +497,19 @@ void UMainToolbarWidget::RenderPIEButtons()
     extern UEditorEngine GEngine;
     bool isPIE = GEngine.IsPIEActive();
 
+    // TestMode 체크박스 (PIE 실행 중엔 비활성화)
+    ImGui::BeginDisabled(isPIE);
+    bool bUseTestMode = GEngine.IsUsingTestGameMode();
+    if (ImGui::Checkbox("##TestMode", &bUseTestMode))
+    {
+        GEngine.SetUseTestGameMode(bUseTestMode);
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Test Mode: UI 흐름 없이 배치된 액터만 테스트 [Ctrl+T]");
+    ImGui::EndDisabled();
+
+    ImGui::SameLine(0, 8.0f);
+
     // Play 버튼
     ImGui::BeginDisabled(isPIE);
     if (IconPlay && IconPlay->GetShaderResourceView())
@@ -921,6 +934,13 @@ void UMainToolbarWidget::HandleKeyboardShortcuts()
 
 #ifdef _EDITOR
     extern UEditorEngine GEngine;
+
+    // Ctrl+T: Toggle Test Mode (PIE 실행 중 아닐 때만)
+    if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_T, false) && !GEngine.IsPIEActive())
+    {
+        GEngine.SetUseTestGameMode(!GEngine.IsUsingTestGameMode());
+        UE_LOG("[info] Test Mode: %s", GEngine.IsUsingTestGameMode() ? "ON" : "OFF");
+    }
 
     // F5: Start PIE
     if (ImGui::IsKeyPressed(ImGuiKey_F5, false) && !GEngine.IsPIEActive())

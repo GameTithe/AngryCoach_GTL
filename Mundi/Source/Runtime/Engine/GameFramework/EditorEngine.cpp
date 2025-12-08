@@ -5,6 +5,7 @@
 #include "Source/Editor/FBX/FbxLoader.h"
 #include "GameModeBase.h"
 #include "Source/Game/AngryCoachGameMode.h"
+#include "Source/Game/TestGameMode.h"
 #include "InputManager.h"
 #include "Pawn.h"
 #include "SelectionManager.h"
@@ -422,7 +423,16 @@ void UEditorEngine::StartPIE()
     AGameModeBase* GameMode = nullptr;
     if (GWorld->GetGameMode() == nullptr)
     {
-        AGameModeBase* GM = GWorld->SpawnActor<AAngryCoachGameMode>(FTransform());
+        AGameModeBase* GM = nullptr;
+        if (bUseTestGameMode)
+        {
+            GM = GWorld->SpawnActor<ATestGameMode>(FTransform());
+            UE_LOG("[info] Using TestGameMode - No UI flow, placed actors only");
+        }
+        else
+        {
+            GM = GWorld->SpawnActor<AAngryCoachGameMode>(FTransform());
+        }
         GWorld->SetGameMode(GM);
     }
      
