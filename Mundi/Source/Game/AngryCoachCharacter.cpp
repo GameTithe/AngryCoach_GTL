@@ -8,6 +8,7 @@
 #include "AccessoryActor.h"
 #include "GorillaAccessoryActor.h"
 #include "CapsuleComponent.h"
+#include "CharacterMovementComponent.h"
 #include "GameplayStatics.h"
 #include "KnifeAccessoryActor.h"
 #include "PunchAccessoryActor.h"
@@ -20,16 +21,23 @@
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 #include "CloakAccessoryActor.h" 
 #include "FAudioDevice.h"
+#include "PlayerCameraManager.h"
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
 	// SkillComponent 생성
 	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
 	GuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
+	GorillaGuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
 	if (GuardMontage)
 	{
 		GuardMontage->bLoop = true;
 	}
+	if (GorillaGuardMontage)
+	{
+		GorillaGuardMontage->bLoop = true;
+	}
+	
 	Hit1Sound = RESOURCE.Load<USound>("Data/Audio/HIT1.wav");
 	Hit2Sound = RESOURCE.Load<USound>("Data/Audio/HIT2.wav");
 	SkillSound = RESOURCE.Load<USound>("Data/Audio/SKILL.wav");
@@ -414,6 +422,10 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
 	float ActualDamage = DamageAmount;
 
+	GWorld->GetPlayerCameraManager()->StartCameraShake(
+		0.3, 0.3, 0.3, DamageAmount
+		);
+
 	if (ActualDamage < 10.f)
 	{
 		if (Hit1Sound)
@@ -451,8 +463,11 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 			KnockbackDirection.Normalize();
 		}
 
-		float KnockbackDistance = 0.5f;
-		RootComponent->AddWorldOffset(KnockbackDirection * KnockbackDistance);
+		float KnockbackPower = 10.0f;
+		CharacterMovement->LaunchCharacter(KnockbackDirection * KnockbackPower, true, false);
+
+		// float KnockbackDistance = 0.2f;
+		// RootComponent->AddWorldOffset(KnockbackDirection);
 	}
 
 	if (CurrentHealth <= 0.0f)
@@ -506,7 +521,14 @@ void AAngryCoachCharacter::DoGuard()
 	}
 
 	SetCurrentState(ECharacterState::Guard);
-	PlayMontage(GuardMontage);
+	if (bCanPlayHitReactionMontage)
+	{
+		PlayMontage(GuardMontage);
+	}
+	else
+	{
+		PlayMontage(GorillaGuardMontage);
+	}
 }
 
 void AAngryCoachCharacter::StopGuard()

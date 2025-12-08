@@ -523,3 +523,35 @@ void FAudioDevice::Preload()
 
     UE_LOG("FAudioDevice::Preload: Loaded %zu .wav files from %s", LoadedCount, DataDir.string().c_str());
 }
+
+void FAudioDevice::StopAllSounds()
+{
+    if (bIsShuttingDown || !pXAudio2) return;
+
+    // Stop and destroy all voices in ActiveVoices
+    for (IXAudio2SourceVoice* voice : ActiveVoices)
+    {
+        if (voice)
+        {
+            voice->Stop(0);
+            voice->FlushSourceBuffers();
+            voice->DestroyVoice();
+        }
+    }
+    ActiveVoices.Empty();
+
+    // Stop and destroy all voices in OneShotVoices
+    for (IXAudio2SourceVoice* voice : OneShotVoices)
+    {
+        if (voice)
+        {
+            voice->Stop(0);
+            voice->FlushSourceBuffers();
+            voice->DestroyVoice();
+        }
+    }
+    OneShotVoices.Empty();
+
+    UE_LOG("[Audio] All active and one-shot sounds stopped and destroyed.");
+}
+
