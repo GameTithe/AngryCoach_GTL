@@ -30,6 +30,15 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 	// 부모의 Tick은 호출하지 않음 (기존 WASD 로직 무시)
 	AActor::Tick(DeltaSeconds);
 
+	// 게임플레이 입력이 비활성화된 경우 (UI 상태 등) 캐릭터 입력 처리 스킵
+	UInputManager& InputManager = UInputManager::GetInstance();
+	if (!InputManager.IsGameplayInputEnabled())
+	{
+		// 카메라 위치는 계속 업데이트 (Select 화면에서도 카메라 동작 유지)
+		UpdateCameraPosition(DeltaSeconds);
+		return;
+	}
+
 	// 각 플레이어 입력 처리
 	// 생존한 경우만 입력받음
 	if (Player1->IsAlive())
