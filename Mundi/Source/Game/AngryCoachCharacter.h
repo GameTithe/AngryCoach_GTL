@@ -65,6 +65,10 @@ public:
 	bool IsGuard() const { return CurrentState == ECharacterState::Guard; }
 	
 	bool bCanPlayHitReactionMontage = true; // New flag to control hit reaction montage playback
+
+	UPROPERTY(EditAnywhere, Category="[캐릭터]", Tooltip="밀려나는 강도를 정합니다.");
+	float KnockbackPower = 10.0f;
+	
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
