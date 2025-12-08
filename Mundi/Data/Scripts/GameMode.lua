@@ -691,14 +691,22 @@ function OnStartPageStart()
         -- Tutorial 버튼 클릭 이벤트 설정
         canvas:SetOnClick("Tutorial", function()
             print("[GameMode] Tutorial button clicked!")
-            UI.RemoveCanvas(startPageCanvasName)
-            StartTutorial()
+            -- 코루틴으로 지연시켜서 콜백 실행 중 캔버스 삭제 방지
+            StartCoroutine(function()
+                coroutine.yield(WaitForSeconds(0.01))
+                UI.RemoveCanvas(startPageCanvasName)
+                OpenTutorial()
+            end)
         end)
 
         -- Exit 버튼 클릭 이벤트 설정
         canvas:SetOnClick("Exit", function()
             print("[GameMode] Exit button clicked!")
-            -- TODO: 게임 종료 처리
+            -- 코루틴으로 지연 후 종료 (콜백 실행 중 종료 방지)
+            StartCoroutine(function()
+                coroutine.yield(WaitForSeconds(0.01))
+                ExitGame()  -- Editor: PIE 종료, StandAlone: exe 종료
+            end)
         end)
 
         print("[GameMode] GameStart button callback set")
@@ -828,27 +836,20 @@ end
 -- ============================================
 
 -- 악세사리 UI 업데이트 (선택 상태 표시)
+-- 인디케이터 위젯 (P1_Ind_1~3, P2_Ind_1~3) 사용: 선택된 인덱스만 visible
 function UpdateAccessoryUI(canvas)
     if not canvas then return end
 
-    -- P1 선택 표시 (선택된 버튼은 SubUV Frame 1, 나머지는 0)
+    -- P1 인디케이터: 선택된 인덱스만 visible
     for i = 1, 3 do
-        local btnName = "p1_acc" .. i
-        if i == p1SelectedAccessory then
-            canvas:SetTextureSubUVFrame(btnName, 1)  -- 선택됨
-        else
-            canvas:SetTextureSubUVFrame(btnName, 0)  -- 미선택
-        end
+        local indName = "P1_Ind_" .. i
+        canvas:SetWidgetVisible(indName, i == p1SelectedAccessory)
     end
 
-    -- P2 선택 표시
+    -- P2 인디케이터: 선택된 인덱스만 visible
     for i = 1, 3 do
-        local btnName = "p2_acc" .. i
-        if i == p2SelectedAccessory then
-            canvas:SetTextureSubUVFrame(btnName, 1)  -- 선택됨
-        else
-            canvas:SetTextureSubUVFrame(btnName, 0)  -- 미선택
-        end
+        local indName = "P2_Ind_" .. i
+        canvas:SetWidgetVisible(indName, i == p2SelectedAccessory)
     end
 end
 
@@ -889,8 +890,11 @@ function SelectionInputLoop()
 
     -- 입력 쿨다운 (프레임 단위, ~60fps 기준 5프레임 ≈ 0.08초)
     local INPUT_COOLDOWN_FRAMES = 5
+    local READY_COOLDOWN_FRAMES = 15  -- Ready 버튼은 더 긴 쿨다운 (토글 방지)
     local p1InputCooldown = 0
     local p2InputCooldown = 0
+    local p1ReadyCooldown = 0
+    local p2ReadyCooldown = 0
     local roundInputCooldown = 0
 
     while UI.FindCanvas(selectCanvasName) do
@@ -900,6 +904,8 @@ function SelectionInputLoop()
         -- 쿨다운 감소 (매 프레임 1씩)
         if p1InputCooldown > 0 then p1InputCooldown = p1InputCooldown - 1 end
         if p2InputCooldown > 0 then p2InputCooldown = p2InputCooldown - 1 end
+        if p1ReadyCooldown > 0 then p1ReadyCooldown = p1ReadyCooldown - 1 end
+        if p2ReadyCooldown > 0 then p2ReadyCooldown = p2ReadyCooldown - 1 end
         if roundInputCooldown > 0 then roundInputCooldown = roundInputCooldown - 1 end
 
         -- ==========================================
@@ -952,11 +958,12 @@ function SelectionInputLoop()
                 end
             end
 
-            -- P1 Ready: T키
-            if InputManager:IsKeyPressed("T") then
+            -- P1 Ready: T키 (쿨다운 적용)
+            if p1ReadyCooldown <= 0 and InputManager:IsKeyPressed("T") then
                 p1Ready = not p1Ready
                 print("[GameMode] P1 Ready: " .. tostring(p1Ready))
                 UpdateReadyUI(canvas)
+                p1ReadyCooldown = READY_COOLDOWN_FRAMES
 
                 -- 둘 다 Ready면 라운드 선택 단계로
                 if p1Ready and p2Ready then
@@ -965,11 +972,12 @@ function SelectionInputLoop()
                 end
             end
 
-            -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97)
-            if InputManager:IsKeyPressed(97) then
+            -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97, 쿨다운 적용)
+            if p2ReadyCooldown <= 0 and InputManager:IsKeyPressed(97) then
                 p2Ready = not p2Ready
                 print("[GameMode] P2 Ready: " .. tostring(p2Ready))
                 UpdateReadyUI(canvas)
+                p2ReadyCooldown = READY_COOLDOWN_FRAMES
 
                 -- 둘 다 Ready면 라운드 선택 단계로
                 if p1Ready and p2Ready then

@@ -19,6 +19,10 @@
 #include "Source/Game/AngryCoachGameMode.h"
 #include "Source/Game/AngryCoachCharacter.h"
 
+#ifdef _EDITOR
+#include "EditorEngine.h"
+#endif
+
 sol::object MakeCompProxy(sol::state_view SolState, void* Instance, UClass* Class) {
     BuildBoundClass(Class);
     LuaComponentProxy Proxy;
@@ -545,6 +549,19 @@ FLuaManager::FLuaManager()
             {
                 GameMode->RestartMatch();
             }
+        }
+    );
+
+    // 게임 종료 함수 (Editor: PIE 종료, StandAlone: exe 종료)
+    SharedLib.set_function("ExitGame",
+        []()
+        {
+#ifdef _EDITOR
+            extern UEditorEngine GEngine;
+            GEngine.EndPIE();
+#else
+            PostQuitMessage(0);
+#endif
         }
     );
 
