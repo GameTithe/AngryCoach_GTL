@@ -376,6 +376,24 @@ void UUICanvas::ResizeWidget(const std::string& WidgetName, float TargetW, float
     }
 }
 
+void UUICanvas::ResizeWidgetCentered(const std::string& WidgetName, float TargetW, float TargetH,
+                                     float Duration, EEasingType Easing)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->SizeToCentered(TargetW, TargetH, Duration, Easing);
+    }
+}
+
+void UUICanvas::ScaleWidgetCentered(const std::string& WidgetName, float ScaleX, float ScaleY,
+                                    float Duration, EEasingType Easing)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->SizeToCenteredByScale(ScaleX, ScaleY, Duration, Easing);
+    }
+}
+
 void UUICanvas::RotateWidget(const std::string& WidgetName, float TargetAngle,
                              float Duration, EEasingType Easing)
 {
@@ -399,6 +417,15 @@ void UUICanvas::StopWidgetAnimation(const std::string& WidgetName)
     if (auto* Widget = FindWidget(WidgetName))
     {
         Widget->StopAnimation();
+    }
+}
+
+void UUICanvas::RestoreWidgetOriginal(const std::string& WidgetName)
+{
+    if (auto* Widget = FindWidget(WidgetName))
+    {
+        Widget->StopAnimation();  // 진행 중인 애니메이션 중지
+        Widget->RestoreOriginalValues();  // 원본 값으로 복원
     }
 }
 

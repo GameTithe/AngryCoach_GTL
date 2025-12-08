@@ -219,6 +219,8 @@ public:
 
     void MoveTo(float TargetX, float TargetY, float Duration, EEasingType Easing = EEasingType::Linear);
     void SizeTo(float TargetW, float TargetH, float Duration, EEasingType Easing = EEasingType::Linear);
+    void SizeToCentered(float TargetW, float TargetH, float Duration, EEasingType Easing = EEasingType::Linear);
+    void SizeToCenteredByScale(float ScaleX, float ScaleY, float Duration, EEasingType Easing = EEasingType::Linear);
     void RotateTo(float TargetAngle, float Duration, EEasingType Easing = EEasingType::Linear);
     void FadeTo(float TargetOpacity, float Duration, EEasingType Easing = EEasingType::Linear);
 

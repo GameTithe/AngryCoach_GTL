@@ -1365,6 +1365,42 @@ void FLuaManager::ExposeUIFunctions()
             }
         ),
 
+        // 크기 애니메이션 (중점 기준)
+        "ResizeWidgetCentered", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float W, float H, float Duration)
+            {
+                if (UGameUIManager::Get().IsValidCanvas(Self)) Self->ResizeWidgetCentered(Name, W, H, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float W, float H, float Duration,
+               const std::string& Easing)
+            {
+                if (!UGameUIManager::Get().IsValidCanvas(Self)) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->ResizeWidgetCentered(Name, W, H, Duration, Type);
+            }
+        ),
+
+        // 크기 애니메이션 (중점 기준, 배율 사용 - 스케일링 문제 없음)
+        "ScaleWidgetCentered", sol::overload(
+            [](UUICanvas* Self, const std::string& Name, float ScaleX, float ScaleY, float Duration)
+            {
+                if (UGameUIManager::Get().IsValidCanvas(Self)) Self->ScaleWidgetCentered(Name, ScaleX, ScaleY, Duration, EEasingType::Linear);
+            },
+            [](UUICanvas* Self, const std::string& Name, float ScaleX, float ScaleY, float Duration,
+               const std::string& Easing)
+            {
+                if (!UGameUIManager::Get().IsValidCanvas(Self)) return;
+                EEasingType Type = EEasingType::Linear;
+                if (Easing == "EaseIn") Type = EEasingType::EaseIn;
+                else if (Easing == "EaseOut") Type = EEasingType::EaseOut;
+                else if (Easing == "EaseInOut") Type = EEasingType::EaseInOut;
+                Self->ScaleWidgetCentered(Name, ScaleX, ScaleY, Duration, Type);
+            }
+        ),
+
         // 회전 애니메이션
         "RotateWidget", sol::overload(
             [](UUICanvas* Self, const std::string& Name, float Angle, float Duration)
@@ -1405,6 +1441,12 @@ void FLuaManager::ExposeUIFunctions()
         "StopAnimation", [](UUICanvas* Self, const std::string& Name)
         {
             if (UGameUIManager::Get().IsValidCanvas(Self)) Self->StopWidgetAnimation(Name);
+        },
+
+        // 위젯을 원본 상태로 복원 (uiasset 로드 시점의 위치/크기/투명도)
+        "RestoreWidgetOriginal", [](UUICanvas* Self, const std::string& Name)
+        {
+            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->RestoreWidgetOriginal(Name);
         },
 
         // ======== 진동 애니메이션 ========

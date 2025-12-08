@@ -148,6 +148,45 @@ void UUIWidget::SizeTo(float TargetW, float TargetH, float Duration, EEasingType
     Animation.bAnimatingSize = true;
 }
 
+void UUIWidget::SizeToCentered(float TargetW, float TargetH, float Duration, EEasingType Easing)
+{
+    // 현재 중심점 계산
+    float CenterX = X + Width * 0.5f;
+    float CenterY = Y + Height * 0.5f;
+
+    // 목표 크기에서의 위치 (중심점 유지)
+    float NewX = CenterX - TargetW * 0.5f;
+    float NewY = CenterY - TargetH * 0.5f;
+
+    // 크기 애니메이션
+    Animation.StartWidth = Width;
+    Animation.StartHeight = Height;
+    Animation.TargetWidth = TargetW;
+    Animation.TargetHeight = TargetH;
+    Animation.bAnimatingSize = true;
+
+    // 위치 애니메이션 (중심점 유지를 위해)
+    Animation.StartX = X;
+    Animation.StartY = Y;
+    Animation.TargetX = NewX;
+    Animation.TargetY = NewY;
+    Animation.bAnimatingPosition = true;
+
+    Animation.Duration = Duration;
+    Animation.Elapsed = 0.0f;
+    Animation.Easing = Easing;
+}
+
+void UUIWidget::SizeToCenteredByScale(float ScaleX, float ScaleY, float Duration, EEasingType Easing)
+{
+    // 현재 크기의 배수로 목표 크기 계산
+    float TargetW = Width * ScaleX;
+    float TargetH = Height * ScaleY;
+
+    // SizeToCentered 재사용
+    SizeToCentered(TargetW, TargetH, Duration, Easing);
+}
+
 void UUIWidget::RotateTo(float TargetAngle, float Duration, EEasingType Easing)
 {
     Animation.StartRotation = Rotation;

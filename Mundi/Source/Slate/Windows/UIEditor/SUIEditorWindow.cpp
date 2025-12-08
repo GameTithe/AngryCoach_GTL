@@ -677,10 +677,15 @@ void SUIEditorWindow::RenderCanvas(float Width, float Height)
                                      canvasBoundsMin.y + CanvasSize.y * CanvasZoom);
     drawList->AddRect(canvasBoundsMin, canvasBoundsMax, IM_COL32(100, 100, 100, 255), 0, 0, 2.0f);
 
-    // 위젯 그리기
-    for (size_t i = 0; i < CurrentAsset.Widgets.size(); i++)
+    // 위젯 그리기 (Z-Order 순으로 정렬 - 낮은 것이 먼저 그려짐)
+    std::vector<size_t> sortedIndices(CurrentAsset.Widgets.size());
+    for (size_t i = 0; i < sortedIndices.size(); i++) sortedIndices[i] = i;
+    std::sort(sortedIndices.begin(), sortedIndices.end(), [this](size_t a, size_t b) {
+        return CurrentAsset.Widgets[a].ZOrder < CurrentAsset.Widgets[b].ZOrder;
+    });
+    for (size_t idx : sortedIndices)
     {
-        DrawWidget(drawList, CurrentAsset.Widgets[i], canvasBoundsMin, CanvasZoom);
+        DrawWidget(drawList, CurrentAsset.Widgets[idx], canvasBoundsMin, CanvasZoom);
     }
 
     // 선택된 위젯 핸들

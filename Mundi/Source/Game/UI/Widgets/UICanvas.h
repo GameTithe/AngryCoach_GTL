@@ -158,6 +158,20 @@ public:
                       float Duration, EEasingType Easing = EEasingType::Linear);
 
     /**
+     * @brief 위젯 크기 변경 애니메이션 (중점 기준)
+     * 위젯의 중심점을 유지하면서 균등하게 커지거나 작아집니다.
+     */
+    void ResizeWidgetCentered(const std::string& Name, float TargetW, float TargetH,
+                              float Duration, EEasingType Easing = EEasingType::Linear);
+
+    /**
+     * @brief 위젯 크기 변경 애니메이션 (중점 기준, 배율 사용)
+     * 현재 크기의 배수로 확대/축소합니다. 스케일링 문제 없이 안전합니다.
+     */
+    void ScaleWidgetCentered(const std::string& Name, float ScaleX, float ScaleY,
+                             float Duration, EEasingType Easing = EEasingType::Linear);
+
+    /**
      * @brief 위젯 회전 애니메이션
      */
     void RotateWidget(const std::string& Name, float TargetAngle,
@@ -173,6 +187,12 @@ public:
      * @brief 위젯 애니메이션 중지
      */
     void StopWidgetAnimation(const std::string& Name);
+
+    /**
+     * @brief 위젯을 원본 상태로 복원 (uiasset 로드 시점의 위치/크기/투명도)
+     * 애니메이션으로 변경된 위젯을 초기 상태로 되돌릴 때 사용
+     */
+    void RestoreWidgetOriginal(const std::string& Name);
 
     /**
      * @brief 위젯 진동 애니메이션 시작
