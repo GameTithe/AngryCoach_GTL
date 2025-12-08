@@ -1,5 +1,6 @@
 #pragma once
 #include "Character.h"
+#include "Source/Runtime/Engine/Skill/SkillTypes.h"
 #include "AAngryCoachCharacter.generated.h"
 
 class UAnimMontage;
@@ -41,8 +42,9 @@ public:
 	void SetAttackShape(UShapeComponent* Shape);
 
 	// ===== 스킬 =====
-	void OnAttackInput(EAttackInput Input);
-	USkillComponent* GetSkillComponent() const { return SkillComponent; }
+    void OnAttackInput(EAttackInput Input);
+    USkillComponent* GetSkillComponent() const { return SkillComponent; }
+    ESkillSlot GetCurrentAttackSlot() const { return CurrentAttackSlot; }
 
 	// 노티파이용 함수
 	void AttackBegin() override;
@@ -70,6 +72,11 @@ public:
 	UPROPERTY(EditAnywhere, Category="[캐릭터]", Tooltip="밀려나는 강도를 정합니다.");
 	float KnockbackPower = 10.0f;
 	
+	// 킬존 진입 여부 검사 - 낙사
+	bool IsBelowKillZ();
+	// 애니메이션 노티파이용 함수
+	void ToggleGorillaFormOnAccessory();
+
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
@@ -77,10 +84,13 @@ private:
 	void Die();
 
 protected:
-	// 스킬/악세서리
-	USkillComponent* SkillComponent = nullptr;
-	AAccessoryActor* CurrentAccessory = nullptr;
-	UShapeComponent* CachedAttackShape = nullptr;
+    // 스킬/악세서리
+    USkillComponent* SkillComponent = nullptr;
+    AAccessoryActor* CurrentAccessory = nullptr;
+    UShapeComponent* CachedAttackShape = nullptr;
+
+    // 현재 공격 슬롯(약/강/스페셜 분기용)
+    ESkillSlot CurrentAttackSlot = ESkillSlot::None;
 
 	UAnimMontage* HitReationMontage = nullptr;
 	UAnimMontage* GuardMontage = nullptr;

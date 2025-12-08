@@ -39,7 +39,7 @@ protected:
 	ACameraActor* GameCamera = nullptr;
 
 	// 카메라 오프셋 (두 캐릭터 중심에서 얼마나 떨어질지) - 미터 단위
-	FVector CameraOffset = FVector(-6.0f, 0.0f, 4.5f);
+	FVector CameraOffset = FVector(-8.0f, 0.0f, 6.f);
 	float CameraLerpSpeed = 5.0f;
 
 	// Player 1

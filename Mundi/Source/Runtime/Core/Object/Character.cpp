@@ -20,7 +20,7 @@ ACharacter::ACharacter()
 
 	SetRootComponent(CapsuleComponent);
 	CapsuleComponent->SetBlockComponent(false);
-	CapsuleComponent->SetGenerateOverlapEvents(false);
+	CapsuleComponent->SetGenerateOverlapEvents(true);
 
 	if (SkeletalMeshComp)
 	{

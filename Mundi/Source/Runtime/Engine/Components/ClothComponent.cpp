@@ -213,6 +213,22 @@ void UClothComponent::ApplyTetherConstraint()
 	cloth->setTetherConstraintStiffness(ClothSettings.TetherStiffness);
 }
 
+void UClothComponent::SetWindVelocity(const FVector& InWindVelocity)
+{
+	// ClothSettings 업데이트
+	ClothSettings.WindVelocity = InWindVelocity;
+
+	// NvCloth에 즉시 반영
+	if (cloth)
+	{
+		cloth->setWindVelocity(physx::PxVec3(
+			InWindVelocity.X,
+			InWindVelocity.Y,
+			InWindVelocity.Z
+		));
+	}
+}
+
 void UClothComponent::UpdateVerticesFromCloth()
 {
 	if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData() || PreviousParticles.Num() == 0 || !CPUSkinnedVertexBuffer)

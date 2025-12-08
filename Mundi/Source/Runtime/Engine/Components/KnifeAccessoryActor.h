@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "AccessoryActor.h"
 #include "AKnifeAccessoryActor.generated.h"
 
