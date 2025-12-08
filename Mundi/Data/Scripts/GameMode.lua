@@ -580,10 +580,32 @@ function Tick(Delta)
 
             local canvas = UI.FindCanvas(battleUICanvasName)
 
-            -- 시간이 0이 되면 진동 중지
-            -- (EndRound는 C++에서 자동 호출됨 → OnRoundEnd에서 GameSet 처리)
+            -- 시간이 0이 되면 타임아웃 처리
             if currentTime <= 0 then
                 StopTimerShake(canvas)
+
+                -- 타임아웃 승자 결정 (체력 비율 비교)
+                local p1Ratio, p2Ratio = UpdateHealthBars()
+                bBattleActive = false
+
+                -- 타임아웃 슬로모션 효과 (5초간 10% 속도)
+                SetSlomo(5.0, 0.1)
+                print("[GameMode] Timeout Slow-motion activated! (5s at 10% speed)")
+
+                local winnerIndex
+                if p1Ratio > p2Ratio then
+                    winnerIndex = 0  -- P1 승리 (체력 더 많음)
+                    print("[GameMode] Timeout! P1 wins (P1:" .. p1Ratio .. " > P2:" .. p2Ratio .. ")")
+                elseif p2Ratio > p1Ratio then
+                    winnerIndex = 1  -- P2 승리 (체력 더 많음)
+                    print("[GameMode] Timeout! P2 wins (P2:" .. p2Ratio .. " > P1:" .. p1Ratio .. ")")
+                else
+                    winnerIndex = -1  -- 무승부 (체력 동일 → 승자 없이 다음 라운드)
+                    print("[GameMode] Timeout! Draw (P1:" .. p1Ratio .. " == P2:" .. p2Ratio .. ")")
+                end
+
+                EndRound(winnerIndex)
+                return  -- 이번 프레임에서 추가 처리 방지
             else
                 -- 타이머 진동 체크 (0초 제외)
                 local shakeIntensity = GetTimerShakeIntensity(currentTime)
@@ -626,9 +648,9 @@ function Tick(Delta)
             -- 전투 종료
             bBattleActive = false
 
-            -- KO 슬로모션 효과 (3초간 50% 속도)
-            SetSlomo(3.0, 0.5)
-            print("[GameMode] KO Slow-motion activated! (3s at 50% speed)")
+            -- KO 슬로모션 효과 (5초간 10% 속도)
+            SetSlomo(5.0, 0.1)
+            print("[GameMode] KO Slow-motion activated! (5s at 10% speed)")
 
             -- 타이머 진동 중지
             local canvas = UI.FindCanvas(battleUICanvasName)
