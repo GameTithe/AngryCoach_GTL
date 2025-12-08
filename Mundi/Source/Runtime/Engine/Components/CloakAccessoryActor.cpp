@@ -45,22 +45,30 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 	// 양손/양발 AttackShape 생성
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
 	{
-		Shape->SphereRadius = 1.f;
+		Shape->SphereRadius = 2.f;
+		Shape->SetGenerateOverlapEvents(false);
+		Shape->SetBlockComponent(false);
 		UE_LOG("[CloakAccessory] LeftHandAttackShape created, Radius=%.2f", Shape->SphereRadius);
 	}
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
 	{
-		Shape->SphereRadius = 1.f;
+		Shape->SphereRadius = 2.f;
+		Shape->SetGenerateOverlapEvents(false);
+		Shape->SetBlockComponent(false);
 		UE_LOG("[CloakAccessory] RightHandAttackShape created, Radius=%.2f", Shape->SphereRadius);
 	}
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
 	{
-		Shape->SphereRadius = 1.f;
+		Shape->SphereRadius = 2.f;
+		Shape->SetGenerateOverlapEvents(false);
+		Shape->SetBlockComponent(false);
 		UE_LOG("[CloakAccessory] LeftFootAttackShape created, Radius=%.2f", Shape->SphereRadius);
 	}
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
 	{
-		Shape->SphereRadius = 1.f;
+		Shape->SphereRadius = 2.f;
+		Shape->SetGenerateOverlapEvents(false);
+		Shape->SetBlockComponent(false);
 		UE_LOG("[CloakAccessory] RightFootAttackShape created, Radius=%.2f", Shape->SphereRadius);
 	}
 	UE_LOG("[CloakAccessory] Total AttackShapes: %d", AttackShapes.Num());
@@ -72,7 +80,6 @@ void ACloakAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	Super::Equip(OwnerCharacter);
 
 	if (!OwnerCharacter) return;
-
 	// AttackShapes를 캐릭터의 손/발 소켓에 부착
 	USkeletalMeshComponent* CharacterMesh = OwnerCharacter->GetMesh();
 	if (CharacterMesh)
@@ -229,34 +236,48 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 		GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
-		// AttackShape 재생성 (prefab에 없을 경우)
+		// AttackShape 설정 (있으면 업데이트, 없으면 재생성)
 		if (AttackShapes.Num() == 0)
 		{
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
 			{
-				Shape->SphereRadius = 1.f;
+				Shape->SphereRadius = 2.f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
 			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
 			{
-				Shape->SphereRadius = 1.f;
+				Shape->SphereRadius = 2.f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
 			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
 			{
-				Shape->SphereRadius = 1.f;
+				Shape->SphereRadius = 2.f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
 			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
 			{
-				Shape->SphereRadius = 1.f;
+				Shape->SphereRadius = 2.f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
 			}
 			UE_LOG("[CloakAccessory] Serialize: AttackShapes recreated, count=%d", AttackShapes.Num());
+		}
+		else
+		{
+			// 기존 Shape 설정 업데이트
+			for (UShapeComponent* Shape : AttackShapes)
+			{
+				if (USphereComponent* Sphere = Cast<USphereComponent>(Shape))
+				{
+					Sphere->SphereRadius = 2.f;
+					Sphere->SetGenerateOverlapEvents(false);
+					Sphere->SetBlockComponent(false);
+				}
+			}
+			UE_LOG("[CloakAccessory] Serialize: AttackShapes updated, count=%d", AttackShapes.Num());
 		}
 
 		// 저장된 값 초기화
@@ -290,32 +311,44 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
-	// AttackShape 재생성 (복제 시)
+	// AttackShape 설정 (있으면 업데이트, 없으면 재생성)
 	if (AttackShapes.Num() == 0)
 	{
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
 		{
-			Shape->SphereRadius = 1.f;
+			Shape->SphereRadius = 2.f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
 		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
 		{
-			Shape->SphereRadius = 1.f;
+			Shape->SphereRadius = 2.f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
 		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
 		{
-			Shape->SphereRadius = 1.f;
+			Shape->SphereRadius = 2.f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
 		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
 		{
-			Shape->SphereRadius = 1.f;
+			Shape->SphereRadius = 2.f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
+		}
+	}
+	else
+	{
+		for (UShapeComponent* Shape : AttackShapes)
+		{
+			if (USphereComponent* Sphere = Cast<USphereComponent>(Shape))
+			{
+				Sphere->SphereRadius = 2.f;
+				Sphere->SetGenerateOverlapEvents(false);
+				Sphere->SetBlockComponent(false);
+			}
 		}
 	}
 

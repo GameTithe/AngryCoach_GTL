@@ -33,12 +33,20 @@ AGorillaAccessoryActor::AGorillaAccessoryActor()
 	// 양손 AttackShape 생성 (왼손/오른손)
 	if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
 	{
-		LeftShape->SphereRadius = 1.f;
+		LeftShape->SphereRadius = 2.f;
+		LeftShape->SetGenerateOverlapEvents(false);
+		LeftShape->SetBlockComponent(false);
+		LeftShape->bOverrideCollisionSetting = true;
+		LeftShape->CollisionEnabled = ECollisionState::QueryOnly;
 		UE_LOG("[GorillaAccessory] LeftAttackShape created, Radius=%.2f", LeftShape->SphereRadius);
 	}
 	if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
 	{
-		RightShape->SphereRadius = 1.f;
+		RightShape->SphereRadius = 2.f;
+		RightShape->SetGenerateOverlapEvents(false);
+		RightShape->SetBlockComponent(false);
+		RightShape->bOverrideCollisionSetting = true;
+		RightShape->CollisionEnabled = ECollisionState::QueryOnly;
 		UE_LOG("[GorillaAccessory] RightAttackShape created, Radius=%.2f", RightShape->SphereRadius);
 	}
 	UE_LOG("[GorillaAccessory] Total AttackShapes: %d", AttackShapes.Num());
@@ -58,22 +66,42 @@ void AGorillaAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandl
 		GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 		GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
-		// AttackShape 재생성 (prefab에 없을 경우)
+		// AttackShape 설정 (있으면 업데이트, 없으면 재생성)
 		if (AttackShapes.Num() == 0)
 		{
 			if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
 			{
-				LeftShape->SphereRadius = 1.f;
+				LeftShape->SphereRadius = 2.f;
 				LeftShape->SetGenerateOverlapEvents(false);
 				LeftShape->SetBlockComponent(false);
+				LeftShape->bOverrideCollisionSetting = true;
+				LeftShape->CollisionEnabled = ECollisionState::QueryOnly;
 			}
 			if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
 			{
-				RightShape->SphereRadius = 1.f;
+				RightShape->SphereRadius = 2.f;
 				RightShape->SetGenerateOverlapEvents(false);
 				RightShape->SetBlockComponent(false);
+				RightShape->bOverrideCollisionSetting = true;
+				RightShape->CollisionEnabled = ECollisionState::QueryOnly;
 			}
 			UE_LOG("[GorillaAccessory] Serialize: AttackShapes recreated, count=%d", AttackShapes.Num());
+		}
+		else
+		{
+			// 기존 Shape 설정 업데이트
+			for (UShapeComponent* Shape : AttackShapes)
+			{
+				if (USphereComponent* Sphere = Cast<USphereComponent>(Shape))
+				{
+					Sphere->SphereRadius = 2.f;
+					Sphere->SetGenerateOverlapEvents(false);
+					Sphere->SetBlockComponent(false);
+					Sphere->bOverrideCollisionSetting = true;
+					Sphere->CollisionEnabled = ECollisionState::QueryOnly;
+				}
+			}
+			UE_LOG("[GorillaAccessory] Serialize: AttackShapes updated, count=%d", AttackShapes.Num());
 		}
 	}
 }
@@ -90,20 +118,32 @@ void AGorillaAccessoryActor::DuplicateSubObjects()
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
-	// AttackShape 재생성 (복제 시)
+	// AttackShape 설정 (있으면 업데이트, 없으면 재생성)
 	if (AttackShapes.Num() == 0)
 	{
 		if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
 		{
-			LeftShape->SphereRadius = 1.f;
+			LeftShape->SphereRadius = 2.f;
 			LeftShape->SetGenerateOverlapEvents(false);
 			LeftShape->SetBlockComponent(false);
 		}
 		if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
 		{
-			RightShape->SphereRadius = 1.f;
+			RightShape->SphereRadius = 2.f;
 			RightShape->SetGenerateOverlapEvents(false);
 			RightShape->SetBlockComponent(false);
+		}
+	}
+	else
+	{
+		for (UShapeComponent* Shape : AttackShapes)
+		{
+			if (USphereComponent* Sphere = Cast<USphereComponent>(Shape))
+			{
+				Sphere->SphereRadius = 2.f;
+				Sphere->SetGenerateOverlapEvents(false);
+				Sphere->SetBlockComponent(false);
+			}
 		}
 	}
 }
