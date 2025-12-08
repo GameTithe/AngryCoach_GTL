@@ -18,11 +18,13 @@
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
 #include "Source/Runtime/Engine/Skill/SkillTypes.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "FAudioDevice.h"
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
 	// SkillComponent 생성
 	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
+	DieSound = RESOURCE.Load<USound>("Data/Audio/Die.wav");
 }
 
 AAngryCoachCharacter::~AAngryCoachCharacter()
@@ -412,5 +414,10 @@ void AAngryCoachCharacter::Die()
 	{
 		CapsuleComponent->SetBlockComponent(false);
 		CapsuleComponent->SetGenerateOverlapEvents(false);
+	}
+
+	if (DieSound)
+	{
+		FAudioDevice::PlaySoundAtLocationOneShot(DieSound, GetActorLocation());
 	}
 }
