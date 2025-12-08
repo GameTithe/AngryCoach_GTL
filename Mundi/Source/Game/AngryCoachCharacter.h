@@ -72,6 +72,8 @@ public:
 	UPROPERTY(EditAnywhere, Category="[캐릭터]", Tooltip="밀려나는 강도를 정합니다.");
 	float KnockbackPower = 10.0f;
 	
+	// 킬존 진입 여부 검사 - 낙사
+	bool IsBelowKillZ();
 	// 애니메이션 노티파이용 함수
 	void ToggleGorillaFormOnAccessory();
 
@@ -97,4 +99,6 @@ protected:
 	USound* Hit2Sound = nullptr;
 	USound* SkillSound = nullptr;
 	USound* DieSound = nullptr;
+
+	TArray<AActor*> HitActors;
 };

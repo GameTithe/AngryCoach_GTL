@@ -929,6 +929,14 @@ int32 USkeletalMeshComponent::GetBoneIndexByName(const FName& BoneName) const
     return Skeleton.FindBoneIndex(BoneName);
 }
 
+void USkeletalMeshComponent::SetRagDollEnabled(bool bEnabled)
+{
+    if (bEnabled)
+    {
+        SetPhysicsAnimationState(EPhysicsAnimationState::PhysicsDriven);
+    }
+}
+
 void USkeletalMeshComponent::ChangePhysicsState()
 {
     // 플레이어 컨트롤러가 제어하는 Pawn인지 확인

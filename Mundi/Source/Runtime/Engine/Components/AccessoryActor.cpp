@@ -122,13 +122,13 @@ void AAccessoryActor::PlayTryParticle()
         if (Slot == ESkillSlot::LightAttack || Slot == ESkillSlot::HeavyAttack)
         {
             if (BaseEffectParticle) { BaseEffectParticle->ResetAndActivate(); }
-            else { UE_LOG("[PlayTryParticle] BaseEffectParticle is null"); }
+            else { /*UE_LOG("[PlayTryParticle] BaseEffectParticle is null");*/ }
             return;
         }
         else if (Slot == ESkillSlot::Specical)
         {
             if (TryAttackParticle) { TryAttackParticle->ResetAndActivate(); }
-            else { UE_LOG("[PlayTryParticle] TryAttackParticle is null"); }
+            else { /*UE_LOG("[PlayTryParticle] TryAttackParticle is null");*/ }
             return;
         }
     }
@@ -251,6 +251,8 @@ void AAccessoryActor::SetAttackShapeNameAndAttach(const FName& Name)
 
 	AttackShape->SetupAttachment(RootComponent);
 	AttackShape->ObjectName = Name;
+	AttackShape->SetGenerateOverlapEvents(false);
+	AttackShape->SetBlockComponent(false);
 }
 
 void AAccessoryActor::DuplicateSubObjects()

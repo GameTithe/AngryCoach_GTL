@@ -989,6 +989,30 @@ void FSceneRenderer::RenderParticlePass()
 	RHIDevice->RSSetState(ERasterizerMode::Solid);
 	RHIDevice->OMSetBlendState(true);
 
+	// 뷰포트 설정 (PostProcessing에서 변경되었을 수 있으므로 ViewRect 기준으로 복원)
+	{
+		D3D11_VIEWPORT vp = {};
+		vp.TopLeftX = (float)View->ViewRect.MinX;
+		vp.TopLeftY = (float)View->ViewRect.MinY;
+		vp.Width    = (float)View->ViewRect.Width();
+		vp.Height   = (float)View->ViewRect.Height();
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+		RHIDevice->GetDeviceContext()->RSSetViewports(1, &vp);
+
+		// FViewportConstants (b10) 업데이트
+		FViewportConstants ViewportCB;
+		ViewportCB.ViewportRect.X = vp.TopLeftX;
+		ViewportCB.ViewportRect.Y = vp.TopLeftY;
+		ViewportCB.ViewportRect.Z = vp.Width;
+		ViewportCB.ViewportRect.W = vp.Height;
+		ViewportCB.ScreenSize.X = static_cast<float>(RHIDevice->GetViewportWidth());
+		ViewportCB.ScreenSize.Y = static_cast<float>(RHIDevice->GetViewportHeight());
+		ViewportCB.ScreenSize.Z = 1.0f / RHIDevice->GetViewportWidth();
+		ViewportCB.ScreenSize.W = 1.0f / RHIDevice->GetViewportHeight();
+		RHIDevice->SetAndUpdateConstantBuffer(ViewportCB);
+	}
+
 	// ParticleMesh 라이팅을 위한 상수버퍼 바인딩
 	FLightManager* LightManager = World->GetLightManager();
 	if (LightManager)

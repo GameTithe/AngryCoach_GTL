@@ -58,7 +58,7 @@ public:
 
 	void SetCurrentState(ECharacterState NewState) { CurrentState = NewState; }
 	ECharacterState GetCurrentState() const { return CurrentState; }
-	bool IsAlive() const { return CurrentState != ECharacterState::Dead; }
+	bool IsAlive() const { return CurrentHealth > 0.0f; }
 	float GetHealthPercent() const;
 	void ResetHealth() { CurrentHealth = MaxHealth; CurrentState = ECharacterState::Idle; }
 	virtual void Revive();  // 라운드 시작 시 캐릭터 완전 복원
