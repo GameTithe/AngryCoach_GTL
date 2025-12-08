@@ -9,6 +9,8 @@
 #include "CloakLightAttackSkill.h"
 #include "CloakSpecialAttackSkill.h"
 #include "ParticleSystemComponent.h"
+#include "SphereComponent.h"
+#include "SkeletalMeshComponent.h"
 
 ACloakAccessoryActor::ACloakAccessoryActor()
 {
@@ -39,6 +41,29 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
+
+	// 양손/양발 AttackShape 생성
+	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
+	{
+		Shape->SphereRadius = 0.5f;
+		UE_LOG("[CloakAccessory] LeftHandAttackShape created, Radius=%.2f", Shape->SphereRadius);
+	}
+	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
+	{
+		Shape->SphereRadius = 0.5f;
+		UE_LOG("[CloakAccessory] RightHandAttackShape created, Radius=%.2f", Shape->SphereRadius);
+	}
+	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
+	{
+		Shape->SphereRadius = 0.5f;
+		UE_LOG("[CloakAccessory] LeftFootAttackShape created, Radius=%.2f", Shape->SphereRadius);
+	}
+	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
+	{
+		Shape->SphereRadius = 0.5f;
+		UE_LOG("[CloakAccessory] RightFootAttackShape created, Radius=%.2f", Shape->SphereRadius);
+	}
+	UE_LOG("[CloakAccessory] Total AttackShapes: %d", AttackShapes.Num());
 }
 
 void ACloakAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
@@ -47,6 +72,13 @@ void ACloakAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	Super::Equip(OwnerCharacter);
 
 	if (!OwnerCharacter) return;
+
+	// AttackShapes를 캐릭터의 손/발 소켓에 부착
+	USkeletalMeshComponent* CharacterMesh = OwnerCharacter->GetMesh();
+	if (CharacterMesh)
+	{
+		AttachAttackShapesToLimbs(CharacterMesh);
+	}
 
 	UCharacterMovementComponent* Movement = OwnerCharacter->GetCharacterMovement();
 	if (Movement)
@@ -64,6 +96,42 @@ void ACloakAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 		UE_LOG("[CloakAccessory] Equipped: Speed %.1f -> %.1f, Jump %d -> %d",
 			OriginalMaxWalkSpeed, Movement->MaxWalkSpeed,
 			OriginalMaxJumpCount, Movement->GetMaxJumpCount());
+	}
+}
+
+void ACloakAccessoryActor::AttachAttackShapesToLimbs(USkeletalMeshComponent* CharacterMesh)
+{
+	if (!CharacterMesh || AttackShapes.Num() < 4)
+		return;
+
+	// 손/발 소켓 이름 (스켈레탈 메시에 맞게 수정 필요)
+	const FName LeftHandSocket = FName("LeftHandSocket");
+	const FName RightHandSocket = FName("RightHandSocket");
+	const FName LeftFootSocket = FName("LeftFootSocket");
+	const FName RightFootSocket = FName("RightFootSocket");
+
+	for (UShapeComponent* Shape : AttackShapes)
+	{
+		if (!Shape) continue;
+
+		FString ShapeName = Shape->ObjectName.ToString();
+		FName TargetSocket;
+
+		if (ShapeName.find("LeftHand") != std::string::npos)
+			TargetSocket = LeftHandSocket;
+		else if (ShapeName.find("RightHand") != std::string::npos)
+			TargetSocket = RightHandSocket;
+		else if (ShapeName.find("LeftFoot") != std::string::npos)
+			TargetSocket = LeftFootSocket;
+		else if (ShapeName.find("RightFoot") != std::string::npos)
+			TargetSocket = RightFootSocket;
+		else
+			continue;
+
+		Shape->SetupAttachment(CharacterMesh, TargetSocket);
+		if (OwningCharacter)
+			Shape->RegisterComponent(OwningCharacter->GetWorld());
+		UE_LOG("[CloakAccessory] %s attached to %s", ShapeName.c_str(), TargetSocket.ToString().c_str());
 	}
 }
 
@@ -161,6 +229,20 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 		GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
+		// AttackShape 재생성 (prefab에 없을 경우)
+		if (AttackShapes.Num() == 0)
+		{
+			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
+				Shape->SphereRadius = 0.5f;
+			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
+				Shape->SphereRadius = 0.5f;
+			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
+				Shape->SphereRadius = 0.5f;
+			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
+				Shape->SphereRadius = 0.5f;
+			UE_LOG("[CloakAccessory] Serialize: AttackShapes recreated, count=%d", AttackShapes.Num());
+		}
+
 		// 저장된 값 초기화
 		OriginalMaxWalkSpeed = 0.0f;
 		OriginalMaxJumpCount = 0;
@@ -186,11 +268,24 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 	GrantedSkills.clear();
 	UCloakLightAttackSkill* LightSkill = NewObject<UCloakLightAttackSkill>();
 	UCloakHeavyAttackSkill* HeavySkill = NewObject<UCloakHeavyAttackSkill>();
-	UCloakHeavyAttackSkill* SpecialSkill = NewObject<UCloakHeavyAttackSkill>();
+	UCloakSpecialAttackSkill* SpecialSkill = NewObject<UCloakSpecialAttackSkill>();
 
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
+
+	// AttackShape 재생성 (복제 시)
+	if (AttackShapes.Num() == 0)
+	{
+		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
+			Shape->SphereRadius = 0.5f;
+		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
+			Shape->SphereRadius = 0.5f;
+		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
+			Shape->SphereRadius = 0.5f;
+		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
+			Shape->SphereRadius = 0.5f;
+	}
 
 	// 저장된 값 초기화
 	OriginalMaxWalkSpeed = 0.0f;
