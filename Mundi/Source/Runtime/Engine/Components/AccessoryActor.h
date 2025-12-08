@@ -36,7 +36,7 @@ public:
     // 기본 Particle
     UParticleSystemComponent* BaseEffectParticle;
 
-    UShapeComponent* AttackShape = nullptr;
+    TArray<UShapeComponent*> AttackShapes;
 
     // === 악세서리 데이터 ===
     //UPROPERTY(EditAnywhere, Category = "Accessory", Tooltip = "이 악세서리가 부여하는 스킬들")
@@ -69,11 +69,11 @@ public:
 protected:
     // 자식 클래스에서 호출하는 헬퍼 함수
     template <typename T>
-    void CreateAttackShape(const FName& Name);
+    UShapeComponent* CreateAttackShape(const FName& Name);
 
 private:
     // 헬퍼 함수
-    void SetAttackShapeNameAndAttach(const FName& Name);
+    void SetAttackShapeNameAndAttach(UShapeComponent* Shape, const FName& Name);
 
     // 파티클 자동 종료용 타이머6
     float HitParticleElapsedTime = 0.0f; 
@@ -81,7 +81,7 @@ private:
     float ElectricParticleElapsedTime = 0.0f;
     bool bElectricParticleActive = false;
 
-    const float ParticleLifetime = 3.3f;  // 파티클 유지 시간 (초)
+    const float ParticleLifetime = 1.0f;  // 파티클 유지 시간 (초)
 
 protected:
     AAngryCoachCharacter* OwningCharacter = nullptr;
@@ -103,10 +103,12 @@ private:
 };
 
 template <typename T>
-void AAccessoryActor::CreateAttackShape(const FName& Name)
+UShapeComponent* AAccessoryActor::CreateAttackShape(const FName& Name)
 {
     static_assert(std::is_base_of<UShapeComponent, T>::value, "T는 ShapeComponent가 아닙니다.");
-    AttackShape = CreateDefaultSubobject<T>("AttackShape");
+    T* NewShape = CreateDefaultSubobject<T>(Name.ToString().c_str());
+    AttackShapes.Add(NewShape);
 
-    SetAttackShapeNameAndAttach(Name);
+    SetAttackShapeNameAndAttach(NewShape, Name);
+    return NewShape;
 }

@@ -39,7 +39,8 @@ public:
 	void EquipAccessory(AAccessoryActor* Accessory);
 	void UnequipAccessory();
 	AAccessoryActor* GetCurrentAccessory() const { return CurrentAccessory; }
-	void SetAttackShape(UShapeComponent* Shape);
+	void AddAttackShape(UShapeComponent* Shape);
+	void ClearAttackShapes();
 
 	// ===== 스킬 =====
     void OnAttackInput(EAttackInput Input);
@@ -69,8 +70,11 @@ public:
 	
 	bool bCanPlayHitReactionMontage = true; // New flag to control hit reaction montage playback
 
-	UPROPERTY(EditAnywhere, Category="[캐릭터]", Tooltip="밀려나는 강도를 정합니다.");
+	UPROPERTY(EditAnywhere, Category="[캐릭터]")
 	float KnockbackPower = 10.0f;
+
+	UPROPERTY(EditAnywhere, Category="[캐릭터]")
+	float VibrationDuration = 1.0f;
 	
 	// 킬존 진입 여부 검사 - 낙사
 	bool IsBelowKillZ();
@@ -82,12 +86,14 @@ private:
 	void DelegateBindToCachedShape();
 	// 죽었을 때 필요한 로직 모아둔 헬퍼
 	void Die();
+	// 게임패드 진동 활성화 헬퍼
+	void EnableGamePadVibration();
 
 protected:
     // 스킬/악세서리
     USkillComponent* SkillComponent = nullptr;
     AAccessoryActor* CurrentAccessory = nullptr;
-    UShapeComponent* CachedAttackShape = nullptr;
+    TArray<UShapeComponent*> CachedAttackShapes;
 
     // 현재 공격 슬롯(약/강/스페셜 분기용)
     ESkillSlot CurrentAttackSlot = ESkillSlot::None;

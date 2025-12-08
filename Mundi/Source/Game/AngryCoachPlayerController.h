@@ -18,6 +18,7 @@ public:
 	// 두 캐릭터 등록
 	void SetControlledCharacters(AAngryCoachCharacter* InPlayer1, AAngryCoachCharacter* InPlayer2);
 	void SetGameCamera(ACameraActor* InCamera);
+	void SetGamePadVibration(bool bEnable, AAngryCoachCharacter* InPlayer, float VibTime);	
 
 protected:
 	// 각 캐릭터별 이동 입력 처리
@@ -32,6 +33,7 @@ private:
 	void ProcessPlayer1Attack(float DeltaTime);
 	void ProcessPlayer2Attack(float DeltaTime);
 	void ResetInputBuffer(bool& bIsInputBuffering, char& PendingKey, float& InputBufferTime);
+	void UpdateGamePadVibration(float DeltaTime);
 
 protected:
 	AAngryCoachCharacter* Player1 = nullptr;
@@ -46,11 +48,16 @@ protected:
 	bool bIsP1InputBuffering = false;
 	char P1PendingKey = 0;
 	float P1InputBufferTime = 0.0f;
+	bool bEnableP1Vibration = false;
+	float P1VibrationTime = 0.0f;	
+	
 	// Player2
 	bool bIsP2InputBuffering = false;
 	char P2PendingKey = 0;
 	float P2InputBufferTime = 0.0f;
+	bool bEnableP2Vibration = false;
+	float P2VibrationTime = 0.0f;
 	
 	float InputBufferLimit = 0.1f;
-
+	int32 GamePadIndex = -1;
 };

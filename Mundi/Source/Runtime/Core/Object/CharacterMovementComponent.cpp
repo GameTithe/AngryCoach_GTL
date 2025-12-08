@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "CharacterMovementComponent.h"
+
+#include "AngryCoachCharacter.h"
 #include "Character.h"
 #include "SceneComponent.h"
 #include "CapsuleComponent.h"
@@ -590,7 +592,7 @@ void UCharacterMovementComponent::LaunchCharacter(FVector LaunchVelocity, bool b
 	}
 
 	bIsApplyKnockback = true;
-	CharacterOwner->SetCurrentState(ECharacterState::Jumping);
+	CharacterOwner->SetCurrentState(ECharacterState::Knockback);
 }
 
 void UCharacterMovementComponent::ApplyKnockback(float DeltaTime)
@@ -606,6 +608,13 @@ void UCharacterMovementComponent::ApplyKnockback(float DeltaTime)
 	{
 		PhysicsVelocity = FVector::Zero();
 		bIsApplyKnockback = false;
+		if (AAngryCoachCharacter* Character = Cast<AAngryCoachCharacter>(CharacterOwner))
+		{
+			if(Character->IsGuard())
+			{
+				CharacterOwner->SetCurrentState(ECharacterState::Guard);
+			}
+		}
 		CharacterOwner->SetCurrentState(ECharacterState::Idle);
 		return;
 	}
@@ -616,49 +625,46 @@ void UCharacterMovementComponent::ApplyKnockback(float DeltaTime)
 	}
 	else
 	{
-		if (PhysicsVelocity.Z < KINDA_SMALL_NUMBER)
-		{
-			PhysicsVelocity.Z = 0.0f;
-		}
+		PhysicsVelocity.Z = 0.0f;
+		// 마찰 (선형 근사)
+		float FrictionFactor = FMath::Max(0.01f, 1.0f - (GroundFriction * DeltaTime));
+		PhysicsVelocity.X *= FrictionFactor;
+		PhysicsVelocity.Y *= FrictionFactor;
 	}
 
-	// 마찰 적용
-	float CurrentFriction = bIsGrounded ? GroundFriction : AirFriction;
-	float FrictionFactor = FMath::Max(0.0f, 1.0f - (CurrentFriction * DeltaTime));
+	float RemainingTime = DeltaTime;
+	int32 LoopCount = 0;
 
-	PhysicsVelocity.X *= FrictionFactor;
-	PhysicsVelocity.Y *= FrictionFactor;
-
-	// 위치적분
-	FVector DeltaMove = PhysicsVelocity * DeltaTime;
-
-	if (!DeltaMove.IsZero())
-	{		
-		// 기존에 만드신 SafeMove 혹은 Solver 로직 사용
-		// [주의] 여기서 Hit가 발생하면(벽/바닥), PhysicsVelocity도 멈춰줘야 함!
+	while (RemainingTime > KINDA_SMALL_NUMBER && LoopCount < 2)
+	{
+		LoopCount++;
+		FVector DeltaMove = PhysicsVelocity * RemainingTime;
+		if (DeltaMove.IsZero())
+		{
+			break;
+		}
+		
 		SafeMoveUpdatedComponent(DeltaMove, OutHit);
 
 		if (OutHit.bBlockingHit)
 		{
-			// 벽에 부딪히면 해당 축의 속도를 0으로 만들거나 반사시켜야 함
-			// 간단하게는 SlideAlongSurface가 처리해주지만, 
-			// 물리 속도 벡터 자체도 갱신해줘야 다음 프레임에 벽을 뚫지 않음
 			float Dot = FVector::Dot(PhysicsVelocity, OutHit.ImpactNormal);
 
-			// 벽 파고드는 방향이면 수정
 			if (Dot < KINDA_SMALL_NUMBER)
 			{
-				// 벽을 뚫으려는 힘(Normal Component)을 제거
 				PhysicsVelocity = PhysicsVelocity - (OutHit.ImpactNormal * Dot);
+				if (OutHit.ImpactNormal.Z > 0.7f)
+				{
+					bIsGrounded = true;					
+					PhysicsVelocity.Z = FMath::Max(0.0f, PhysicsVelocity.Z);
+				}
 			}
-
-			float RemainingTime = 1.0f - OutHit.Time;
-			if (RemainingTime > KINDA_SMALL_NUMBER)
-			{
-				FVector SlideDelta = PhysicsVelocity * (DeltaTime * RemainingTime);
-				SafeMoveUpdatedComponent(SlideDelta, OutHit);
-			}
-			
+			float TimeConsumed = RemainingTime * OutHit.Time;
+			RemainingTime -= TimeConsumed;
+		}
+		else
+		{
+			break;
 		}
 	}
 }

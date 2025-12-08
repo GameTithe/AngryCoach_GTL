@@ -6,6 +6,7 @@
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
 #include "AccessoryActor.h"
+#include "AngryCoachPlayerController.h"
 #include "GorillaAccessoryActor.h"
 #include "CapsuleComponent.h"
 #include "CharacterMovementComponent.h"
@@ -56,61 +57,24 @@ void AAngryCoachCharacter::BeginPlay()
 	 */
 	Super::BeginPlay();
 
-	// 기본 펀치 악세서리 장착 (이미 장착된 게 없을 때만)
-	if (GWorld && !CurrentAccessory)
+	FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+	AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	if (GorillaAccessory)
 	{
-		//FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		//ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		//
-		//if (CloakAccessory)
-		//{
-		//	EquipAccessory(CloakAccessory);
-		//	FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		//	ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		//
-		//	if (CloakAccessory)
-		//	{
-		//		EquipAccessory(CloakAccessory);
-		//
-		//		if (SkillComponent)
-		//		{
-		//			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
-		//		}
-		//
-		//		CloakAccessory->GetRootComponent()->SetOwner(this);
-		//	}
-		//}
-
-		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		
-		if (KnifeAccessory)
+		EquipAccessory(GorillaAccessory);
+		if (SkillComponent)
 		{
-			EquipAccessory(KnifeAccessory);
-		
-			if (SkillComponent)
-			{
-				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
-			}
-			
-			KnifeAccessory->GetRootComponent()->SetOwner(this);
+			SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
 		}
-			  
-		 // FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		 // AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		 //
-		 // if (GorillaAccessory)
-		 // {
-		 // 	EquipAccessory(GorillaAccessory);
-		 //
-		 // 	if (SkillComponent)
-		 // 	{
-		 // 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-		 // 	}
-		 // 	
-		 // 	GorillaAccessory->GetRootComponent()->SetOwner(this);
-		 // }
+ 	
+		GorillaAccessory->GetRootComponent()->SetOwner(this);
 	}
+
+
+
+
+
+
 }
 
 void AAngryCoachCharacter::Tick(float DeltaSeconds)
@@ -272,21 +236,29 @@ void AAngryCoachCharacter::UnequipAccessory()
 	CurrentAccessory = nullptr;
 }
 
-void AAngryCoachCharacter::SetAttackShape(UShapeComponent* Shape)
+void AAngryCoachCharacter::AddAttackShape(UShapeComponent* Shape)
 {
 	if (!Shape)
 	{
 		return;
 	}
-	
-	if (CachedAttackShape == Shape)
+
+	// 이미 등록된 shape인지 확인
+	if (CachedAttackShapes.Contains(Shape))
 	{
 		return;
 	}
 
-	CachedAttackShape = Shape;
+	CachedAttackShapes.Add(Shape);
 
-	DelegateBindToCachedShape();
+	// 델리게이트 바인딩
+	Shape->OnComponentBeginOverlap.AddDynamic(this, &AAngryCoachCharacter::OnBeginOverlap);
+	UE_LOG("AttackShape added and delegate bound. Total shapes: %d", CachedAttackShapes.Num());
+}
+
+void AAngryCoachCharacter::ClearAttackShapes()
+{
+	CachedAttackShapes.Empty();
 }
 
 // ===== 스킬 =====
@@ -349,19 +321,32 @@ void AAngryCoachCharacter::AttackBegin()
 	}
 
 	HitActors.Empty();
-	if (CachedAttackShape)
+	if (CachedAttackShapes.Num() > 0)
 	{
-		CachedAttackShape->SetGenerateOverlapEvents(true);
+		for (UShapeComponent* Shape : CachedAttackShapes)
+		{
+			if (Shape)
+			{
+				Shape->SetGenerateOverlapEvents(true);
+			}
+		}
 		SetCurrentState(ECharacterState::Attacking);
+		UE_LOG("attack begin - %d shapes activated", CachedAttackShapes.Num());
 	}
 }
 
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackEnd)
 void AAngryCoachCharacter::AttackEnd()
 {
-    if (CachedAttackShape)
+    if (CachedAttackShapes.Num() > 0)
     {
-        CachedAttackShape->SetGenerateOverlapEvents(false);
+        for (UShapeComponent* Shape : CachedAttackShapes)
+        {
+            if (Shape)
+            {
+                Shape->SetGenerateOverlapEvents(false);
+            }
+        }
         SetCurrentState(ECharacterState::Idle);
     }
     // 공격 종료 시 슬롯 리셋
@@ -370,11 +355,12 @@ void AAngryCoachCharacter::AttackEnd()
 
 void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
-	if (!HitActors.IsEmpty() && HitActors.Contains(HitResult.HitActor))
+	if (HitActors.Contains(HitResult.HitActor))
 	{
 		return;
 	}
 
+	HitActors.Add(HitResult.HitActor);
 	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 1.0f, this, HitResult);
 }
 
@@ -441,12 +427,9 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 			KnockbackDirection.Normalize();
 		}
 
-		float KnockbackPower = 10.0f;
 		CharacterMovement->LaunchCharacter(KnockbackDirection * KnockbackPower, true, false);
+		EnableGamePadVibration();
 
-
-		// float KnockbackDistance = 0.2f;
-		// RootComponent->AddWorldOffset(KnockbackDirection);
 	}
 
 	if (CurrentHealth <= 0.0f)
@@ -454,10 +437,10 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 		Die();
 	}	
 	
-	// HitReation();
 
 	//CurrentAccessory->PlayHitParticle();
-	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
+	// 피격 위치를 카메라 쪽(캐릭터 앞쪽)으로 오프셋
+	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation() + FVector(-2,0,01));
 
 	return ActualDamage;
 }
@@ -527,8 +510,7 @@ void AAngryCoachCharacter::StopGuard()
 
 void AAngryCoachCharacter::DelegateBindToCachedShape()
 {
-	// CachedAttackShape->OnComponentHit.AddDynamic(this, &AAngryCoachCharacter::OnHit);
-	CachedAttackShape->OnComponentBeginOverlap.AddDynamic(this, &AAngryCoachCharacter::OnBeginOverlap);
+	// 이제 AddAttackShape에서 개별적으로 바인딩합니다
 }
 
 void AAngryCoachCharacter::Revive()
@@ -549,11 +531,14 @@ void AAngryCoachCharacter::Die()
 	{
 		SkeletalMeshComp->SetRagDollEnabled(true);
 	}
-	// Collision
-	if (CachedAttackShape)
+	// Collision - 모든 AttackShape 비활성화
+	for (UShapeComponent* Shape : CachedAttackShapes)
 	{
-		CachedAttackShape->SetBlockComponent(false);
-		CachedAttackShape->SetGenerateOverlapEvents(false);
+		if (Shape)
+		{
+			Shape->SetBlockComponent(false);
+			Shape->SetGenerateOverlapEvents(false);
+		}
 	}
 
 	if (CapsuleComponent)
@@ -570,6 +555,17 @@ void AAngryCoachCharacter::Die()
 	SetCurrentState(ECharacterState::Dead);
 	// 낙사처리를 위해서 내부에서 체력 0으로 처리
 	CurrentHealth = 0.0f;
+}
+
+void AAngryCoachCharacter::EnableGamePadVibration()
+{
+	if(AController* Controller = GetController())
+	{
+		if (AAngryCoachPlayerController* AngryController = Cast<AAngryCoachPlayerController>(Controller))
+		{
+			AngryController->SetGamePadVibration(true, this, VibrationDuration);
+		}
+	}
 }
 
 bool AAngryCoachCharacter::IsBelowKillZ()

@@ -37,6 +37,8 @@ public:
 	UParticleSystemComponent* PassiveEffectParticle;
 
 private:
+	// AttackShape를 캐릭터의 손/발 소켓에 부착하는 헬퍼 함수
+	void AttachAttackShapesToLimbs(class USkeletalMeshComponent* CharacterMesh);
 	// 원래 값 저장 (Unequip 시 복원용)
 	float OriginalMaxWalkSpeed = 0.0f;
 	int32 OriginalMaxJumpCount = 0;
