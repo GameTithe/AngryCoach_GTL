@@ -26,7 +26,13 @@ AAngryCoachCharacter::AAngryCoachCharacter()
 	// SkillComponent 생성
 	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
 	GuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
-	GuardMontage->bLoop = true;
+	if (GuardMontage)
+	{
+		GuardMontage->bLoop = true;
+	}
+	Hit1Sound = RESOURCE.Load<USound>("Data/Audio/HIT1.wav");
+	Hit2Sound = RESOURCE.Load<USound>("Data/Audio/HIT2.wav");
+	SkillSound = RESOURCE.Load<USound>("Data/Audio/SKILL.wav");
 	DieSound = RESOURCE.Load<USound>("Data/Audio/Die.wav");
 }
 
@@ -334,6 +340,10 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 			 * Skil별 데미지 적용
 			 */
 			BaseDamage = 15.0f;
+			if (SkillSound)
+			{
+				FAudioDevice::PlaySoundAtLocationOneShot(SkillSound, GetActorLocation());
+			}
 			break;
 		}
 	}
@@ -385,7 +395,8 @@ void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveC
 
 void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
-	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 5.0f, this, HitResult);
+	
+	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, BaseDamage, this, HitResult);
 	// UE_LOG("Owner : %p, damaged actor : %p", this, HitResult.HitActor);
 	// UE_LOG("Damage : %f", AppliedDamage);
 }
@@ -400,7 +411,20 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
 	float ActualDamage = DamageAmount;
 
-	
+	if (ActualDamage <= 15.f)
+	{
+		if (Hit1Sound)
+		{
+			FAudioDevice::PlaySoundAtLocationOneShot(Hit1Sound, GetActorLocation());
+		}
+	}
+	else
+	{
+		if (Hit2Sound)
+		{
+			FAudioDevice::PlaySoundAtLocationOneShot(Hit2Sound, GetActorLocation());
+		}
+	}
 
 	if (!IsGuard())
 	{
