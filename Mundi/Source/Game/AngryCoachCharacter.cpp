@@ -76,61 +76,62 @@ void AAngryCoachCharacter::BeginPlay()
 
 		// AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
 		 
-		FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		// FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		// ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		// if (CloakAccessory)
+		// {
+		// 	EquipAccessory(CloakAccessory);
+		// 	 FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		// 	 AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		// 	 if (KnifeAccessory)
+		// 	 {
+		//  		EquipAccessory(KnifeAccessory);
+		// 	
+		// 		if (SkillComponent)
+		// 		{
+		// 			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
+		// 		}
+		// 		
+		// 		CloakAccessory->GetRootComponent()->SetOwner(this);
+		// 	}
+		//
+		// // FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		// // AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		// //
+		// // if (GorillaAccessory)
+		// // {
+		// // 	EquipAccessory(GorillaAccessory);
+		// //
+		// // 	if (SkillComponent)
+		// // 	{
+		// // 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+		// // 	}
+		// // 	
+		// // 	GorillaAccessory->GetRootComponent()->SetOwner(this);
+		// // }
+		// 	
+		//  	if (SkillComponent)
+		//  	{
+		//  		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+		//  	}
+		//  }
 
-		if (CloakAccessory)
-		{
-			EquipAccessory(CloakAccessory);
-		 FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		 AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		
-		 if (KnifeAccessory)
-		 {
-		 	EquipAccessory(KnifeAccessory);
+		if (GorillaAccessory)
+		{
+			EquipAccessory(GorillaAccessory);
 		
 			if (SkillComponent)
 			{
-				SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
+				SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
 			}
 			
-			CloakAccessory->GetRootComponent()->SetOwner(this);
+			GorillaAccessory->GetRootComponent()->SetOwner(this);
 		}
-
-		// FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		// AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		//
-		// if (GorillaAccessory)
-		// {
-		// 	EquipAccessory(GorillaAccessory);
-		//
-		// 	if (SkillComponent)
-		// 	{
-		// 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-		// 	}
-		// 	
-		// 	GorillaAccessory->GetRootComponent()->SetOwner(this);
-		// }
-		 	if (SkillComponent)
-		 	{
-		 		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
-		 	}
-		 }
-		//
-		// FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		// AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		//
-		// if (GorillaAccessory)
-		// {
-		// 	EquipAccessory(GorillaAccessory);
-		//
-		// 	if (SkillComponent)
-		// 	{
-		// 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-		// 	}
-		// 	
-		// 	GorillaAccessory->GetRootComponent()->SetOwner(this);
-		// }
 	}
 }
 
@@ -306,6 +307,9 @@ void AAngryCoachCharacter::UnequipAccessory()
 	{
 		SkillComponent->SetDefaultSkills();
 	}
+
+	// 기존 악세서리 액터 파괴
+	CurrentAccessory->Destroy();
 
 	CurrentAccessory = nullptr;
 }
@@ -558,6 +562,19 @@ void AAngryCoachCharacter::DelegateBindToCachedShape()
 	UE_LOG("Delegate Bind");
 }
 
+void AAngryCoachCharacter::Revive()
+{
+	// 부모 클래스의 Revive 호출 (체력/상태 리셋, Ragdoll 비활성화)
+	Super::Revive();
+
+	// CapsuleComponent collision 복원 (기본값으로)
+	// 참고: Character 생성자에서 SetBlockComponent(false), SetGenerateOverlapEvents(false)로 설정됨
+	// Revive에서는 필요에 따라 다시 설정
+	// CapsuleComponent는 기본적으로 collision이 꺼져있으므로 그대로 둠
+
+	UE_LOG("[AngryCoachCharacter] Revived! HP=%f", CurrentHealth);
+}
+
 void AAngryCoachCharacter::Die()
 {
 	// Ragdoll
@@ -591,4 +608,16 @@ void AAngryCoachCharacter::Die()
 bool AAngryCoachCharacter::IsBelowKillZ()
 {
 	return GetActorLocation().Z <= -5.0f;
+}
+
+REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, ToggleGorillaFormOnAccessory)
+void AAngryCoachCharacter::ToggleGorillaFormOnAccessory()
+{
+	if (CurrentAccessory)
+	{
+		if (AGorillaAccessoryActor* GA = Cast<AGorillaAccessoryActor>(CurrentAccessory))
+		{
+			GA->ToggleGorillaForm();
+		}
+	}
 }

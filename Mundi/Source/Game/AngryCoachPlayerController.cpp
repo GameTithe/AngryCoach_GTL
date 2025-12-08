@@ -33,6 +33,15 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 	// 부모의 Tick은 호출하지 않음 (기존 WASD 로직 무시)
 	AActor::Tick(DeltaSeconds);
 
+	// 게임플레이 입력이 비활성화된 경우 (UI 상태 등) 캐릭터 입력 처리 스킵
+	UInputManager& InputManager = UInputManager::GetInstance();
+	if (!InputManager.IsGameplayInputEnabled())
+	{
+		// 카메라 위치는 계속 업데이트 (Select 화면에서도 카메라 동작 유지)
+		UpdateCameraPosition(DeltaSeconds);
+		return;
+	}
+
 	// 각 플레이어 입력 처리
 	// 생존한 경우만 입력받음
 	if (Player1->IsAlive())
@@ -185,7 +194,7 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 
 	// 두 캐릭터 사이 거리에 따라 카메라 거리 조절 (미터 단위)
 	float Distance = FVector::Distance(P1Pos, P2Pos);
-	float ZoomFactor = FMath::Max(1.0f, Distance / 5.0f);  // 5m 이상 떨어지면 줌아웃
+	float ZoomFactor = FMath::Max(1.0f, Distance / 10.0f);  // 10m 이상 떨어지면 줌아웃
 
 	FVector TargetCameraPos = CenterPos + CameraOffset * ZoomFactor;
 
@@ -226,7 +235,7 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 
 		// 2. 동적 비네트 (Vignette)
 		float CameraMovementDistance = (NewPos - CurrentPos).Size();
-		float VignetteIntensity = FMath::Clamp(CameraMovementDistance / 0.15f, 0.0f, 0.8f);  
+		float VignetteIntensity = FMath::Clamp(CameraMovementDistance / 0.1f, 0.0f, 0.8f);  
 		float VignetteRadius = 0.5f;
 		float VignetteSoftness = 1.f;
 		float VignetteRoundness = 2.0f;
