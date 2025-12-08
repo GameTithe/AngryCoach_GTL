@@ -34,7 +34,7 @@ AAccessoryActor::AAccessoryActor()
 	// 악세서리 스킬 생성 및 등록
 	UAccessoryLightAttackSkill* LightSkill = NewObject<UAccessoryLightAttackSkill>();
 	UAccessoryHeavyAttackSkill* HeavySkill = NewObject<UAccessoryHeavyAttackSkill>();
-
+	
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 }

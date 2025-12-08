@@ -5,6 +5,9 @@
 #include "AngryCoachCharacter.h"
 #include "CharacterMovementComponent.h"
 #include "ClothComponent.h"
+#include "CloakHeavyAttackSkill.h"
+#include "CloakLightAttackSkill.h"
+#include "CloakSpecialAttackSkill.h"
 
 ACloakAccessoryActor::ACloakAccessoryActor()
 {
@@ -16,15 +19,18 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 	ClothComponent = CreateDefaultSubobject<UClothComponent>("ClothComponent");
 	if (ClothComponent)
 	{
-		ClothComponent->SetupAttachment(SceneRoot);
+		ClothComponent->SetupAttachment(RootComponent);
 	}
-
+ 
 	// Default 스킬 사용
 	GrantedSkills.clear();
-	UDefaultLightAttackSkill* LightSkill = NewObject<UDefaultLightAttackSkill>();
-	UDefaultHeavyAttackSkill* HeavySkill = NewObject<UDefaultHeavyAttackSkill>();
+	UCloakLightAttackSkill* LightSkill = NewObject<UCloakLightAttackSkill>();
+	UCloakHeavyAttackSkill* HeavySkill = NewObject<UCloakHeavyAttackSkill>();
+	UCloakSpecialAttackSkill* SpecialSkill = NewObject<UCloakSpecialAttackSkill>();
+	
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
+	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 }
 
 void ACloakAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
@@ -90,10 +96,12 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 		// Default 스킬로 재생성
 		GrantedSkills.clear();
-		UDefaultLightAttackSkill* LightSkill = NewObject<UDefaultLightAttackSkill>();
-		UDefaultHeavyAttackSkill* HeavySkill = NewObject<UDefaultHeavyAttackSkill>();
+		UCloakLightAttackSkill* LightSkill = NewObject<UCloakLightAttackSkill>();
+		UCloakHeavyAttackSkill* HeavySkill = NewObject<UCloakHeavyAttackSkill>();
+		UCloakSpecialAttackSkill* SpecialSkill = NewObject<UCloakSpecialAttackSkill>();
 		GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 		GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
+		GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
 		// 저장된 값 초기화
 		OriginalMaxWalkSpeed = 0.0f;
@@ -118,10 +126,13 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 
 	// Default 스킬로 재생성
 	GrantedSkills.clear();
-	UDefaultLightAttackSkill* LightSkill = NewObject<UDefaultLightAttackSkill>();
-	UDefaultHeavyAttackSkill* HeavySkill = NewObject<UDefaultHeavyAttackSkill>();
+	UCloakLightAttackSkill* LightSkill = NewObject<UCloakLightAttackSkill>();
+	UCloakHeavyAttackSkill* HeavySkill = NewObject<UCloakHeavyAttackSkill>();
+	UCloakHeavyAttackSkill* SpecialSkill = NewObject<UCloakHeavyAttackSkill>();
+
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
+	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
 	// 저장된 값 초기화
 	OriginalMaxWalkSpeed = 0.0f;

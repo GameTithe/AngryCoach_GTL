@@ -12,6 +12,7 @@
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
 #include "Source/Runtime/Engine/Skill/SkillTypes.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "CloakAccessoryActor.h" 
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
@@ -48,19 +49,19 @@ void AAngryCoachCharacter::BeginPlay()
 
 		//AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
 		 
-		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 
-		if (KnifeAccessory)
+		if (CloakAccessory)
 		{
-			EquipAccessory(KnifeAccessory);
+			EquipAccessory(CloakAccessory);
 		
 			if (SkillComponent)
 			{
-				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+				SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
 			}
 			
-			KnifeAccessory->GetRootComponent()->SetOwner(this);
+			CloakAccessory->GetRootComponent()->SetOwner(this);
 		}
 	}
 }

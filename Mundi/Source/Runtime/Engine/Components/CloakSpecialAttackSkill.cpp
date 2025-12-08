@@ -1,23 +1,27 @@
 ﻿#include "pch.h"
-#include "CloakLightAttackSkill.h" 
+#include "CloakSpecialAttackSkill.h"
 #include "CloakAccessoryActor.h"
 #include "AngryCoachCharacter.h"
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
 #include "CharacterMovementComponent.h"
-UCloakLightAttackSkill::UCloakLightAttackSkill()
-{
-	ObjectName = "CloakLightAttack";
 
-	Montage = RESOURCE.Load<UAnimMontage>("Data/Montages/PlayerWeak.montage.json");
+
+UCloakSpecialAttackSkill::UCloakSpecialAttackSkill()
+{
+	ObjectName = "CloakSpecialAttack";
+
+	Montage = RESOURCE.Load<UAnimMontage>("Data/Montages/PlayerSpecial.montage.json");
 	if (!Montage)
 	{
-		UE_LOG("[CloakLightAttackSkill] Failed to load knife2 montage!");
+		UE_LOG("[CloakSpecialSkill] Failed to load Cloak montage!");
 	}
 }
 
-void UCloakLightAttackSkill::Activate(AActor* Caster)
+void UCloakSpecialAttackSkill::Activate(AActor* Caster)
 {
-	//Super::Activate(Caster); float DamageMultiplier = 1.0f;
+	// Super::Activate(Caster);
+
+	float DamageMultiplier = 1.0f;
 	float Range = 150.0f;
 	if (ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(SourceAccessory))
 	{

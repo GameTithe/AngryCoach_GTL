@@ -68,7 +68,7 @@ LONG __stdcall FCrashHandler::UnhandledExceptionFilter(_EXCEPTION_POINTERS* Exce
     std::wstring CrashFunc = L"Unknown Function";
     std::wstring CrashFile = L"Unknown File";
     int CrashLine = 0;
-    bool bCapturedTopFrame = false; // 맨 위 스택을 잡았는지 체크
+    bool bCapturedTopFrame = false; // 몸 위 스택을 잡았는지 체크
 
     // ============================================================
     // 심볼 초기화 및 로그 작성
