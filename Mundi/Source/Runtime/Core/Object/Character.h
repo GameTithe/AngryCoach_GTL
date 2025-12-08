@@ -60,6 +60,8 @@ public:
 	ECharacterState GetCurrentState() const { return CurrentState; }
 	bool IsAlive() const { return CurrentState != ECharacterState::Dead; }
 	float GetHealthPercent() const;
+	void ResetHealth() { CurrentHealth = MaxHealth; CurrentState = ECharacterState::Idle; }
+	virtual void Revive();  // 라운드 시작 시 캐릭터 완전 복원
 	void UpdateCharacterState(float CurrentSpeedSq = 0.0f);
 	bool CanAttack();
 	virtual void HitReation();

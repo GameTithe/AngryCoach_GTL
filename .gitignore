@@ -447,6 +447,9 @@ GEMINI.md
 
 # Untracked Data Files
 /Mundi/Data/**
+# 예외: GameMode.lua만 추적
+!/Mundi/Data/Scripts/
+!/Mundi/Data/Scripts/GameMode.lua
 /Mundi/DerivedDataCache/**
 /Mundi/ThirdParty/**
 

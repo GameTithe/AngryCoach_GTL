@@ -815,11 +815,18 @@ bool UUICanvas::TriggerFocusedClick()
     UE_LOG("[UICanvas] '%s': Triggering click on focused button '%s'\n",
            Name.c_str(), FocusedButton->Name.c_str());
 
-    // 버튼 눌림 → 떼기 시뮬레이션
-    FocusedButton->OnMouseDown();
-    bool bClicked = FocusedButton->OnMouseUp();
+    // 키보드 클릭: OnClick 직접 호출
+    if (FocusedButton->OnClick)
+    {
+        UE_LOG("[UICanvas] '%s': Directly calling OnClick for '%s'\n",
+               Name.c_str(), FocusedButton->Name.c_str());
+        FocusedButton->OnClick();
+        return true;
+    }
 
-    return bClicked;
+    UE_LOG("[UICanvas] '%s': Button '%s' has no OnClick callback!\n",
+           Name.c_str(), FocusedButton->Name.c_str());
+    return false;
 }
 
 bool UUICanvas::ProcessKeyboardInput(bool bUp, bool bDown, bool bConfirm)
