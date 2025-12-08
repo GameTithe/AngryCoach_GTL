@@ -345,7 +345,13 @@ bool FUIAsset::LoadFromFile(const std::string& Path)
 
 SUIEditorWindow::SUIEditorWindow()
 {
+#ifdef _EDITOR
+    // 에디터에서는 소스 폴더에 저장 (Git 버전 관리 + 빌드 시 복사)
+    UIAssetPath = std::filesystem::path("../../Mundi/Data/UI");
+#else
+    // 게임 빌드에서는 실행 파일 기준 Data/UI
     UIAssetPath = std::filesystem::path(GDataDir) / "UI";
+#endif
     if (!std::filesystem::exists(UIAssetPath))
     {
         std::filesystem::create_directories(UIAssetPath);
