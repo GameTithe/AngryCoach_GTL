@@ -11,6 +11,7 @@
 #include "Source/Runtime/AssetManagement/Texture.h" // UTexture
 #include "Source/Runtime/Core/Misc/JsonSerializer.h"
 #include "Source/Runtime/Engine/Components/MeshComponent.h" // EMaterialTextureSlot
+#include "Source/Runtime/Engine/Physics/PhysicsAsset.h"
 
 AGorillaAccessoryActor::AGorillaAccessoryActor()
 {
@@ -290,6 +291,18 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 		UE_LOG("[AGorillaAccessoryActor] Switching to Gorilla Form.");
 		CharacterMesh->SetSkeletalMesh(GorillaSkeletalMeshPath);
 		CharacterMesh->SetAnimGraph(GorillaAnimGraph);
+
+		// PhysicsAsset 자동 생성 (없을 경우)
+		if (!GorillaPhysicsAsset && CharacterMesh->GetSkeletalMesh())
+		{
+			GorillaPhysicsAsset = NewObject<UPhysicsAsset>();
+			FSkeleton* Skeleton = CharacterMesh->GetSkeletalMesh()->GetSkeleton();
+			if (Skeleton)
+			{
+				GorillaPhysicsAsset->CreateGenerateAllBodySetup(EAggCollisionShapeType::Capsule, Skeleton, CharacterMesh);
+				UE_LOG("[AGorillaAccessoryActor] PhysicsAsset auto-generated for Gorilla form.");
+			}
+		}
 		CharacterMesh->SetPhysicsAsset(GorillaPhysicsAsset);
 
 		// Particle Component 부착
