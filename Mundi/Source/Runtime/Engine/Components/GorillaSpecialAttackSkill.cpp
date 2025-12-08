@@ -1,22 +1,31 @@
 #include "pch.h"
 #include "GorillaSpecialAttackSkill.h"
+
+#include "AngryCoachCharacter.h"
 #include "GorillaAccessoryActor.h" // AGorillaAccessoryActor
 
 UGorillaSpecialAttackSkill::UGorillaSpecialAttackSkill()
 {
 	ObjectName = "GorillaSpecialAttack";
+	Montage = RESOURCE.Load<UAnimMontage>("Data/Montages/GorillaSpecial.montage.json");
 }
 
 void UGorillaSpecialAttackSkill::Activate(AActor* Caster)
 {
-	// 스킬은 자신을 소유한 악세서리에게 형태 전환을 요청
-	AGorillaAccessoryActor* GorillaAccessory = Cast<AGorillaAccessoryActor>(SourceAccessory);
-	if (GorillaAccessory)
+	// - 애니메이션 재생 (더 느리고 강한 모션)
+	if (!SourceAccessory || !SourceAccessory->GetOwningCharacter() || !Montage)
 	{
-		GorillaAccessory->ToggleGorillaForm();
+		return;
 	}
-	else
+	
+	AGorillaAccessoryActor* GA = Cast<AGorillaAccessoryActor>(SourceAccessory);
+	if (GA)
 	{
-		UE_LOG("[UGorillaSpecialAttackSkill] SourceAccessory is not a AGorillaAccessoryActor!");
+		if (!GA->GetIsGorillaForm())
+		{
+			AAngryCoachCharacter* Character = SourceAccessory->GetOwningCharacter();
+			Character->PlayMontage(Montage);
+		}
+		GA->ToggleGorillaForm();
 	}
 }
