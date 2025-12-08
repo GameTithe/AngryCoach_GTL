@@ -19,6 +19,7 @@ public:
 	// 스킬에서 호출할 상태 전환 함수
 	void ToggleGorillaForm();
 
+	bool GetIsGorillaForm() {return bIsGorillaFormActive;}
 private:
 	// 고릴라 형태가 활성화되었는지 여부
 	bool bIsGorillaFormActive = false;

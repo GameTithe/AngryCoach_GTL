@@ -74,7 +74,7 @@ void AAngryCoachCharacter::BeginPlay()
 				SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
 			}
 			
-			KnifeAccessory->GetRootComponent()->SetOwner(this);
+			GorillaAccessory->GetRootComponent()->SetOwner(this);
 		}
 	}
 }
