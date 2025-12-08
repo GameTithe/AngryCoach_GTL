@@ -55,6 +55,28 @@ local p1HP = MAX_HP
 local p2HP = MAX_HP
 local currentRoundNumber = 0  -- 현재 라운드 번호
 
+-- ============================================
+-- 악세사리 선택 관련
+-- ============================================
+
+-- 악세사리 목록 (인덱스 → 프리팹 경로)
+local AccessoryList = {
+    [1] = { name = "Knife",   prefab = "Data/Prefabs/FlowerKnife.prefab" },
+    [2] = { name = "Cloak",   prefab = "Data/Prefabs/CloakAcce.prefab" },
+    [3] = { name = "Gorilla", prefab = "Data/Prefabs/Gorilla.prefab" }
+}
+
+-- 현재 선택된 악세사리 인덱스 (1~3)
+local p1SelectedAccessory = 1
+local p2SelectedAccessory = 1
+
+-- 플레이어 Ready 상태
+local p1Ready = false
+local p2Ready = false
+
+-- 선택 단계 (false = 악세사리 선택, true = 라운드 선택)
+local bRoundSelectionPhase = false
+
 -- 코루틴 대기 함수 (스케줄러가 "wait_time" 태그를 기대함)
 function WaitForSeconds(seconds)
     return "wait_time", seconds
@@ -740,67 +762,6 @@ end
 -- ============================================
 -- 라운드 선택 관련 변수
 local selectedRoundIndex = 2  -- 기본값: 2 (3판 2선승)
-local bRoundSelectionActive = false  -- 라운드 선택 UI 활성화 여부
-
--- 화살표 위젯 visible 업데이트
-function UpdateRoundArrows(canvas, index)
-    if not canvas then return end
-
-    -- left_arrow: 감소할 수 있을 때 표시 (index > 1)
-    -- right_arrow: 증가할 수 있을 때 표시 (index < 3)
-    canvas:SetWidgetVisible("left_arrow", index > 1)
-    canvas:SetWidgetVisible("right_arrow", index < 3)
-end
-
--- 라운드 선택 키 입력 처리 코루틴
-function RoundSelectionInputLoop()
-    bRoundSelectionActive = true
-    print("[GameMode] Round selection input loop started")
-
-    while bRoundSelectionActive do
-        local canvas = UI.FindCanvas(selectCanvasName)
-        if not canvas then
-            print("[GameMode] Select canvas not found, exiting input loop")
-            break
-        end
-
-        -- 좌우 키 입력 감지 (A/D 또는 화살표)
-        local leftPressed = InputManager:IsKeyPressed("A") or InputManager:IsKeyPressed(37)  -- 37 = VK_LEFT
-        local rightPressed = InputManager:IsKeyPressed("D") or InputManager:IsKeyPressed(39)  -- 39 = VK_RIGHT
-        local confirmPressed = InputManager:IsKeyPressed(" ") or InputManager:IsKeyPressed(13)  -- Space or Enter
-
-        if leftPressed and selectedRoundIndex > 1 then
-            selectedRoundIndex = selectedRoundIndex - 1  -- 왼쪽 화살표 = 숫자 감소
-            canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
-            UpdateRoundArrows(canvas, selectedRoundIndex)
-            print("[GameMode] Round selection changed to: " .. selectedRoundIndex)
-        end
-
-        if rightPressed and selectedRoundIndex < 3 then
-            selectedRoundIndex = selectedRoundIndex + 1  -- 오른쪽 화살표 = 숫자 증가
-            canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
-            UpdateRoundArrows(canvas, selectedRoundIndex)
-            print("[GameMode] Round selection changed to: " .. selectedRoundIndex)
-        end
-
-        if confirmPressed then
-            print("[GameMode] Round selection confirmed: " .. selectedRoundIndex)
-            bRoundSelectionActive = false
-
-            -- 선택된 라운드 설정
-            currentRoundsToWin = selectedRoundIndex
-            SetRoundsToWin(selectedRoundIndex)
-            SetMaxRounds(2 * selectedRoundIndex - 1)  -- 1->1, 2->3, 3->5
-
-            -- 다음 단계로 진행
-            coroutine.yield(WaitForSeconds(0.01))
-            OnRoundSelected()
-            return
-        end
-
-        coroutine.yield(WaitForSeconds(0.017))  -- 프레임당 1번 체크 (60fps 기준)
-    end
-end
 
 function OnCharacterSelectStart()
     print("[GameMode Callback] >>> Character Select Started <<<")
@@ -815,47 +776,264 @@ function OnCharacterSelectStart()
         camManager:StartFade(5.0, 1.0, 0.0)  -- Duration=5초, Alpha 1→0
     end
 
-    -- 첫 매치일 때만 라운드 선택 UI 표시
+    -- 첫 매치일 때만 Select UI 표시
     if not bFirstMatch then
-        -- 첫 매치가 아니면 바로 전투로 (라운드 선택 스킵)
+        -- 첫 매치가 아니면 바로 전투로 (선택 스킵)
         print("[GameMode] Skipping Select UI (not first match), going to battle...")
         EndCharacterSelect()
         return
     end
 
-    -- Select UI 로드 (라운드 선택) - 첫 매치일 때만
+    -- Select UI 로드 - 첫 매치일 때만
     print("[GameMode] Loading Select.uiasset (first match)...")
     local canvas = UI.LoadUIAsset("Data/UI/Select.uiasset")
     if canvas then
         canvas:PlayAllEnterAnimations()
         print("[GameMode] Select UI loaded!")
 
-        -- 초기 선택값 설정 (기본 1)
-        selectedRoundIndex = 1
+        -- 초기값 설정
+        p1SelectedAccessory = 1
+        p2SelectedAccessory = 1
+        p1Ready = false
+        p2Ready = false
+        bRoundSelectionPhase = false
+        selectedRoundIndex = 2  -- 기본값: 2선승
+
+        -- 초기 UI 상태 설정
+        UpdateAccessoryUI(canvas)
         canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
 
-        -- 초기 화살표 상태 설정
-        UpdateRoundArrows(canvas, selectedRoundIndex)
+        -- 초기 악세사리 미리보기 장착
+        EquipAccessoryToPlayer(1, AccessoryList[p1SelectedAccessory].prefab)
+        EquipAccessoryToPlayer(2, AccessoryList[p2SelectedAccessory].prefab)
+
+        -- 라운드 선택 화살표는 처음에 숨김 (둘 다 Ready 후에 표시)
+        canvas:SetWidgetVisible("left_arrow", false)
+        canvas:SetWidgetVisible("right_arrow", false)
 
         -- 키 입력 처리 코루틴 시작
-        StartCoroutine(RoundSelectionInputLoop)
+        StartCoroutine(SelectionInputLoop)
 
-        print("[GameMode] Round selection (A/D or Arrow keys, Space/Enter to confirm)")
+        print("[GameMode] Selection started - P1:A/D+T, P2:Arrows+Numpad1")
     else
-        print("[GameMode] WARNING: Failed to load Select.uiasset, using default (Best of 3)")
-        -- fallback: 기본값 3판 2선승
+        print("[GameMode] WARNING: Failed to load Select.uiasset, using default")
         SetRoundsToWin(2)
         SetMaxRounds(3)
         EndCharacterSelect()
     end
 end
 
--- 라운드 선택 완료 시 호출
-function OnRoundSelected()
-    print("[GameMode] Round selected, proceeding to battle...")
+-- ============================================
+-- 통합 선택 UI (악세사리 + 라운드)
+-- ============================================
+
+-- 악세사리 UI 업데이트 (선택 상태 표시)
+function UpdateAccessoryUI(canvas)
+    if not canvas then return end
+
+    -- P1 선택 표시 (선택된 버튼은 SubUV Frame 1, 나머지는 0)
+    for i = 1, 3 do
+        local btnName = "p1_acc" .. i
+        if i == p1SelectedAccessory then
+            canvas:SetTextureSubUVFrame(btnName, 1)  -- 선택됨
+        else
+            canvas:SetTextureSubUVFrame(btnName, 0)  -- 미선택
+        end
+    end
+
+    -- P2 선택 표시
+    for i = 1, 3 do
+        local btnName = "p2_acc" .. i
+        if i == p2SelectedAccessory then
+            canvas:SetTextureSubUVFrame(btnName, 1)  -- 선택됨
+        else
+            canvas:SetTextureSubUVFrame(btnName, 0)  -- 미선택
+        end
+    end
+end
+
+-- Ready 상태 UI 업데이트
+function UpdateReadyUI(canvas)
+    if not canvas then return end
+
+    -- P1 Ready 체크 표시 (SubUV Frame 1 = 체크됨)
+    canvas:SetWidgetVisible("p1_ready_check", p1Ready)
+    if p1Ready then
+        canvas:SetTextureSubUVFrame("p1_ready_check", 1)
+    end
+
+    -- P2 Ready 체크 표시
+    canvas:SetWidgetVisible("p2_ready_check", p2Ready)
+    if p2Ready then
+        canvas:SetTextureSubUVFrame("p2_ready_check", 1)
+    end
+
+    -- 둘 다 Ready면 라운드 선택 화살표 표시 (인덱스에 따라)
+    if p1Ready and p2Ready then
+        UpdateRoundArrows(canvas)
+    end
+end
+
+-- 라운드 선택 화살표 업데이트 (인덱스에 따라 visible 설정)
+function UpdateRoundArrows(canvas)
+    if not canvas then return end
+    -- left_arrow: 감소 가능할 때만 표시 (index > 1)
+    -- right_arrow: 증가 가능할 때만 표시 (index < 3)
+    canvas:SetWidgetVisible("left_arrow", selectedRoundIndex > 1)
+    canvas:SetWidgetVisible("right_arrow", selectedRoundIndex < 3)
+end
+
+-- 통합 선택 입력 루프
+function SelectionInputLoop()
+    print("[GameMode] SelectionInputLoop started")
+
+    -- 입력 쿨다운 (프레임 단위, ~60fps 기준 5프레임 ≈ 0.08초)
+    local INPUT_COOLDOWN_FRAMES = 5
+    local p1InputCooldown = 0
+    local p2InputCooldown = 0
+    local roundInputCooldown = 0
+
+    while UI.FindCanvas(selectCanvasName) do
+        local canvas = UI.FindCanvas(selectCanvasName)
+        if not canvas then break end
+
+        -- 쿨다운 감소 (매 프레임 1씩)
+        if p1InputCooldown > 0 then p1InputCooldown = p1InputCooldown - 1 end
+        if p2InputCooldown > 0 then p2InputCooldown = p2InputCooldown - 1 end
+        if roundInputCooldown > 0 then roundInputCooldown = roundInputCooldown - 1 end
+
+        -- ==========================================
+        -- Phase 1: 악세사리 선택 (둘 다 Ready 전)
+        -- ==========================================
+        if not bRoundSelectionPhase then
+            -- P1 악세사리 선택: A/D (Ready 전에만, 쿨다운 적용)
+            if not p1Ready and p1InputCooldown <= 0 then
+                local p1Changed = false
+                if InputManager:IsKeyPressed("A") then
+                    if p1SelectedAccessory > 1 then
+                        p1SelectedAccessory = p1SelectedAccessory - 1
+                        p1Changed = true
+                    end
+                elseif InputManager:IsKeyPressed("D") then
+                    if p1SelectedAccessory < 3 then
+                        p1SelectedAccessory = p1SelectedAccessory + 1
+                        p1Changed = true
+                    end
+                end
+
+                if p1Changed then
+                    print("[GameMode] P1 accessory: " .. AccessoryList[p1SelectedAccessory].name)
+                    UpdateAccessoryUI(canvas)
+                    EquipAccessoryToPlayer(1, AccessoryList[p1SelectedAccessory].prefab)
+                    p1InputCooldown = INPUT_COOLDOWN_FRAMES
+                end
+            end
+
+            -- P2 악세사리 선택: 화살표 (Ready 전에만, 쿨다운 적용)
+            if not p2Ready and p2InputCooldown <= 0 then
+                local p2Changed = false
+                if InputManager:IsKeyPressed(37) then  -- VK_LEFT
+                    if p2SelectedAccessory > 1 then
+                        p2SelectedAccessory = p2SelectedAccessory - 1
+                        p2Changed = true
+                    end
+                elseif InputManager:IsKeyPressed(39) then  -- VK_RIGHT
+                    if p2SelectedAccessory < 3 then
+                        p2SelectedAccessory = p2SelectedAccessory + 1
+                        p2Changed = true
+                    end
+                end
+
+                if p2Changed then
+                    print("[GameMode] P2 accessory: " .. AccessoryList[p2SelectedAccessory].name)
+                    UpdateAccessoryUI(canvas)
+                    EquipAccessoryToPlayer(2, AccessoryList[p2SelectedAccessory].prefab)
+                    p2InputCooldown = INPUT_COOLDOWN_FRAMES
+                end
+            end
+
+            -- P1 Ready: T키
+            if InputManager:IsKeyPressed("T") then
+                p1Ready = not p1Ready
+                print("[GameMode] P1 Ready: " .. tostring(p1Ready))
+                UpdateReadyUI(canvas)
+
+                -- 둘 다 Ready면 라운드 선택 단계로
+                if p1Ready and p2Ready then
+                    bRoundSelectionPhase = true
+                    print("[GameMode] Both players ready! Round selection enabled.")
+                end
+            end
+
+            -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97)
+            if InputManager:IsKeyPressed(97) then
+                p2Ready = not p2Ready
+                print("[GameMode] P2 Ready: " .. tostring(p2Ready))
+                UpdateReadyUI(canvas)
+
+                -- 둘 다 Ready면 라운드 선택 단계로
+                if p1Ready and p2Ready then
+                    bRoundSelectionPhase = true
+                    print("[GameMode] Both players ready! Round selection enabled.")
+                end
+            end
+
+        -- ==========================================
+        -- Phase 2: 라운드 선택 (둘 다 Ready 후)
+        -- ==========================================
+        else
+            -- 라운드 선택: A/D 또는 화살표 (쿨다운 적용)
+            if roundInputCooldown <= 0 then
+                local leftPressed = InputManager:IsKeyPressed("A") or InputManager:IsKeyPressed(37)
+                local rightPressed = InputManager:IsKeyPressed("D") or InputManager:IsKeyPressed(39)
+
+                if leftPressed and selectedRoundIndex > 1 then
+                    selectedRoundIndex = selectedRoundIndex - 1
+                    canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
+                    UpdateRoundArrows(canvas)
+                    print("[GameMode] Round to win: " .. selectedRoundIndex)
+                    roundInputCooldown = INPUT_COOLDOWN_FRAMES
+                elseif rightPressed and selectedRoundIndex < 3 then
+                    selectedRoundIndex = selectedRoundIndex + 1
+                    canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
+                    UpdateRoundArrows(canvas)
+                    print("[GameMode] Round to win: " .. selectedRoundIndex)
+                    roundInputCooldown = INPUT_COOLDOWN_FRAMES
+                end
+            end
+
+            -- 확정: Space 또는 Enter
+            if InputManager:IsKeyPressed("Space") or InputManager:IsKeyPressed(13) then
+                print("[GameMode] Selection confirmed!")
+                FinishSelection()
+                break
+            end
+        end
+
+        coroutine.yield(WaitForSeconds(0.016))  -- ~60fps
+    end
+
+    print("[GameMode] SelectionInputLoop ended")
+end
+
+-- 선택 완료
+function FinishSelection()
+    print("[GameMode] FinishSelection called")
+    print("[GameMode] P1 accessory: " .. AccessoryList[p1SelectedAccessory].name)
+    print("[GameMode] P2 accessory: " .. AccessoryList[p2SelectedAccessory].name)
+    print("[GameMode] Rounds to win: " .. selectedRoundIndex)
+
+    -- 라운드 설정
+    currentRoundsToWin = selectedRoundIndex
+    SetRoundsToWin(selectedRoundIndex)
+    SetMaxRounds(2 * selectedRoundIndex - 1)  -- 1->1, 2->3, 3->5
 
     -- 새 매치 시작 - 승리 카운트 초기화
     ResetRoundWins()
+
+    -- 선택된 악세사리 장착
+    EquipAccessoryToPlayer(1, AccessoryList[p1SelectedAccessory].prefab)
+    EquipAccessoryToPlayer(2, AccessoryList[p2SelectedAccessory].prefab)
 
     -- Select UI 제거
     if UI.FindCanvas(selectCanvasName) then

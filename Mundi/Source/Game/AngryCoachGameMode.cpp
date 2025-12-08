@@ -47,7 +47,8 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 		Player1 = Cast<AAngryCoachCharacter>(P1Actor);
 		if (Player1)
 		{
-			Player1->SetActorLocation(FVector(0, -5, 2));
+			Player1->SetActorLocation(FVector(0, -2.5f, 2));
+			Player1->SetActorRotation(FVector(0, 0, 90));  // Yaw=90: +Y 방향 (Player2를 향함)
 			Player1->PossessedBy(AngryCoachController);
 		}
 	}
@@ -60,7 +61,8 @@ void AAngryCoachGameMode::PostLogin(APlayerController* NewPlayer)
 		if (Player2)
 		{
 			Player2->bIsCGC = false;
-			Player2->SetActorLocation(FVector(0, 5, 2));
+			Player2->SetActorLocation(FVector(0, 2.5f, 2));
+			Player2->SetActorRotation(FVector(0, 0, -90));  // Yaw=-90: -Y 방향 (Player1을 향함)
 			Player2->PossessedBy(AngryCoachController);
 		}
 	}

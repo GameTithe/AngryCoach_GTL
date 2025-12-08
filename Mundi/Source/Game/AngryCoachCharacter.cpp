@@ -287,6 +287,9 @@ void AAngryCoachCharacter::UnequipAccessory()
 		SkillComponent->SetDefaultSkills();
 	}
 
+	// 기존 악세서리 액터 파괴
+	CurrentAccessory->Destroy();
+
 	CurrentAccessory = nullptr;
 }
 
