@@ -19,6 +19,7 @@ AAngryCoachGameMode::AAngryCoachGameMode()
 
 AAngryCoachGameMode::~AAngryCoachGameMode()
 {
+	FAudioDevice::StopAllSounds();
 }
 
 void AAngryCoachGameMode::StartPlay()
