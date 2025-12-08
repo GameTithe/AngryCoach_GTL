@@ -26,6 +26,9 @@ void UGorillaSpecialAttackSkill::Activate(AActor* Caster)
 			AAngryCoachCharacter* Character = SourceAccessory->GetOwningCharacter();
 			Character->PlayMontage(Montage);
 		}
-		GA->ToggleGorillaForm();
+		else
+		{
+			GA->ToggleGorillaForm();
+		}
 	}
 }

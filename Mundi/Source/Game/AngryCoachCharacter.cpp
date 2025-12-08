@@ -576,3 +576,15 @@ void AAngryCoachCharacter::Die()
 		FAudioDevice::PlaySoundAtLocationOneShot(DieSound, GetActorLocation());
 	}
 }
+
+REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, ToggleGorillaFormOnAccessory)
+void AAngryCoachCharacter::ToggleGorillaFormOnAccessory()
+{
+	if (CurrentAccessory)
+	{
+		if (AGorillaAccessoryActor* GA = Cast<AGorillaAccessoryActor>(CurrentAccessory))
+		{
+			GA->ToggleGorillaForm();
+		}
+	}
+}
