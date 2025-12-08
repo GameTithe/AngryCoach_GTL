@@ -57,10 +57,10 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		SceneRoot = nullptr;
 		AccessoryMesh = nullptr;
 		TryAttackParticle = nullptr;
-		HitAttackParticle = nullptr; 
+		HitAttackParticle = nullptr;
 		BaseEffectParticle = nullptr;
 		OwningCharacter = nullptr;
-		AttackShape = nullptr;
+		AttackShapes.Empty();
 
 		for (UActorComponent* Comp : GetOwnedComponents())
 		{
@@ -74,10 +74,11 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 
 			if (auto* Shape = Cast<UShapeComponent>(Comp))
 			{
-				FString Tag = Shape->GetTag();
-				if (Shape->ObjectName == FName("AttackShape"))					
+				FString ShapeName = Shape->ObjectName.ToString();
+				// "AttackShape"가 포함된 모든 Shape를 배열에 추가
+				if (ShapeName.find("AttackShape") != std::string::npos)
 				{
-					AttackShape = Shape;
+					AttackShapes.Add(Shape);
 				}
 			}
 
@@ -91,7 +92,7 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				if (ParticleName.find("TryAttack") != std::string::npos)
 				{
 					TryAttackParticle = Particle;
-				} 
+				}
 				else if (ParticleName.find("HitAttack") != std::string::npos)
 				{
 					HitAttackParticle = Particle;
@@ -242,17 +243,17 @@ void AAccessoryActor::Tick(float DeltaTime)
 }
 
  
-void AAccessoryActor::SetAttackShapeNameAndAttach(const FName& Name)
+void AAccessoryActor::SetAttackShapeNameAndAttach(UShapeComponent* Shape, const FName& Name)
 {
-	if (!RootComponent || !AttackShape)
+	if (!RootComponent || !Shape)
 	{
 		return;
 	}
 
-	AttackShape->SetupAttachment(RootComponent);
-	AttackShape->ObjectName = Name;
-	AttackShape->SetGenerateOverlapEvents(false);
-	AttackShape->SetBlockComponent(false);
+	Shape->SetupAttachment(RootComponent);
+	Shape->ObjectName = Name;
+	Shape->SetGenerateOverlapEvents(false);
+	Shape->SetBlockComponent(false);
 }
 
 void AAccessoryActor::DuplicateSubObjects()
@@ -263,8 +264,9 @@ void AAccessoryActor::DuplicateSubObjects()
 	SceneRoot = nullptr;
 	AccessoryMesh = nullptr;
 	TryAttackParticle = nullptr;
-	HitAttackParticle = nullptr; 
+	HitAttackParticle = nullptr;
 	OwningCharacter = nullptr;
+	AttackShapes.Empty();
 
 	// 복제된 컴포넌트들을 다시 찾아서 포인터 재설정
 	for (UActorComponent* Comp : GetOwnedComponents())
@@ -275,6 +277,16 @@ void AAccessoryActor::DuplicateSubObjects()
 			if (Scene == GetRootComponent())
 			{
 				SceneRoot = Scene;
+			}
+		}
+
+		if (auto* Shape = Cast<UShapeComponent>(Comp))
+		{
+			FString ShapeName = Shape->ObjectName.ToString();
+			// "AttackShape"가 포함된 모든 Shape를 배열에 추가
+			if (ShapeName.find("AttackShape") != std::string::npos)
+			{
+				AttackShapes.Add(Shape);
 			}
 		}
 
@@ -289,7 +301,7 @@ void AAccessoryActor::DuplicateSubObjects()
 			if (ParticleName.find("TryAttack") != std::string::npos)
 			{
 				TryAttackParticle = Particle;
-			} 
+			}
 			else if (ParticleName.find("HitAttack") != std::string::npos)
 			{
 				HitAttackParticle = Particle;
@@ -345,13 +357,16 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 		SkillComp->OverrideSkills(GrantedSkills, this);
 	}
 
-	// 3. Attack Shape을 캐릭터에 캐싱
-	if (AttackShape)
+	// 3. Attack Shapes를 캐릭터에 캐싱
+	for (UShapeComponent* Shape : AttackShapes)
 	{
-		OwnerCharacter->SetAttackShape(AttackShape);
-		// 자신을 공격하는 걸 방지하기 위해서 owner 설정
-		AttackShape->SetOwner(OwnerCharacter);
-	}	
+		if (Shape)
+		{
+			OwnerCharacter->AddAttackShape(Shape);
+			// 자신을 공격하는 걸 방지하기 위해서 owner 설정
+			Shape->SetOwner(OwnerCharacter);
+		}
+	}
 }
 
 void AAccessoryActor::Unequip()

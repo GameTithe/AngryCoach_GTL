@@ -20,7 +20,14 @@ public:
 	void ToggleGorillaForm();
 
 	bool GetIsGorillaForm() {return bIsGorillaFormActive;}
+
+	// 손 소켓에 AttackShape를 부착하도록 오버라이드
+	void Equip(AAngryCoachCharacter* OwnerCharacter) override;
+
 private:
+	// AttackShape를 손 소켓에 부착하는 헬퍼 함수
+	void ReattachAttackShapesToHands(USkeletalMeshComponent* CharacterMesh);
+
 	// 고릴라 형태가 활성화되었는지 여부
 	bool bIsGorillaFormActive = false;
 
