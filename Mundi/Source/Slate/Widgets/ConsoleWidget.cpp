@@ -161,11 +161,7 @@ void UConsoleWidget::RenderToolbar()
 void UConsoleWidget::RenderLogOutput()
 {
 	std::lock_guard<std::mutex> lock(LogMutex);
-	// 2. 인덱스로 계산해서 지운다.
-	if (Items.Num() > 1000)
-	{
-		Items.erase(Items.begin(), Items.end() - 1000);
-	}
+	// 로그 개수 제한 해제 (기존 1000개 제한 삭제)
 	
 	// Reserve space for input at bottom
 	const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();

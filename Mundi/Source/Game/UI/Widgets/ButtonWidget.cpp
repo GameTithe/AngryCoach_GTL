@@ -237,26 +237,12 @@ bool UButtonWidget::OnMouseUp()
 
             if (OnClickCopy)
             {
-                try
-                {
-                    OnClickCopy();
-                }
-                catch (...)
-                {
-                    UE_LOG("[Button] Exception in OnClick callback!\n");
-                }
+                OnClickCopy();
             }
 
             if (OnPressEndCopy)
             {
-                try
-                {
-                    OnPressEndCopy();
-                }
-                catch (...)
-                {
-                    UE_LOG("[Button] Exception in OnPressEnd callback!\n");
-                }
+                OnPressEndCopy();
             }
 
             return true;  // 클릭 성공
