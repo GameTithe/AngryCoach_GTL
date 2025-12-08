@@ -16,7 +16,7 @@ AGorillaAccessoryActor::AGorillaAccessoryActor()
 	ObjectName = "GorillaAccessory";
 	AccessoryName = "Gorilla";
 	Description = "Powerful gorilla attacks";
-	AttachSocketName = FName("hand_r");
+	AttachSocketName = FName("HeadWeapon");
 	bIsGorillaFormActive = false;
 
 	GrantedSkills.clear();

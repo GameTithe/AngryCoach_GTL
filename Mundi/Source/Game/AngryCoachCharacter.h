@@ -58,6 +58,9 @@ public:
 	void HitReation() override;
 	void ClearState() override;
 
+	// 애니메이션 노티파이용 함수
+	void ToggleGorillaFormOnAccessory();
+
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
