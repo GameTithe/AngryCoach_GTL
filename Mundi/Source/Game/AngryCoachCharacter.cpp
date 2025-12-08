@@ -82,35 +82,35 @@ void AAngryCoachCharacter::BeginPlay()
 		//	}
 		//}
 
-		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		
-		if (KnifeAccessory)
-		{
-			EquipAccessory(KnifeAccessory);
-		
-			if (SkillComponent)
-			{
-				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
-			}
-			
-			KnifeAccessory->GetRootComponent()->SetOwner(this);
-		}
+		//FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		//AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		//if (KnifeAccessory)
+		//{
+		//	EquipAccessory(KnifeAccessory);
+		//
+		//	if (SkillComponent)
+		//	{
+		//		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+		//	}
+		//	
+		//	KnifeAccessory->GetRootComponent()->SetOwner(this);
+		//}
 			  
-		 // FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		 // AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		 //
-		 // if (GorillaAccessory)
-		 // {
-		 // 	EquipAccessory(GorillaAccessory);
-		 //
-		 // 	if (SkillComponent)
-		 // 	{
-		 // 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-		 // 	}
-		 // 	
-		 // 	GorillaAccessory->GetRootComponent()->SetOwner(this);
-		 // }
+		 FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		 AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		 
+		 if (GorillaAccessory)
+		 {
+		 	EquipAccessory(GorillaAccessory);
+		 
+		 	if (SkillComponent)
+		 	{
+		 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+		 	}
+		 	
+		 	GorillaAccessory->GetRootComponent()->SetOwner(this);
+		 }
 	}
 }
 
@@ -474,7 +474,8 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	
 
 	//CurrentAccessory->PlayHitParticle();
-	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
+	// 피격 위치를 카메라 쪽(캐릭터 앞쪽)으로 오프셋
+	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation() + FVector(-2,0,01));
 
 	return ActualDamage;
 }

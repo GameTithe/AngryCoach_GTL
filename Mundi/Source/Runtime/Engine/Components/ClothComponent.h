@@ -22,9 +22,9 @@ struct FClothSimulationSettings
 {
 	// Physics properties
 	float Mass = 1.0f;                          // 전체 질량
-	float Damping = 0.2f;                       // 감쇠 (0-1)
-	float LinearDrag = 0.2f;                    // 선형 저항
-	float AngularDrag = 0.2f;                   // 각속도 저항
+	float Damping = 0.1f;                       // 감쇠 (0-1) - 낮춰서 더 자연스럽게
+	float LinearDrag = 0.05f;                   // 선형 저항 - 낮춰서 공기 저항 감소
+	float AngularDrag = 0.1f;                   // 각속도 저항 - 낮춰서 회전이 더 자유롭게
 	float Friction = 0.5f;                      // 마찰
 	// Stretch constraints (Horizontal/Vertical)
 	float StretchStiffness = 0.5f;              // 신축 강성 (0-1)
@@ -56,12 +56,12 @@ struct FClothSimulationSettings
 
 	// Gravity
 	bool bUseGravity = true;                    // 중력 사용
-	FVector GravityOverride = FVector(0, 0, -2.8f); // 중력 오버라이드 (cm/s^2) - 9.8 m/s^2
+	FVector GravityOverride = FVector(0, 0, -9.80f); // 중력 오버라이드 (cm/s^2) - 현실적인 중력
 
 	// Wind
-	FVector WindVelocity = FVector(-10, -10, 0);  // 바람 속도 (cm/s) - 기본값: 바람 없음
-	float WindDrag = 0.5f;                      // 바람 저항 (0-1)
-	float WindLift = 0.3f;                      // 바람 양력 (0-1)
+	FVector WindVelocity = FVector(0, 0, 0);    // 바람 속도 (cm/s) - 기본값: 바람 없음
+	float WindDrag = 0.1f;                      // 바람 저항 (0-1) - 낮춰서 저항 감소
+	float WindLift = 0.1f;                      // 바람 양력 (0-1) - 낮춰서 떠오르는 효과 감소
 
 	// Tether constraints (거리 제약)
 	bool bUseTethers = true;                    // Tether 사용

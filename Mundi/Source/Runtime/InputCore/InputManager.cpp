@@ -743,13 +743,92 @@ void UInputManager::StopGamepadVibration(int GamepadIndex)
     SetGamepadVibration(GamepadIndex, 0.0f, 0.0f);
 }
 
+// === 플레이어-게임패드 동적 등록 구현 ===
+
+bool UInputManager::RegisterGamepadForPlayer(int PlayerIndex, int GamepadIndex)
+{
+    if (PlayerIndex < 0 || PlayerIndex >= MaxPlayers) return false;
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return false;
+    if (!GamepadStates[GamepadIndex].bConnected) return false;
+
+    // 이미 다른 플레이어가 사용 중인지 확인
+    for (int i = 0; i < MaxPlayers; ++i)
+    {
+        if (RegisteredGamepads[i] == GamepadIndex)
+        {
+            return false; // 이미 등록됨
+        }
+    }
+
+    RegisteredGamepads[PlayerIndex] = GamepadIndex;
+    return true;
+}
+
+void UInputManager::UnregisterGamepadForPlayer(int PlayerIndex)
+{
+    if (PlayerIndex < 0 || PlayerIndex >= MaxPlayers) return;
+    RegisteredGamepads[PlayerIndex] = -1;
+}
+
+void UInputManager::UnregisterAllGamepads()
+{
+    for (int i = 0; i < MaxPlayers; ++i)
+    {
+        RegisteredGamepads[i] = -1;
+    }
+}
+
+int UInputManager::GetRegisteredGamepadForPlayer(int PlayerIndex) const
+{
+    if (PlayerIndex < 0 || PlayerIndex >= MaxPlayers) return -1;
+    return RegisteredGamepads[PlayerIndex];
+}
+
+int UInputManager::GetPlayerForGamepad(int GamepadIndex) const
+{
+    if (GamepadIndex < 0 || GamepadIndex >= MaxGamepads) return -1;
+    for (int i = 0; i < MaxPlayers; ++i)
+    {
+        if (RegisteredGamepads[i] == GamepadIndex)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int UInputManager::TryRegisterGamepadFromInput()
+{
+    int32 PadIndex = GetGamepadWithAnyButtonPressed();
+    if (PadIndex < 0) return -1;
+
+    // 이미 등록된 게임패드인지 확인
+    int ExistingPlayer = GetPlayerForGamepad(PadIndex);
+    if (ExistingPlayer >= 0) return -1; // 이미 등록됨
+
+    // 미등록 플레이어 찾기 (0번부터)
+    for (int i = 0; i < MaxPlayers; ++i)
+    {
+        if (RegisteredGamepads[i] < 0)
+        {
+            if (RegisterGamepadForPlayer(i, PadIndex))
+            {
+                UE_LOG("Gamepad %d registered to Player %d (Connected: %d)\n", PadIndex, i, GetConnectedGamepadCount());
+                return i; // 등록 성공, 플레이어 인덱스 반환
+            }
+        }
+    }
+
+    return -1; // 빈 슬롯 없음
+}
+
 bool UInputManager::IsGamepadMappedToKey(int KeyCode, bool bCheckPressed, bool bCheckReleased) const
 {
-    // ===== Gamepad 0 → Player 1 (WASD + Space) =====
-    if (GamepadStates[0].bConnected)
+    // ===== Player 1 (등록된 게임패드) → WASD + 액션키 =====
+    int Pad0Index = RegisteredGamepads[0];
+    if (Pad0Index >= 0 && Pad0Index < MaxGamepads && GamepadStates[Pad0Index].bConnected)
     {
-        const FGamepadState& Pad0 = GamepadStates[0];
-        const FGamepadState& Pad0Prev = GamepadStates[0]; // PreviousState는 구조체 안에 있음
+        const FGamepadState& Pad0 = GamepadStates[Pad0Index];
 
         // 현재/이전 스틱 값
         float CurrLX = Pad0.LeftStickX;
@@ -794,17 +873,18 @@ bool UInputManager::IsGamepadMappedToKey(int KeyCode, bool bCheckPressed, bool b
         case 'S': if (CheckKey(bCurrS, bPrevS)) return true; break;
         case 'A': if (CheckKey(bCurrA, bPrevA)) return true; break;
         case 'D': if (CheckKey(bCurrD, bPrevD)) return true; break;
-        case VK_SPACE: if (CheckButton(XINPUT_GAMEPAD_A)) return true; break;
-        // 추가 액션키 매핑 가능
-        // case 'E': if (CheckButton(XINPUT_GAMEPAD_B)) return true; break;
-        // case VK_SHIFT: if (CheckButton(XINPUT_GAMEPAD_X)) return true; break;
+        case 'I': if (CheckButton(XINPUT_GAMEPAD_B)) return true; break;  // 점프 (B)
+        case 'T': if (CheckButton(XINPUT_GAMEPAD_X)) return true; break;  // 약공 (X)
+        case 'Y': if (CheckButton(XINPUT_GAMEPAD_A)) return true; break;  // 강공 (A)
+        case 'U': if (CheckButton(XINPUT_GAMEPAD_Y)) return true; break;  // 스킬 (Y)
         }
     }
 
-    // ===== Gamepad 1 → Player 2 (화살표 + Numpad0) =====
-    if (GamepadStates[1].bConnected)
+    // ===== Player 2 (등록된 게임패드) → 화살표 + 액션키 =====
+    int Pad1Index = RegisteredGamepads[1];
+    if (Pad1Index >= 0 && Pad1Index < MaxGamepads && GamepadStates[Pad1Index].bConnected)
     {
-        const FGamepadState& Pad1 = GamepadStates[1];
+        const FGamepadState& Pad1 = GamepadStates[Pad1Index];
 
         float CurrLX = Pad1.LeftStickX;
         float CurrLY = Pad1.LeftStickY;
@@ -841,13 +921,14 @@ bool UInputManager::IsGamepadMappedToKey(int KeyCode, bool bCheckPressed, bool b
 
         switch (KeyCode)
         {
-        case VK_UP:    if (CheckKey(bCurrUp, bPrevUp)) return true; break;
-        case VK_DOWN:  if (CheckKey(bCurrDown, bPrevDown)) return true; break;
-        case VK_LEFT:  if (CheckKey(bCurrLeft, bPrevLeft)) return true; break;
-        case VK_RIGHT: if (CheckKey(bCurrRight, bPrevRight)) return true; break;
-        case VK_NUMPAD0: if (CheckButton(XINPUT_GAMEPAD_A)) return true; break;  // P2 점프키 (필요시 변경)
-        case VK_RCONTROL: if (CheckButton(XINPUT_GAMEPAD_A)) return true; break; // 또는 우측 Ctrl
-        // 추가 액션키 매핑 가능
+        case VK_UP:      if (CheckKey(bCurrUp, bPrevUp)) return true; break;
+        case VK_DOWN:    if (CheckKey(bCurrDown, bPrevDown)) return true; break;
+        case VK_LEFT:    if (CheckKey(bCurrLeft, bPrevLeft)) return true; break;
+        case VK_RIGHT:   if (CheckKey(bCurrRight, bPrevRight)) return true; break;
+        case VK_NUMPAD6: if (CheckButton(XINPUT_GAMEPAD_B)) return true; break;  // 점프 (B)
+        case VK_NUMPAD1: if (CheckButton(XINPUT_GAMEPAD_X)) return true; break;  // 약공 (X)
+        case VK_NUMPAD2: if (CheckButton(XINPUT_GAMEPAD_A)) return true; break;  // 강공 (A)
+        case VK_NUMPAD3: if (CheckButton(XINPUT_GAMEPAD_Y)) return true; break;  // 스킬 (Y)
         }
     }
 

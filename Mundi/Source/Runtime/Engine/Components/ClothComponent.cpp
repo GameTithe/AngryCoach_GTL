@@ -423,17 +423,20 @@ void UClothComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatch
 	if (Material && Material->GetShader())
 	{
 		Shader = Material->GetShader();
+		UE_LOG("[ClothComponent] Using material from slot 0: %s", Material->GetName().c_str());
 	}
 	else
 	{
+		UE_LOG("[ClothComponent] Material slot 0 is null or has no shader, using default material");
 		Material = UResourceManager::GetInstance().GetDefaultMaterial();
 		if (Material)
 		{
 			Shader = Material->GetShader();
+			UE_LOG("[ClothComponent] Using default material: %s", Material->GetName().c_str());
 		}
 		if (!Material || !Shader)
 		{
-			UE_LOG("UClothComponent: 기본 머티리얼이 없습니다.");
+			UE_LOG("[ClothComponent] ERROR: No material or shader available!");
 			return;
 		}
 	}
@@ -490,6 +493,56 @@ void UClothComponent::SetupClothFromMesh()
 	{
 		SkeletalMesh->CreateCPUSkinnedVertexBuffer(&CPUSkinnedVertexBuffer);
 		UE_LOG("[ClothComponent] Created CPUSkinnedVertexBuffer");
+	}
+
+	// Material 설정 (SkeletalMesh의 GroupInfo에서 가져오기)
+	if (MaterialSlots.IsEmpty())
+	{
+		const TArray<FGroupInfo>& GroupInfos = SkeletalMesh->GetMeshGroupInfo();
+		UE_LOG("[ClothComponent] GroupInfos count: %d", GroupInfos.size());
+
+		if (!GroupInfos.IsEmpty())
+		{
+			MaterialSlots.resize(GroupInfos.size());
+			for (int i = 0; i < GroupInfos.size(); ++i)
+			{
+				UE_LOG("[ClothComponent] Loading material[%d]: %s", i, GroupInfos[i].InitialMaterialName.c_str());
+				SetMaterialByName(i, GroupInfos[i].InitialMaterialName);
+
+				// 로드 확인
+				UMaterialInterface* LoadedMat = GetMaterial(i);
+				if (LoadedMat)
+				{
+					UE_LOG("[ClothComponent] Material[%d] loaded successfully: %s", i, LoadedMat->GetName().c_str());
+				}
+				else
+				{
+					UE_LOG("[ClothComponent] Material[%d] FAILED to load!", i);
+				}
+			}
+			UE_LOG("[ClothComponent] Loaded %d materials from SkeletalMesh", GroupInfos.size());
+		}
+		else
+		{
+			// GroupInfo가 없으면 기본 Material 슬롯 1개 생성
+			UE_LOG("[ClothComponent] No GroupInfos found, using default material");
+			MaterialSlots.resize(1);
+			UMaterialInterface* DefaultMat = UResourceManager::GetInstance().GetDefaultMaterial();
+			SetMaterial(0, DefaultMat);
+
+			if (DefaultMat)
+			{
+				UE_LOG("[ClothComponent] Default material set: %s", DefaultMat->GetName().c_str());
+			}
+			else
+			{
+				UE_LOG("[ClothComponent] ERROR: Default material is NULL!");
+			}
+		}
+	}
+	else
+	{
+		UE_LOG("[ClothComponent] MaterialSlots already populated (%d slots)", MaterialSlots.size());
 	}
 
 	BuildClothMesh();
