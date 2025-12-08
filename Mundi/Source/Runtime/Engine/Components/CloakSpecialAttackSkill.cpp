@@ -34,6 +34,15 @@ void UCloakSpecialAttackSkill::Activate(AActor* Caster)
 	{
 		if (!Character->GetCharacterMovement()->IsFalling() && Montage)
 		{
+			// 강제 이동 설정: 바라보는 방향으로 일정 속도로 이동
+			FVector DashDirection = Character->GetActorRotation().GetForwardVector();
+			float DashSpeed = 5.0f;  // 대시 속도
+			float DashDuration = Montage->GetPlayLength();  // 몽타주 재생 시간 동안 이동
+
+			Character->GetCharacterMovement()->SetForcedMovement(
+				DashDirection * DashSpeed,
+				DashDuration
+			);
 			Character->PlayMontage(Montage);
 		}
 	}

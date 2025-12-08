@@ -49,6 +49,11 @@ public:
 	int32 GetMaxJumpCount() const { return MaxJumpCount; }
 	void ResetJumpCount() { CurrentJumpCount = 0; }
 
+	// 강제 이동 제어 (스킬 등에서 사용)
+	void SetForcedMovement(const FVector& InVelocity, float Duration);
+	void ClearForcedMovement();
+	bool IsForcedMovement() const { return bForceMovement; }
+
 protected:
 	void PhysWalking(float DeltaSecond);
 	void PhysFalling(float DeltaSecond);
@@ -90,5 +95,11 @@ protected:
 
 	const float GLOBAL_GRAVITY_Z = -9.8f;
 	const float GravityScale = 1.0f;
+
+	// 강제 이동 상태 (스킬 사용 시)
+	bool bForceMovement = false;
+	FVector ForcedVelocity = FVector::Zero();
+	float ForcedMovementDuration = 0.0f;
+	float ForcedMovementTimer = 0.0f;
 
 };
