@@ -8,6 +8,7 @@
 #include "AccessoryActor.h"
 #include "GorillaAccessoryActor.h"
 #include "CapsuleComponent.h"
+#include "CharacterMovementComponent.h"
 #include "GameplayStatics.h"
 #include "KnifeAccessoryActor.h"
 #include "PunchAccessoryActor.h"
@@ -20,6 +21,7 @@
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 #include "CloakAccessoryActor.h" 
 #include "FAudioDevice.h"
+#include "PlayerCameraManager.h"
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
@@ -274,6 +276,9 @@ void AAngryCoachCharacter::UnequipAccessory()
 		SkillComponent->SetDefaultSkills();
 	}
 
+	// 기존 악세서리 액터 파괴
+	CurrentAccessory->Destroy();
+
 	CurrentAccessory = nullptr;
 }
 
@@ -402,6 +407,10 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	// 피해량을 감소시키는 요인이 있다면 감도된 피해량 적용	
 	float ActualDamage = DamageAmount;
 
+	GWorld->GetPlayerCameraManager()->StartCameraShake(
+		0.3, 0.3, 0.3, DamageAmount
+		);
+
 	if (ActualDamage < 10.f)
 	{
 		if (Hit1Sound)
@@ -439,8 +448,11 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 			KnockbackDirection.Normalize();
 		}
 
-		float KnockbackDistance = 0.5f;
-		RootComponent->AddWorldOffset(KnockbackDirection * KnockbackDistance);
+		float KnockbackPower = 10.0f;
+		CharacterMovement->LaunchCharacter(KnockbackDirection * KnockbackPower, true, false);
+
+		// float KnockbackDistance = 0.2f;
+		// RootComponent->AddWorldOffset(KnockbackDirection);
 	}
 
 	if (CurrentHealth <= 0.0f)
@@ -524,6 +536,19 @@ void AAngryCoachCharacter::DelegateBindToCachedShape()
 {
 	CachedAttackShape->OnComponentHit.AddDynamic(this, &AAngryCoachCharacter::OnHit);
 	UE_LOG("Delegate Bind");
+}
+
+void AAngryCoachCharacter::Revive()
+{
+	// 부모 클래스의 Revive 호출 (체력/상태 리셋, Ragdoll 비활성화)
+	Super::Revive();
+
+	// CapsuleComponent collision 복원 (기본값으로)
+	// 참고: Character 생성자에서 SetBlockComponent(false), SetGenerateOverlapEvents(false)로 설정됨
+	// Revive에서는 필요에 따라 다시 설정
+	// CapsuleComponent는 기본적으로 collision이 꺼져있으므로 그대로 둠
+
+	UE_LOG("[AngryCoachCharacter] Revived! HP=%f", CurrentHealth);
 }
 
 void AAngryCoachCharacter::Die()

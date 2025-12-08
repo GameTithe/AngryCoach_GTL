@@ -276,3 +276,17 @@ bool ACharacter::CanAttack()
 void ACharacter::HitReation()
 {
 }
+
+void ACharacter::Revive()
+{
+	// 체력/상태 리셋
+	CurrentHealth = MaxHealth;
+	CurrentState = ECharacterState::Idle;
+
+	// Ragdoll 비활성화 및 포즈 리셋
+	if (SkeletalMeshComp)
+	{
+		SkeletalMeshComp->SetPhysicsAnimationState(EPhysicsAnimationState::AnimationDriven);
+		SkeletalMeshComp->ResetToBindPose();
+	}
+}

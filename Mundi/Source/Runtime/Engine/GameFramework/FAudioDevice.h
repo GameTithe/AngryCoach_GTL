@@ -38,6 +38,8 @@ public:
      // Loads .wav files under GDataDir/Audio into resource manager
     static void Preload();
 
+    static void StopAllSounds(); // Stops and destroys all active and one-shot sounds
+
 private:
     static IXAudio2*                pXAudio2;
     static IXAudio2MasteringVoice*  pMasteringVoice;

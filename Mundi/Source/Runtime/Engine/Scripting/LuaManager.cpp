@@ -17,6 +17,11 @@
 #include "Source/Game/UI/Widgets/UICanvas.h"
 #include "Source/Game/UI/Widgets/ButtonWidget.h"
 #include "Source/Game/AngryCoachGameMode.h"
+#include "Source/Game/AngryCoachCharacter.h"
+
+#ifdef _EDITOR
+#include "EditorEngine.h"
+#endif
 
 sol::object MakeCompProxy(sol::state_view SolState, void* Instance, UClass* Class) {
     BuildBoundClass(Class);
@@ -544,6 +549,142 @@ FLuaManager::FLuaManager()
             {
                 GameMode->RestartMatch();
             }
+        }
+    );
+
+    // 게임 종료 함수 (Editor: PIE 종료, StandAlone: exe 종료)
+    SharedLib.set_function("ExitGame",
+        []()
+        {
+#ifdef _EDITOR
+            extern UEditorEngine GEngine;
+            GEngine.EndPIE();
+#else
+            PostQuitMessage(0);
+#endif
+        }
+    );
+
+    // 플레이어 체력 관련 함수들
+    SharedLib.set_function("GetP1HealthPercent",
+        []() -> float
+        {
+            if (!GWorld) return 0.0f;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->GetP1HealthPercent();
+            }
+            return 0.0f;
+        }
+    );
+
+    SharedLib.set_function("GetP2HealthPercent",
+        []() -> float
+        {
+            if (!GWorld) return 0.0f;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->GetP2HealthPercent();
+            }
+            return 0.0f;
+        }
+    );
+
+    SharedLib.set_function("IsP1Alive",
+        []() -> bool
+        {
+            if (!GWorld) return false;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->IsP1Alive();
+            }
+            return false;
+        }
+    );
+
+    SharedLib.set_function("IsP2Alive",
+        []() -> bool
+        {
+            if (!GWorld) return false;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->IsP2Alive();
+            }
+            return false;
+        }
+    );
+
+    SharedLib.set_function("ResetPlayersHP",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                GameMode->ResetPlayersHP();
+            }
+        }
+    );
+
+    // 플레이어 캐릭터 접근자
+    SharedLib.set_function("GetPlayer1",
+        []() -> AAngryCoachCharacter*
+        {
+            if (!GWorld) return nullptr;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->GetPlayer1();
+            }
+            return nullptr;
+        }
+    );
+
+    SharedLib.set_function("GetPlayer2",
+        []() -> AAngryCoachCharacter*
+        {
+            if (!GWorld) return nullptr;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->GetPlayer2();
+            }
+            return nullptr;
+        }
+    );
+
+    // 악세사리 장착 (prefab 경로로 스폰 후 장착)
+    SharedLib.set_function("EquipAccessoryToPlayer",
+        [](int32 PlayerIndex, const FString& PrefabPath)
+        {
+            if (!GWorld) return;
+            auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode());
+            if (!GameMode) return;
+
+            AAngryCoachCharacter* Player = (PlayerIndex == 1) ? GameMode->GetPlayer1() : GameMode->GetPlayer2();
+            if (!Player) return;
+
+            // 기존 악세사리 해제
+            Player->UnequipAccessory();
+
+            // 새 악세사리 스폰 및 장착
+            AActor* NewActor = GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath));
+            if (AAccessoryActor* Accessory = Cast<AAccessoryActor>(NewActor))
+            {
+                Player->EquipAccessory(Accessory);
+            }
+        }
+    );
+
+    // 악세사리 해제
+    SharedLib.set_function("UnequipAccessoryFromPlayer",
+        [](int32 PlayerIndex)
+        {
+            if (!GWorld) return;
+            auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode());
+            if (!GameMode) return;
+
+            AAngryCoachCharacter* Player = (PlayerIndex == 1) ? GameMode->GetPlayer1() : GameMode->GetPlayer2();
+            if (!Player) return;
+
+            Player->UnequipAccessory();
         }
     );
 

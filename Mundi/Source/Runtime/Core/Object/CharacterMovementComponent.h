@@ -54,6 +54,7 @@ public:
 	void ClearForcedMovement();
 	bool IsForcedMovement() const { return bForceMovement; }
 
+	void LaunchCharacter(FVector LaunchVelocity, bool bXYOverride, bool bZOverride);
 protected:
 	void PhysWalking(float DeltaSecond);
 	void PhysFalling(float DeltaSecond);
@@ -89,6 +90,7 @@ protected:
 	/** PhysScene 가져오기 */
 	FPhysScene* GetPhysScene() const;
 
+	void ApplyKnockback(float DeltaTime);
 protected:
 	ACharacter* CharacterOwner = nullptr;
 	bool bIsFalling = false;
@@ -102,4 +104,7 @@ protected:
 	float ForcedMovementDuration = 0.0f;
 	float ForcedMovementTimer = 0.0f;
 
+	FVector PhysicsVelocity = FVector::Zero();
+	bool bIsApplyKnockback = false;	
+	float AirFriction = 0.5f;
 };

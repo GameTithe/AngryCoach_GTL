@@ -12,7 +12,8 @@ public:
     FLinearColor FadeColor = FLinearColor::Zero();
     float StartAlpha = 0.f;   // 시작 불투명도 [0..1]
     float EndAlpha   = 1.f;   // 종료 불투명도 [0..1]
-    float Elapsed    = 0.f;   // 진행 시간(초)
+    // NOTE: Elapsed는 Base class(CameraModifierBase)에서 상속받아 사용
+    //       TickLifetime()에서 증가시킴
 
     float CurrentAlpha = 0.f; // 이번 프레임 출력 알파
     
@@ -20,13 +21,12 @@ public:
     {
         if (!bEnabled) return;
 
-        Elapsed += DeltaTime;
+        // NOTE: Elapsed는 TickLifetime에서 이미 증가하므로 여기서 증가시키지 않음
         const float T = (Duration <= 0.f) ? 1.f : FMath::Clamp(Elapsed / Duration, 0.f, 1.f);
 
         CurrentAlpha = FMath::Lerp(StartAlpha, EndAlpha, T);
 
-        // 완료 처리
-        if (T >= 1.f) bEnabled = false;
+        // 완료 처리는 TickLifetime에서 처리됨
     }
 
     virtual void CollectPostProcess(TArray<FPostProcessModifier>& Out) override
