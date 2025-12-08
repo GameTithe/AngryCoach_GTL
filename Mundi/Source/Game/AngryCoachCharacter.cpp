@@ -42,48 +42,44 @@ void AAngryCoachCharacter::BeginPlay()
 
 	// 기본 펀치 악세서리 장착 (이미 장착된 게 없을 때만)
 	if (GWorld && !CurrentAccessory)
-	{ 
-		FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-		ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-		
-		if (CloakAccessory)
-		{
-			EquipAccessory(CloakAccessory);
-			FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-			ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-
-			if (CloakAccessory)
-			{
-				EquipAccessory(CloakAccessory);
-
-				if (SkillComponent)
-				{
-					SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
-				}
-
-				CloakAccessory->GetRootComponent()->SetOwner(this);
-			}
-		}
-		// FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		// AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	{
+		//FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		//ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		//
-		// if (GorillaAccessory)
-		// {
-		// 	EquipAccessory(GorillaAccessory);
+		//if (CloakAccessory)
+		//{
+		//	EquipAccessory(CloakAccessory);
+		//	FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+		//	ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		//
-		// 	if (SkillComponent)
-		// 	{
-		// 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-		// 	}
-		// 	
-		// 	GorillaAccessory->GetRootComponent()->SetOwner(this);
-		// }
-		//	if (SkillComponent)
+		//	if (CloakAccessory)
 		//	{
-		//		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+		//		EquipAccessory(CloakAccessory);
+		//
+		//		if (SkillComponent)
+		//		{
+		//			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
+		//		}
+		//
+		//		CloakAccessory->GetRootComponent()->SetOwner(this);
 		//	}
 		//}
-		//
+
+		FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		
+		if (KnifeAccessory)
+		{
+			EquipAccessory(KnifeAccessory);
+		
+			if (SkillComponent)
+			{
+				SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+			}
+			
+			KnifeAccessory->GetRootComponent()->SetOwner(this);
+		}
+			  
 		// FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
 		// AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 		//
@@ -267,8 +263,8 @@ void AAngryCoachCharacter::SetAttackShape(UShapeComponent* Shape)
 // ===== 스킬 =====
 void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 {
-	if (!SkillComponent)
-		return;
+    if (!SkillComponent)
+        return;
 
 	// TODO: 점프 중이면 JumpAttack, 콤보 중이면 다음 콤보 등 상태 체크
 	// 지금은 단순 매핑
@@ -301,10 +297,12 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 		}
 	}
 
-	if (Slot != ESkillSlot::None)
-	{
-		SkillComponent->HandleInput(Slot);		
-	}
+    if (Slot != ESkillSlot::None)
+    {
+        // 현재 공격 슬롯 기록 (이펙트 분기용)
+        CurrentAttackSlot = Slot;
+        SkillComponent->HandleInput(Slot);
+    }
 }
 
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackBegin)
@@ -328,12 +326,14 @@ void AAngryCoachCharacter::AttackBegin()
 REGISTER_FUNCTION_NOTIFY(AAngryCoachCharacter, AttackEnd)
 void AAngryCoachCharacter::AttackEnd()
 {	
-	if (CachedAttackShape)
-	{
-		CachedAttackShape->SetBlockComponent(false);
-		SetCurrentState(ECharacterState::Idle);
-		UE_LOG("attack end");
-	}
+    if (CachedAttackShape)
+    {
+        CachedAttackShape->SetBlockComponent(false);
+        SetCurrentState(ECharacterState::Idle);
+        UE_LOG("attack end");
+    }
+    // 공격 종료 시 슬롯 리셋
+    CurrentAttackSlot = ESkillSlot::None;
 }
 
 void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
@@ -349,13 +349,7 @@ void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveC
 void AAngryCoachCharacter::OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
 {
 	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 5.0f, this, HitResult);
-
-	// 대미지를 입혔을 때 전기 파티클 생성
-	if (AppliedDamage > 0.0f && CurrentAccessory && HitResult.HitActor)
-	{
-		CurrentAccessory->SpawnElectricHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
-	}
-
+	  
 	// UE_LOG("Owner : %p, damaged actor : %p", this, HitResult.HitActor);
 	// UE_LOG("Damage : %f", AppliedDamage);
 }
@@ -382,8 +376,10 @@ float AAngryCoachCharacter::TakeDamage(float DamageAmount, const FHitResult& Hit
 	}
 	
 	HitReation();
+
 	//CurrentAccessory->PlayHitParticle();
 	CurrentAccessory->SpawnHitParticleAtLocation(HitResult.HitActor->GetActorLocation());
+
 	UE_LOG("[TakeDamage] Owner %p, insti %p cur %f", this, Instigator, CurrentHealth);
 	return ActualDamage;
 }

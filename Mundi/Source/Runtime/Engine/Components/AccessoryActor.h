@@ -8,14 +8,21 @@ class USkillBase;
 class AAngryCoachCharacter;
 class UParticleSystemComponent;
 
-UCLASS(DisplayName = "악세서리", Description = "악세서리 액터입니다")
+struct FActiveParticle
+{
+    UParticleSystemComponent* Comp;
+    float TimeRemaining;
 
+};
+UCLASS(DisplayName = "악세서리", Description = "악세서리 액터입니다")
 class AAccessoryActor : public AActor
 {
 public:
     GENERATED_REFLECTION_BODY();
     AAccessoryActor();
 
+    TArray<FActiveParticle> ActiveParticles;
+    
     // === 컴포넌트 ===
     USceneComponent* SceneRoot;
     UStaticMeshComponent* AccessoryMesh;
@@ -24,10 +31,7 @@ public:
     UParticleSystemComponent* TryAttackParticle;
 
     // 타격 성공 Particle
-    UParticleSystemComponent* HitAttackParticle;
-
-    // 전기 타격 Particle (일회성 스폰용)
-    UParticleSystemComponent* ElectricHitParticle;
+    UParticleSystemComponent* HitAttackParticle; 
 
     // 기본 Particle
     UParticleSystemComponent* BaseEffectParticle;
@@ -57,7 +61,10 @@ public:
     void StopHitParticle();
 
     void SpawnHitParticleAtLocation(const FVector& Location);
-    void SpawnElectricHitParticleAtLocation(const FVector& Location);
+    
+
+    // Tick 오버라이드 (파티클 자동 종료용)
+    void Tick(float DeltaTime) override;
 
 protected:
     // 자식 클래스에서 호출하는 헬퍼 함수
@@ -67,6 +74,14 @@ protected:
 private:
     // 헬퍼 함수
     void SetAttackShapeNameAndAttach(const FName& Name);
+
+    // 파티클 자동 종료용 타이머
+    float HitParticleElapsedTime = 0.0f; 
+
+    float ElectricParticleElapsedTime = 0.0f;
+    bool bElectricParticleActive = false;
+
+    const float ParticleLifetime = 3.3f;  // 파티클 유지 시간 (초)
 
 protected:
     AAngryCoachCharacter* OwningCharacter = nullptr;
