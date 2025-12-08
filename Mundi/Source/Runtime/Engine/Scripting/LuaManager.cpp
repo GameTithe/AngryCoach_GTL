@@ -1741,38 +1741,17 @@ void FLuaManager::ExposeUIFunctions()
         // NOTE: sol::protected_function을 shared_ptr로 래핑하여 람다 캡처 시 수명 문제 해결
         "SetOnClick", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
         {
-            if (!Self)
-            {
-                UE_LOG("[UI] SetOnClick: Self is null!\n");
-                return;
-            }
+            if (!Self) return;
             auto* Button = dynamic_cast<UButtonWidget*>(Self->FindWidget(Name));
-            if (!Button)
-            {
-                UE_LOG("[UI] SetOnClick: Button '%s' not found!\n", Name.c_str());
-                return;
-            }
-            if (!Callback.valid())
-            {
-                UE_LOG("[UI] SetOnClick: Callback is not valid!\n");
-                return;
-            }
-
-            UE_LOG("[UI] SetOnClick: Successfully set callback for button '%s'\n", Name.c_str());
+            if (!Button) return;
+            if (!Callback.valid()) return;
 
             auto CallbackPtr = std::make_shared<sol::protected_function>(Callback);
-            auto ButtonName = Name;  // 로깅용 복사
-            Button->OnClick = [CallbackPtr, ButtonName]()
+            Button->OnClick = [CallbackPtr]()
             {
-                UE_LOG("[UI] Button '%s' OnClick triggered!\n", ButtonName.c_str());
                 if (CallbackPtr && CallbackPtr->valid())
                 {
-                    sol::protected_function_result result = (*CallbackPtr)();
-                    if (!result.valid())
-                    {
-                        sol::error err = result;
-                        UE_LOG("[UI] Button '%s' OnClick error: %s\n", ButtonName.c_str(), err.what());
-                    }
+                    (*CallbackPtr)();
                 }
             };
         },
@@ -1788,12 +1767,7 @@ void FLuaManager::ExposeUIFunctions()
                 {
                     if (CallbackPtr && CallbackPtr->valid())
                     {
-                        sol::protected_function_result result = (*CallbackPtr)();
-                        if (!result.valid())
-                        {
-                            sol::error err = result;
-                            UE_LOG("[UI] Button OnHoverStart error: %s\n", err.what());
-                        }
+                        (*CallbackPtr)();
                     }
                 };
             }
@@ -1810,12 +1784,7 @@ void FLuaManager::ExposeUIFunctions()
                 {
                     if (CallbackPtr && CallbackPtr->valid())
                     {
-                        sol::protected_function_result result = (*CallbackPtr)();
-                        if (!result.valid())
-                        {
-                            sol::error err = result;
-                            UE_LOG("[UI] Button OnHoverEnd error: %s\n", err.what());
-                        }
+                        (*CallbackPtr)();
                     }
                 };
             }

@@ -261,21 +261,13 @@ void UGameUIManager::Update(float DeltaTime)
     ProcessKeyboardInput();
 
     // 모든 캔버스 업데이트 (위젯 애니메이션 처리)
-    static int updateLogCount = 0;
     for (auto& Pair : Canvases)
     {
         if (Pair.second)
         {
-            if (updateLogCount < 5)
-            {
-                UE_LOG("[UI] GameUIManager::Update calling canvas %s update, dt=%.4f\n",
-                    Pair.first.c_str(), DeltaTime);
-            }
             Pair.second->Update(DeltaTime);
         }
     }
-    if (updateLogCount < 5 && !Canvases.empty())
-        updateLogCount++;
 }
 
 void UGameUIManager::BeginD2DDraw()
@@ -415,8 +407,6 @@ void UGameUIManager::RemoveCanvas(const std::string& Name)
 
 void UGameUIManager::RemoveAllCanvases()
 {
-    UE_LOG("[UI] RemoveAllCanvases: Removing %d canvases\n", (int)Canvases.size());
-
     // 먼저 모든 캔버스의 콜백을 정리 (Lua 상태 소멸 전 sol::protected_function 해제)
     // 이렇게 하면 캔버스/버튼 소멸 시 lua_unref 크래시 방지
     for (auto& Pair : Canvases)
@@ -430,7 +420,6 @@ void UGameUIManager::RemoveAllCanvases()
     Canvases.clear();
     SortedCanvases.clear();
     bCanvasesSortDirty = false;
-    UE_LOG("[UI] RemoveAllCanvases: Done\n");
 }
 
 void UGameUIManager::SetCanvasVisible(const std::string& Name, bool bVisible)
