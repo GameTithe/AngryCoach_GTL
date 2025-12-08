@@ -99,4 +99,6 @@ protected:
 	USound* Hit2Sound = nullptr;
 	USound* SkillSound = nullptr;
 	USound* DieSound = nullptr;
+
+	TArray<AActor*> HitActors;
 };

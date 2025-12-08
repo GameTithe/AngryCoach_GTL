@@ -19,8 +19,8 @@ ACharacter::ACharacter()
 	CapsuleComponent->SetTag("CharacterCollider");
 
 	SetRootComponent(CapsuleComponent);
-	CapsuleComponent->SetBlockComponent(false);
-	CapsuleComponent->SetGenerateOverlapEvents(true);
+	CapsuleComponent->SetBlockComponent(true);
+	CapsuleComponent->SetGenerateOverlapEvents(false);
 
 	if (SkeletalMeshComp)
 	{
