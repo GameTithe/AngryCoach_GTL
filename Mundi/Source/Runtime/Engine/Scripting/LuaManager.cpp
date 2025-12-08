@@ -879,11 +879,12 @@ FLuaManager::FLuaManager()
 
 FLuaManager::~FLuaManager()
 {
-    ShutdownBeforeLuaClose();
-
-    // Lua 상태 삭제 전에 UI 캔버스들의 Lua 콜백 정리
+    // Lua 상태 삭제 전에 UI 캔버스들의 Lua 콜백 정리 (가장 먼저!)
     // (버튼 콜백들이 sol::protected_function을 shared_ptr로 가지고 있음)
+    // ShutdownBeforeLuaClose()보다 먼저 호출해야 함
     UGameUIManager::Get().RemoveAllCanvases();
+
+    ShutdownBeforeLuaClose();
 
     if (Lua)
     {
