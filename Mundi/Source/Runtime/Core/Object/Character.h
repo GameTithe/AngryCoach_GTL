@@ -62,6 +62,7 @@ public:
 	float GetHealthPercent() const;
 	void UpdateCharacterState(float CurrentSpeedSq = 0.0f);
 	bool CanAttack();
+	virtual void HitReation();
 
 protected:
 	UCapsuleComponent* CapsuleComponent = nullptr;

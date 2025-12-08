@@ -27,6 +27,10 @@ protected:
 	// 카메라 위치 업데이트 (두 캐릭터 중심)
 	void UpdateCameraPosition(float DeltaTime);
 
+private:
+	void ProcessPlayer1Attack(float DeltaTime);
+	void ProcessPlayer2Attack(float DeltaTime);
+
 protected:
 	AAngryCoachCharacter* Player1 = nullptr;
 	AAngryCoachCharacter* Player2 = nullptr;

@@ -52,7 +52,10 @@ public:
 	void OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 	void OnHit(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult) override;
 
-	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;	
+	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
+
+	void HitReation() override;
+	void ClearState() override;
 
 private:
 	// 델리게이트 바인딩 헬퍼 함수
@@ -65,4 +68,6 @@ protected:
 	USkillComponent* SkillComponent = nullptr;
 	AAccessoryActor* CurrentAccessory = nullptr;
 	UShapeComponent* CachedAttackShape = nullptr;
+
+	UAnimMontage* HitReationMontage = nullptr;
 };

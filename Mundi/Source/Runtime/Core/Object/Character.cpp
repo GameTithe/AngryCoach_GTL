@@ -266,8 +266,12 @@ void ACharacter::UpdateCharacterState(float CurrentSpeedSq)
 
 bool ACharacter::CanAttack()
 {
-	return (CurrentState == ECharacterState::Attacking &&
-		CurrentState == ECharacterState::Walking &&
-		CurrentState == ECharacterState::Jumping &&
-		CurrentState == ECharacterState::Damaged);
+	return CurrentState != ECharacterState::Attacking &&
+		CurrentState != ECharacterState::Walking &&
+		CurrentState != ECharacterState::Jumping &&
+		CurrentState != ECharacterState::Damaged;
+}
+
+void ACharacter::HitReation()
+{
 }
