@@ -45,11 +45,11 @@ void UShapeComponent::OnTransformUpdated()
 
 void UShapeComponent::TickComponent(float DeltaSeconds)
 {
-    if (!bGenerateOverlapEvents || !bBlockComponent)
-    {
-        // Super::TickComponent(DeltaSeconds);
-        return;
-    }
+    // if (!bGenerateOverlapEvents || !bBlockComponent)
+    // {
+    //     // Super::TickComponent(DeltaSeconds);
+    //     return;
+    // }
 
     UWorld* World = GetWorld();
     if (!World)
@@ -101,18 +101,18 @@ void UShapeComponent::TickComponent(float DeltaSeconds)
                 }
             }
             
-            if (this->bGenerateOverlapEvents && Other->bGenerateOverlapEvents)
-            {                
-                if (Collision::CheckOverlap(this, Other))
+            if (this->bGenerateOverlapEvents /*&& Other->bGenerateOverlapEvents*/)
+            {
+                FHitResult HitResult;
+                if (/*Collision::CheckOverlap(this, Other)*/Collision::ComputePenetration(this, Other, HitResult))
                 {
-                    FHitResult HitResult;
                     HitResult.HitComponent = Other;
                     HitResult.HitActor = Other->GetOwner();
-                    HitResult.bBlockingHit = false;
-                    HitResult.ImpactPoint = this->GetWorldLocation();
-                    HitResult.ImpactNormal = FVector::Zero();
-                    
+                    // HitResult.bBlockingHit = false;
+                    // HitResult.ImpactPoint = this->GetWorldLocation();
+                    // HitResult.ImpactNormal = FVector::Zero();
                     PendingOverlaps.Add(HitResult);
+                    AddWorldOffset(-HitResult.ImpactNormal * HitResult.PenetrationDepth);
                 }
             }
         }
