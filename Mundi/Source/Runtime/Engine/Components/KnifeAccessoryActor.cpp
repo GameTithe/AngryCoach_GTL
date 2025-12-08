@@ -13,7 +13,7 @@ AKnifeAccessoryActor::AKnifeAccessoryActor()
 	ObjectName = "KnifeAccessory";
 	AccessoryName = "Knife";
 	Description = "Fast knife attacks";
-	AttachSocketName = FName("LEFT_KNIFE");
+	// AttachSocketName = FName("LEFT_KNIFE");
 
 	// 나이프 메시 로드 및 설정
 	if (AccessoryMesh)

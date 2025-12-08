@@ -47,35 +47,35 @@ void AAngryCoachCharacter::BeginPlay()
 		// 	PunchAccessory->GetRootComponent()->SetOwner(this);
 		// }
 
-		//AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
+		// AKnifeAccessoryActor* KnifeAccessory = GWorld->SpawnActor<AKnifeAccessoryActor>();
 		 
-		// FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-		// AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		 FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+		 AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		
+		 if (KnifeAccessory)
+		 {
+		 	EquipAccessory(KnifeAccessory);
+		
+		 	if (SkillComponent)
+		 	{
+		 		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+		 	}
+		 }
 		//
-		// if (KnifeAccessory)
+		// FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+		// AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+		//
+		// if (GorillaAccessory)
 		// {
-		// 	EquipAccessory(KnifeAccessory);
+		// 	EquipAccessory(GorillaAccessory);
 		//
 		// 	if (SkillComponent)
 		// 	{
-		// 		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+		// 		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
 		// 	}
+		// 	
+		// 	GorillaAccessory->GetRootComponent()->SetOwner(this);
 		// }
-
-		FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-		AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-
-		if (GorillaAccessory)
-		{
-			EquipAccessory(GorillaAccessory);
-		
-			if (SkillComponent)
-			{
-				SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
-			}
-			
-			GorillaAccessory->GetRootComponent()->SetOwner(this);
-		}
 	}
 }
 
