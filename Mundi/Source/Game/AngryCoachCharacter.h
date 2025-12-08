@@ -57,6 +57,7 @@ public:
 	float TakeDamage(float DamageAmount, const FHitResult& HitResult, AActor* Instigator) override;
 
 	void HitReation() override;
+	void Revive() override;  // 라운드 시작 시 캐릭터 복원 (Ragdoll 해제, collision 복원 등)
 	void ClearState() override;
 
 	void DoGuard();

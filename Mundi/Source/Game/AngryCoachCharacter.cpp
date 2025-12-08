@@ -523,6 +523,19 @@ void AAngryCoachCharacter::DelegateBindToCachedShape()
 	UE_LOG("Delegate Bind");
 }
 
+void AAngryCoachCharacter::Revive()
+{
+	// 부모 클래스의 Revive 호출 (체력/상태 리셋, Ragdoll 비활성화)
+	Super::Revive();
+
+	// CapsuleComponent collision 복원 (기본값으로)
+	// 참고: Character 생성자에서 SetBlockComponent(false), SetGenerateOverlapEvents(false)로 설정됨
+	// Revive에서는 필요에 따라 다시 설정
+	// CapsuleComponent는 기본적으로 collision이 꺼져있으므로 그대로 둠
+
+	UE_LOG("[AngryCoachCharacter] Revived! HP=%f", CurrentHealth);
+}
+
 void AAngryCoachCharacter::Die()
 {
 	// Ragdoll

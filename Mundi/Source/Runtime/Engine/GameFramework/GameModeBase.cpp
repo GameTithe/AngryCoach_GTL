@@ -56,6 +56,12 @@ void AGameModeBase::Tick(float DeltaTime)
 		return;
 	}
 
+	// GameOver 상태에서는 라운드 처리 안함
+	if (GameState->GetGameState() == EGameState::GameOver)
+	{
+		return;
+	}
+
 	// 인트로 컷신 업데이트
 	if (IntroCutscene && !IntroCutscene->IsFinished())
 	{

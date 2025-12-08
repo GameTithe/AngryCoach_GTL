@@ -547,6 +547,66 @@ FLuaManager::FLuaManager()
         }
     );
 
+    // 플레이어 체력 관련 함수들
+    SharedLib.set_function("GetP1HealthPercent",
+        []() -> float
+        {
+            if (!GWorld) return 0.0f;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->GetP1HealthPercent();
+            }
+            return 0.0f;
+        }
+    );
+
+    SharedLib.set_function("GetP2HealthPercent",
+        []() -> float
+        {
+            if (!GWorld) return 0.0f;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->GetP2HealthPercent();
+            }
+            return 0.0f;
+        }
+    );
+
+    SharedLib.set_function("IsP1Alive",
+        []() -> bool
+        {
+            if (!GWorld) return false;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->IsP1Alive();
+            }
+            return false;
+        }
+    );
+
+    SharedLib.set_function("IsP2Alive",
+        []() -> bool
+        {
+            if (!GWorld) return false;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                return GameMode->IsP2Alive();
+            }
+            return false;
+        }
+    );
+
+    SharedLib.set_function("ResetPlayersHP",
+        []()
+        {
+            if (!GWorld) return;
+            if (auto* GameMode = Cast<AAngryCoachGameMode>(GWorld->GetGameMode()))
+            {
+                GameMode->ResetPlayersHP();
+            }
+        }
+    );
+
     SharedLib.set_function("EndIntro",
         []()
         {
