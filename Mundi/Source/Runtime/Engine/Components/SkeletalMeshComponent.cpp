@@ -1,4 +1,4 @@
-﻿
+
 #include "pch.h"
 #include "SkeletalMeshComponent.h"
 #include "Source/Runtime/Engine/Animation/AnimDateModel.h"
@@ -1484,4 +1484,52 @@ void USkeletalMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandl
             InOutHandle["PhysicsAssetOverridePath"] = "";
         }
     }
+}
+
+void USkeletalMeshComponent::SetAnimGraph(UAnimationGraph* InAnimGraph)
+{
+	// Do nothing if the graph is the same
+	if (AnimGraph == InAnimGraph)
+	{
+		return;
+	}
+
+	AnimGraph = InAnimGraph;
+
+	// AnimInstance and StateMachine must be recreated and recompiled with the new graph
+	if (AnimInstance)
+	{
+		// Clean up old state machine
+		if (UAnimationStateMachine* OldStateMachine = AnimInstance->GetStateMachine())
+		{
+			DeleteObject(OldStateMachine);
+		}
+
+		// Create new state machine for the existing anim instance
+		UAnimationStateMachine* NewStateMachine = NewObject<UAnimationStateMachine>();
+		AnimInstance->SetStateMachine(NewStateMachine);
+
+		// Re-compile with the new graph
+		if (AnimGraph)
+		{
+			FAnimBlueprintCompiler::Compile(
+				AnimGraph,
+				AnimInstance,
+				NewStateMachine
+			);
+			UE_LOG("[USkeletalMeshComponent] Re-compiled AnimInstance with new AnimGraph.");
+		}
+		else
+		{
+			// If the new graph is null, the state machine will be empty.
+			UE_LOG("[USkeletalMeshComponent] Set a null AnimGraph. AnimInstance is now empty.");
+		}
+	}
+	else
+	{
+		// If there was no AnimInstance, we probably don't need to create one here at runtime.
+		// This case might need more logic depending on game design, but for now,
+		// we just set the graph pointer. The next BeginPlay or relevant event would init the instance.
+		UE_LOG("[USkeletalMeshComponent] SetAnimGraph called, but no AnimInstance exists yet.");
+	}
 }

@@ -11,4 +11,6 @@ public:
 	UGorillaHeavyAttackSkill();
 
 	virtual void Activate(AActor* Caster) override;
+private:
+	UAnimMontage* HumanMontage = nullptr;
 };
