@@ -35,6 +35,9 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 
 	// 게임플레이 입력이 비활성화된 경우 (UI 상태 등) 캐릭터 입력 처리 스킵
 	UInputManager& InputManager = UInputManager::GetInstance();
+
+	// 게임패드 자동 등록 (버튼 누르면 등록)
+	InputManager.TryRegisterGamepadFromInput();
 	if (!InputManager.IsGameplayInputEnabled())
 	{
 		// 카메라 위치는 계속 업데이트 (Select 화면에서도 카메라 동작 유지)

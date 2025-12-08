@@ -147,10 +147,26 @@ public:
 
     // === 게임패드 → 키보드 자동 매핑 ===
     // 활성화하면 게임패드 입력이 자동으로 키보드 입력으로 인식됨
-    // Gamepad 0 → Player 1 (WASD + 액션키)
-    // Gamepad 1 → Player 2 (화살표 + 액션키)
+    // 등록된 게임패드 인덱스 기반으로 매핑
     void SetGamepadToKeyboardMapping(bool bEnable) { bGamepadToKeyboardMapping = bEnable; }
     bool IsGamepadToKeyboardMappingEnabled() const { return bGamepadToKeyboardMapping; }
+
+    // === 플레이어-게임패드 동적 등록 ===
+    // "Press A to join" 방식으로 플레이어 등록
+    // 반환값: 등록 성공 여부
+    bool RegisterGamepadForPlayer(int PlayerIndex, int GamepadIndex);
+    void UnregisterGamepadForPlayer(int PlayerIndex);
+    void UnregisterAllGamepads();
+
+    // 등록된 게임패드 인덱스 조회 (-1이면 미등록)
+    int GetRegisteredGamepadForPlayer(int PlayerIndex) const;
+
+    // 해당 게임패드가 이미 등록되어 있는지 확인 (-1이면 미등록)
+    int GetPlayerForGamepad(int GamepadIndex) const;
+
+    // 버튼을 누른 게임패드를 자동으로 플레이어에 등록 (미등록 플레이어 우선)
+    // 반환값: 등록된 플레이어 인덱스 (-1이면 등록 실패 또는 입력 없음)
+    int TryRegisterGamepadFromInput();
 
     // 스틱 → 키 매핑 임계값 (기본 0.5)
     void SetStickToKeyThreshold(float Threshold) { StickToKeyThreshold = Threshold; }
@@ -236,6 +252,10 @@ private:
     // 게임패드 → 키보드 매핑 설정
     bool bGamepadToKeyboardMapping = true;  // 기본 활성화
     float StickToKeyThreshold = 0.5f;       // 스틱이 이 값 이상이면 키 입력으로 인식
+
+    // 플레이어별 등록된 게임패드 인덱스 (-1이면 미등록)
+    static constexpr int MaxPlayers = 2;
+    int RegisteredGamepads[MaxPlayers] = { -1, -1 };
 
     // 게임패드 입력이 특정 키에 매핑되는지 확인 (내부 헬퍼)
     bool IsGamepadMappedToKey(int KeyCode, bool bCheckPressed = false, bool bCheckReleased = false) const;
