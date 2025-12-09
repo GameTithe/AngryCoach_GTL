@@ -56,23 +56,6 @@ void UCapsuleComponent::OnRegister(UWorld* World)
     OnCreatePhysicsState(World);
 }
 
-void UCapsuleComponent::OnUnregister()
-{
-    // PhysX body 정리
-    if (BodyInstance)
-    {
-        UWorld* World = GetWorld();
-        if (World && World->GetPhysScene())
-        {
-            BodyInstance->Terminate(*World->GetPhysScene());
-        }
-        delete BodyInstance;
-        BodyInstance = nullptr;
-    }
-
-    Super::OnUnregister();
-}
-
 void UCapsuleComponent::OnCreatePhysicsState(UWorld* World)
 {
     if (!World)

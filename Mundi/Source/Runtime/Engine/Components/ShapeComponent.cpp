@@ -26,8 +26,27 @@ void UShapeComponent::BeginPlay()
 void UShapeComponent::OnRegister(UWorld* InWorld)
 {
     Super::OnRegister(InWorld);
-    
+
     GetWorldAABB();
+
+    // PhysX body 생성은 자식 클래스에서 크기 계산 후 호출
+}
+
+void UShapeComponent::OnUnregister()
+{
+    // PhysX body 정리
+    if (BodyInstance)
+    {
+        UWorld* World = GetWorld();
+        if (World && World->GetPhysScene())
+        {
+            BodyInstance->Terminate(*World->GetPhysScene());
+        }
+        delete BodyInstance;
+        BodyInstance = nullptr;
+    }
+
+    Super::OnUnregister();
 }
 
 void UShapeComponent::OnTransformUpdated()

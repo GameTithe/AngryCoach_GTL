@@ -5,9 +5,13 @@
 #include "Character.h"
 #include "SceneComponent.h"
 #include "CapsuleComponent.h"
+#include "PrimitiveComponent.h"
 #include "World.h"
 #include "Source/Runtime/Engine/Physics/PhysScene.h"
+#include "Source/Runtime/Engine/Physics/BodyInstance.h"
 #include "Source/Runtime/Engine/Collision/Collision.h"
+#include <PxPhysicsAPI.h>
+using namespace physx;
 
 UCharacterMovementComponent::UCharacterMovementComponent()
 {
@@ -471,23 +475,29 @@ bool UCharacterMovementComponent::SafeMoveUpdatedComponent(const FVector& Delta,
 		FVector SafeLocation = Start + Delta.GetNormalized() * SafeDistance;
 		UpdatedComponent->SetWorldLocation(SafeLocation);
 
-		// 다른 캐릭터와 충돌 시 밀어내기
-		if (OutHit.HitActor)
+		// 충돌한 물체 밀어내기 (동적 물체만)
+		if (OutHit.HitComponent)
 		{
-			if (ACharacter* OtherCharacter = Cast<ACharacter>(OutHit.HitActor))
+			UPrimitiveComponent* HitPrimitive = Cast<UPrimitiveComponent>(OutHit.HitComponent);
+			if (HitPrimitive && HitPrimitive->BodyInstance && HitPrimitive->BodyInstance->RigidActor)
 			{
-				// 밀어내기 방향 (내 이동 방향)
-				FVector PushDirection = Delta.GetNormalized();
-				PushDirection.Z = 0.0f; // 수평으로만 밀기
-				PushDirection = PushDirection.GetNormalized();
-
-				// 침투 깊이만큼 상대방 밀어내기
-				float PushDistance = FMath::Max(0.0f, Delta.Size() - SafeDistance);
-				FVector PushVector = PushDirection * PushDistance;
-
-				if (USceneComponent* OtherRoot = OtherCharacter->GetRootComponent())
+				// Kinematic body만 밀어내기 (Dynamic은 PhysX가 처리, Static은 밀면 안됨)
+				PxRigidDynamic* Dyn = HitPrimitive->BodyInstance->RigidActor->is<PxRigidDynamic>();
+				if (Dyn && (Dyn->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC))
 				{
-					OtherRoot->AddWorldOffset(PushVector);
+					// 밀어내기 방향 (내 이동 방향)
+					FVector PushDirection = Delta.GetNormalized();
+					PushDirection.Z = 0.0f; // 수평으로만 밀기
+					if (!PushDirection.IsZero())
+					{
+						PushDirection = PushDirection.GetNormalized();
+
+						// 침투 깊이만큼 상대방 밀어내기
+						float PushDistance = FMath::Max(0.0f, Delta.Size() - SafeDistance);
+						FVector PushVector = PushDirection * PushDistance;
+
+						OutHit.HitComponent->AddWorldOffset(PushVector);
+					}
 				}
 			}
 		}

@@ -53,22 +53,6 @@ void UBoxComponent::OnRegister(UWorld* InWorld)
 	OnCreatePhysicsState(InWorld);
 }
 
-void UBoxComponent::OnUnregister()
-{
-	if (BodyInstance)
-	{
-		UWorld* World = GetWorld();
-		if (World && World->GetPhysScene())
-		{
-			BodyInstance->Terminate(*World->GetPhysScene());
-		}
-		delete BodyInstance;
-		BodyInstance = nullptr;
-	}
-
-	Super::OnUnregister();
-}
-
 void UBoxComponent::OnCreatePhysicsState(UWorld* World)
 {
 	if (!World)

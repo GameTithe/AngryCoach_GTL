@@ -27,6 +27,7 @@ void USphereComponent::OnRegister(UWorld* InWorld)
         return;
     }
 
+
     if (AActor* Owner = GetOwner())
     {
         FAABB ActorBounds = Owner->GetBounds();
@@ -52,22 +53,6 @@ void USphereComponent::OnRegister(UWorld* InWorld)
 
     // PhysX body 생성
     OnCreatePhysicsState(InWorld);
-}
-
-void USphereComponent::OnUnregister()
-{
-    if (BodyInstance)
-    {
-        UWorld* World = GetWorld();
-        if (World && World->GetPhysScene())
-        {
-            BodyInstance->Terminate(*World->GetPhysScene());
-        }
-        delete BodyInstance;
-        BodyInstance = nullptr;
-    }
-
-    Super::OnUnregister();
 }
 
 void USphereComponent::OnCreatePhysicsState(UWorld* World)
