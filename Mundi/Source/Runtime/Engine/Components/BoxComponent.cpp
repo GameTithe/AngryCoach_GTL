@@ -66,6 +66,14 @@ void UBoxComponent::OnCreatePhysicsState(UWorld* World)
 		return;
 	}
 
+	// Extent가 유효하지 않으면 PhysX body 생성하지 않음
+	if (BoxExtent.X <= 0.0f || BoxExtent.Y <= 0.0f || BoxExtent.Z <= 0.0f)
+	{
+		UE_LOG("[BoxComponent] %s - Invalid extent (%.4f, %.4f, %.4f), skipping PhysX body creation",
+			ObjectName.ToString().c_str(), BoxExtent.X, BoxExtent.Y, BoxExtent.Z);
+		return;
+	}
+
 	if (BodyInstance)
 	{
 		BodyInstance->Terminate(*PhysScene);

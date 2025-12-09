@@ -29,6 +29,14 @@ void UShapeComponent::OnRegister(UWorld* InWorld)
 
     GetWorldAABB();
 
+    // 부착 정보 로그
+    FString ParentName = AttachParent ? AttachParent->ObjectName.ToString() : "None";
+    FString SocketName = AttachSocketName.ToString().empty() ? "None" : AttachSocketName.ToString();
+    FTransform WorldTM = GetWorldTransform();
+    UE_LOG("[ShapeComponent] %s OnRegister - Parent: %s, Socket: %s, WorldPos: (%.2f, %.2f, %.2f)",
+        ObjectName.ToString().c_str(), ParentName.c_str(), SocketName.c_str(),
+        WorldTM.Translation.X, WorldTM.Translation.Y, WorldTM.Translation.Z);
+
     // PhysX body 생성은 자식 클래스에서 크기 계산 후 호출
 }
 
@@ -70,7 +78,9 @@ void UShapeComponent::OnTransformUpdated()
         {
             FTransform WorldTransform = GetWorldTransform();
             PxTransform PxTM = ToPx(WorldTransform);
-            Dyn->setKinematicTarget(PxTM);
+            // setKinematicTarget은 다음 simulate()에서 적용됨
+            // setGlobalPose는 즉시 적용됨
+            Dyn->setGlobalPose(PxTM);
         }
     }
 

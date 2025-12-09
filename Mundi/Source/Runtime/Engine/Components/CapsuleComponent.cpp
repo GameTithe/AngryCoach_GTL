@@ -69,6 +69,14 @@ void UCapsuleComponent::OnCreatePhysicsState(UWorld* World)
         return;
     }
 
+    // Radius가 유효하지 않으면 PhysX body 생성하지 않음
+    if (CapsuleRadius <= 0.0f || CapsuleHalfHeight <= 0.0f)
+    {
+        UE_LOG("[CapsuleComponent] %s - Invalid size (R=%.4f, H=%.4f), skipping PhysX body creation",
+            ObjectName.ToString().c_str(), CapsuleRadius, CapsuleHalfHeight);
+        return;
+    }
+
     // 이미 있으면 정리
     if (BodyInstance)
     {

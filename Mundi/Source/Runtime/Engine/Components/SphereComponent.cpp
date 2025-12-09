@@ -68,6 +68,14 @@ void USphereComponent::OnCreatePhysicsState(UWorld* World)
         return;
     }
 
+    // Radius가 유효하지 않으면 PhysX body 생성하지 않음
+    if (SphereRadius <= 0.0f)
+    {
+        UE_LOG("[SphereComponent] %s - Invalid radius (%.4f), skipping PhysX body creation",
+            ObjectName.ToString().c_str(), SphereRadius);
+        return;
+    }
+
     if (BodyInstance)
     {
         BodyInstance->Terminate(*PhysScene);
