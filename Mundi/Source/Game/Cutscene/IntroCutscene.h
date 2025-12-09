@@ -12,6 +12,7 @@ typedef void (*FOnCutsceneFinished)(void* Owner);
  * @brief 인트로 컷신 페이즈
  *
  * 흐름: 1초 대기 → gtl Enter → gtl Exit → 1초 대기
+ *       → phys/dx/power Enter → phys/dx/power Exit → 1초 대기
  *       → team_label Enter → team_label Exit → 1초 대기
  *       → mb1~4 Enter(동시) → mb1~4 Exit(동시) → 완료
  */
@@ -22,6 +23,9 @@ enum class EIntroPhase : uint8_t
 	GtlEnter,          // gtl Enter 애니메이션
 	GtlExit,           // gtl Exit 애니메이션
 	GtlWait,           // 1초 대기
+	TechEnter,         // phys, dx, power Enter (동시)
+	TechExit,          // phys, dx, power Exit (동시)
+	TechWait,          // 1초 대기
 	TeamLabelEnter,    // team_label Enter
 	TeamLabelExit,     // team_label Exit
 	TeamLabelWait,     // 1초 대기
@@ -102,6 +106,7 @@ private:
 
 	// === 대기 시간 설정 (초) ===
 	static constexpr float WAIT_DURATION = 1.0f;          // 기본 대기 시간
+	static constexpr float TECH_WAIT_DURATION = 2.0f;     // Tech (phys, dx, power) 후 대기 시간
 	static constexpr float MEMBERS_WAIT_DURATION = 1.0f;  // Members Enter 후 대기 시간
 
 	// === 내부 함수 ===
@@ -135,6 +140,11 @@ private:
 	 * @brief 멤버 위젯들(mb1~4)의 애니메이션이 모두 완료되었는지 확인
 	 */
 	bool AreMembersAnimationDone();
+
+	/**
+	 * @brief Tech 위젯들(phys, dx, power)의 애니메이션이 모두 완료되었는지 확인
+	 */
+	bool AreTechAnimationDone();
 
 	/**
 	 * @brief 리소스 정리

@@ -363,6 +363,10 @@ void UEditorEngine::MainLoop()
 
 void UEditorEngine::Shutdown()
 {
+    // GameUI 캔버스 먼저 정리 (Lua 콜백 해제)
+    // World/Lua 상태 삭제 전에 해야 dangling reference 방지
+    UGameUIManager::Get().RemoveAllCanvases();
+
     // 월드부터 삭제해야 DeleteAll 때 문제가 없음
     for (FWorldContext WorldContext : WorldContexts)
     {

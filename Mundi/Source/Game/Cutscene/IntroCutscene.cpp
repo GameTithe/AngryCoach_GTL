@@ -7,19 +7,14 @@
 
 bool UIntroCutscene::Start()
 {
-	UE_LOG("[IntroCutscene] Starting...\n");
-
 	// UI 에셋 로드
 	Canvas = UGameUIManager::Get().LoadUIAsset("Data/UI/Intro.uiasset");
 	if (!Canvas)
 	{
-		UE_LOG("[IntroCutscene] ERROR: Failed to load Intro.uiasset\n");
 		// 로드 실패 시 바로 완료 처리
 		TransitionTo(EIntroPhase::Finished);
 		return false;
 	}
-
-	UE_LOG("[IntroCutscene] Intro.uiasset loaded successfully\n");
 
 	// 위젯 초기화
 	InitializeWidgets();
@@ -53,6 +48,13 @@ void UIntroCutscene::Update(float DeltaTime)
 	case EIntroPhase::GtlWait:
 		if (PhaseTime >= WAIT_DURATION)
 		{
+			TransitionTo(EIntroPhase::TechEnter);
+		}
+		break;
+
+	case EIntroPhase::TechWait:
+		if (PhaseTime >= TECH_WAIT_DURATION)
+		{
 			TransitionTo(EIntroPhase::TeamLabelEnter);
 		}
 		break;
@@ -76,6 +78,20 @@ void UIntroCutscene::Update(float DeltaTime)
 		if (IsWidgetAnimationDone("gtl"))
 		{
 			TransitionTo(EIntroPhase::GtlWait);
+		}
+		break;
+
+	case EIntroPhase::TechEnter:
+		if (AreTechAnimationDone())
+		{
+			TransitionTo(EIntroPhase::TechExit);
+		}
+		break;
+
+	case EIntroPhase::TechExit:
+		if (AreTechAnimationDone())
+		{
+			TransitionTo(EIntroPhase::TechWait);
 		}
 		break;
 
@@ -121,14 +137,12 @@ void UIntroCutscene::Update(float DeltaTime)
 
 void UIntroCutscene::Skip()
 {
-	UE_LOG("[IntroCutscene] Skipped!\n");
 	Cleanup();
 	TransitionTo(EIntroPhase::Finished);
 }
 
 void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 {
-	UE_LOG("[IntroCutscene] Phase: %d -> %d\n", static_cast<int>(CurrentPhase), static_cast<int>(NewPhase));
 
 	CurrentPhase = NewPhase;
 	PhaseTime = 0.0f;
@@ -137,7 +151,6 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 	switch (NewPhase)
 	{
 	case EIntroPhase::InitialWait:
-		UE_LOG("[IntroCutscene] Initial wait (1 sec)...\n");
 		break;
 
 	case EIntroPhase::GtlEnter:
@@ -151,7 +164,6 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 				if (UTextureWidget* TexWidget = dynamic_cast<UTextureWidget*>(SubUVWidget))
 				{
 					TexWidget->StartSubUVAnimation(10.0f, true);  // 10 FPS, 루프
-					UE_LOG("[IntroCutscene] SubUV animation started with gtl\n");
 				}
 			}
 		}
@@ -159,13 +171,11 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 
 	case EIntroPhase::GtlExit:
 		PlayWidgetExit("gtl");
-		// SubUV 위젯도 함께 Exit Animation (UI Editor에서 설정한 애니메이션 사용)
+		// SubUV 위젯도 함께 Exit Animation
 		PlayWidgetExit("SubUV");
-		UE_LOG("[IntroCutscene] SubUV exit animation started with gtl exit\n");
 		break;
 
 	case EIntroPhase::GtlWait:
-		UE_LOG("[IntroCutscene] GTL wait (1 sec)...\n");
 		// SubUV 위젯 숨기고 애니메이션 정지
 		if (Canvas)
 		{
@@ -177,7 +187,30 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 				}
 			}
 			Canvas->SetWidgetVisible("SubUV", false);
-			UE_LOG("[IntroCutscene] SubUV hidden after gtl exit\n");
+		}
+		break;
+
+	case EIntroPhase::TechEnter:
+		// phys, dx, power 동시 Enter
+		PlayWidgetEnter("phys");
+		PlayWidgetEnter("dx");
+		PlayWidgetEnter("power");
+		break;
+
+	case EIntroPhase::TechExit:
+		// phys, dx, power 동시 Exit
+		PlayWidgetExit("phys");
+		PlayWidgetExit("dx");
+		PlayWidgetExit("power");
+		break;
+
+	case EIntroPhase::TechWait:
+		// Tech 위젯들 숨기기
+		if (Canvas)
+		{
+			Canvas->SetWidgetVisible("phys", false);
+			Canvas->SetWidgetVisible("dx", false);
+			Canvas->SetWidgetVisible("power", false);
 		}
 		break;
 
@@ -186,11 +219,9 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 		break;
 
 	case EIntroPhase::TeamLabelExit:
-		//PlayWidgetExit("team_label");
 		break;
 
 	case EIntroPhase::TeamLabelWait:
-		UE_LOG("[IntroCutscene] TeamLabel wait (1 sec)...\n");
 		break;
 
 	case EIntroPhase::MembersEnter:
@@ -202,7 +233,6 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 		break;
 
 	case EIntroPhase::MembersWait:
-		UE_LOG("[IntroCutscene] Members wait (%.1f sec)...\n", MEMBERS_WAIT_DURATION);
 		break;
 
 	case EIntroPhase::MembersExit:
@@ -215,13 +245,9 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 		break;
 
 	case EIntroPhase::Finished:
-		// 완료
 		Cleanup();
-
-		// 콜백 호출
 		if (OnFinished)
 		{
-			UE_LOG("[IntroCutscene] Calling OnFinished callback\n");
 			OnFinished(Owner);
 		}
 		break;
@@ -233,16 +259,14 @@ void UIntroCutscene::TransitionTo(EIntroPhase NewPhase)
 
 void UIntroCutscene::InitializeWidgets()
 {
-	if (!Canvas)
-	{
-		return;
-	}
-
-	UE_LOG("[IntroCutscene] Initializing widgets (hiding all)\n");
+	if (!Canvas) return;
 
 	// 모든 위젯 숨기기
 	Canvas->SetWidgetVisible("gtl", false);
-	Canvas->SetWidgetVisible("SubUV", false);  // SubUV 위젯도 숨김
+	Canvas->SetWidgetVisible("SubUV", false);
+	Canvas->SetWidgetVisible("phys", false);
+	Canvas->SetWidgetVisible("dx", false);
+	Canvas->SetWidgetVisible("power", false);
 	Canvas->SetWidgetVisible("team_label", false);
 	Canvas->SetWidgetVisible("mb1", false);
 	Canvas->SetWidgetVisible("mb2", false);
@@ -252,40 +276,24 @@ void UIntroCutscene::InitializeWidgets()
 
 void UIntroCutscene::PlayWidgetEnter(const std::string& WidgetName)
 {
-	if (!Canvas)
-	{
-		return;
-	}
+	if (!Canvas) return;
 
 	UUIWidget* Widget = Canvas->FindWidget(WidgetName);
 	if (Widget)
 	{
 		Widget->bVisible = true;
 		Widget->PlayEnterAnimation();
-		UE_LOG("[IntroCutscene] Playing Enter animation: %s\n", WidgetName.c_str());
-	}
-	else
-	{
-		UE_LOG("[IntroCutscene] WARNING: Widget not found: %s\n", WidgetName.c_str());
 	}
 }
 
 void UIntroCutscene::PlayWidgetExit(const std::string& WidgetName)
 {
-	if (!Canvas)
-	{
-		return;
-	}
+	if (!Canvas) return;
 
 	UUIWidget* Widget = Canvas->FindWidget(WidgetName);
 	if (Widget)
 	{
 		Widget->PlayExitAnimation();
-		UE_LOG("[IntroCutscene] Playing Exit animation: %s\n", WidgetName.c_str());
-	}
-	else
-	{
-		UE_LOG("[IntroCutscene] WARNING: Widget not found: %s\n", WidgetName.c_str());
 	}
 }
 
@@ -313,16 +321,18 @@ bool UIntroCutscene::AreMembersAnimationDone()
 	       IsWidgetAnimationDone("mb4");
 }
 
+bool UIntroCutscene::AreTechAnimationDone()
+{
+	return IsWidgetAnimationDone("phys") &&
+	       IsWidgetAnimationDone("dx") &&
+	       IsWidgetAnimationDone("power");
+}
+
 void UIntroCutscene::Cleanup()
 {
-	UE_LOG("[IntroCutscene] Cleaning up...\n");
-
-	// 캔버스 제거
 	if (Canvas)
 	{
 		UGameUIManager::Get().RemoveCanvas(CanvasName);
 		Canvas = nullptr;
 	}
-
-	UE_LOG("[IntroCutscene] Cleanup complete\n");
 }

@@ -137,34 +137,15 @@ void AAngryCoachCharacter::DuplicateSubObjects()
 // ===== 몽타주 =====
 void AAngryCoachCharacter::PlayMontage(UAnimMontage* Montage)
 {
-	UE_LOG("[AAngryCoachCharacter::PlayMontage] Called!");
-
-	if (!Montage)
-	{
-		UE_LOG("[PlayMontage] Montage is null!");
-		return;
-	}
-	if (IsPlayingMontage())
-	{
-		UE_LOG("[PlayMontage] Montage is already playing!");
-		return;
-	}
+	if (!Montage) return;
+	if (IsPlayingMontage()) return;
 
 	USkeletalMeshComponent* MeshComp = GetMesh();
-	if (!MeshComp)
-	{
-		UE_LOG("[PlayMontage] MeshComp is null!");
-		return;
-	}
+	if (!MeshComp) return;
 
 	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-	if (!AnimInstance)
-	{
-		UE_LOG("[PlayMontage] AnimInstance is null! MeshComp: %p", MeshComp);
-		return;
-	}
+	if (!AnimInstance) return;
 
-	UE_LOG("[PlayMontage] Playing montage. AnimInstance: %p", AnimInstance);
 	AnimInstance->PlayMontage(Montage);
 }
 
@@ -194,7 +175,6 @@ bool AAngryCoachCharacter::PlayMontageSection(UAnimMontage* Montage, const FStri
 {
 	if (!Montage->HasSections())
 	{
-		UE_LOG("몽타주에 섹션이 없습니다.");
 		return false;
 	}
 
@@ -362,7 +342,6 @@ void AAngryCoachCharacter::AttackEnd()
             }
         }
         SetCurrentState(ECharacterState::Idle);
-        UE_LOG("attack end - %d shapes deactivated", CachedAttackShapes.Num());
     }
     // 공격 종료 시 슬롯 리셋
     CurrentAttackSlot = ESkillSlot::None;
@@ -377,7 +356,6 @@ void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiv
 
 	HitActors.Add(HitResult.HitActor);
 	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 1.0f, this, HitResult);
-	UE_LOG("OnBeginOverlap - Hit: %p", HitResult.HitActor);
 }
 
 void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
@@ -538,8 +516,6 @@ void AAngryCoachCharacter::Revive()
 	// 참고: Character 생성자에서 SetBlockComponent(false), SetGenerateOverlapEvents(false)로 설정됨
 	// Revive에서는 필요에 따라 다시 설정
 	// CapsuleComponent는 기본적으로 collision이 꺼져있으므로 그대로 둠
-
-	UE_LOG("[AngryCoachCharacter] Revived! HP=%f", CurrentHealth);
 }
 
 void AAngryCoachCharacter::Die()

@@ -192,10 +192,25 @@ void UGameUIManager::Shutdown()
 
 void UGameUIManager::SetViewport(float X, float Y, float Width, float Height)
 {
+    // 뷰포트 크기 변경 감지
+    bool bSizeChanged = (ViewportWidth != Width || ViewportHeight != Height);
+
     ViewportX = X;
     ViewportY = Y;
     ViewportWidth = Width;
     ViewportHeight = Height;
+
+    // 뷰포트 크기가 변경되면 모든 캔버스의 위젯 좌표/크기 재계산
+    if (bSizeChanged && Width > 0 && Height > 0)
+    {
+        for (auto& Pair : Canvases)
+        {
+            if (Pair.second)
+            {
+                Pair.second->RecalculateWidgetScales(Width, Height);
+            }
+        }
+    }
 }
 
 void UGameUIManager::ReleaseD2DResources()
@@ -246,21 +261,13 @@ void UGameUIManager::Update(float DeltaTime)
     ProcessKeyboardInput();
 
     // 모든 캔버스 업데이트 (위젯 애니메이션 처리)
-    static int updateLogCount = 0;
     for (auto& Pair : Canvases)
     {
         if (Pair.second)
         {
-            if (updateLogCount < 5)
-            {
-                UE_LOG("[UI] GameUIManager::Update calling canvas %s update, dt=%.4f\n",
-                    Pair.first.c_str(), DeltaTime);
-            }
             Pair.second->Update(DeltaTime);
         }
     }
-    if (updateLogCount < 5 && !Canvases.empty())
-        updateLogCount++;
 }
 
 void UGameUIManager::BeginD2DDraw()
@@ -387,17 +394,32 @@ bool UGameUIManager::IsValidCanvas(UUICanvas* Canvas) const
 
 void UGameUIManager::RemoveCanvas(const std::string& Name)
 {
+    // 캔버스 삭제 전 콜백 정리 (Lua 상태 소멸 전 sol::protected_function 해제)
+    auto it = Canvases.find(Name);
+    if (it != Canvases.end() && it->second)
+    {
+        it->second->ClearAllCallbacks();
+    }
+
     Canvases.erase(Name);
     bCanvasesSortDirty = true;
 }
 
 void UGameUIManager::RemoveAllCanvases()
 {
-    UE_LOG("[UI] RemoveAllCanvases: Removing %d canvases\n", (int)Canvases.size());
+    // 먼저 모든 캔버스의 콜백을 정리 (Lua 상태 소멸 전 sol::protected_function 해제)
+    // 이렇게 하면 캔버스/버튼 소멸 시 lua_unref 크래시 방지
+    for (auto& Pair : Canvases)
+    {
+        if (Pair.second)
+        {
+            Pair.second->ClearAllCallbacks();
+        }
+    }
+
     Canvases.clear();
     SortedCanvases.clear();
     bCanvasesSortDirty = false;
-    UE_LOG("[UI] RemoveAllCanvases: Done\n");
 }
 
 void UGameUIManager::SetCanvasVisible(const std::string& Name, bool bVisible)
@@ -458,6 +480,10 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
         UE_LOG("[UI] LoadUIAsset failed: Could not create canvas '%s'\n", assetName.c_str());
         return nullptr;
     }
+
+    // 캔버스에 디자인 해상도 저장 (런타임 리사이즈용)
+    canvas->DesignWidth = designWidth;
+    canvas->DesignHeight = designHeight;
 
     // 위젯 배열 읽기
     JSON widgetsArray;
@@ -647,9 +673,15 @@ UUICanvas* UGameUIManager::LoadUIAsset(const std::string& FilePath)
         // Z-Order 설정
         canvas->SetWidgetZOrder(widgetName.c_str(), zOrder);
 
-        // Animation 설정
+        // Animation 설정 및 디자인 좌표 저장
         if (UUIWidget* widget = canvas->FindWidget(widgetName.c_str()))
         {
+            // 디자인 좌표 저장 (런타임 리사이즈용)
+            widget->DesignX = rawX;
+            widget->DesignY = rawY;
+            widget->DesignWidth = rawW;
+            widget->DesignHeight = rawH;
+
             // Enter Animation
             JSON enterAnimObj;
             if (FJsonSerializer::ReadObject(widgetObj, "enterAnim", enterAnimObj, JSON(), false))

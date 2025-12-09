@@ -879,11 +879,12 @@ FLuaManager::FLuaManager()
 
 FLuaManager::~FLuaManager()
 {
-    ShutdownBeforeLuaClose();
-
-    // Lua 상태 삭제 전에 UI 캔버스들의 Lua 콜백 정리
+    // Lua 상태 삭제 전에 UI 캔버스들의 Lua 콜백 정리 (가장 먼저!)
     // (버튼 콜백들이 sol::protected_function을 shared_ptr로 가지고 있음)
+    // ShutdownBeforeLuaClose()보다 먼저 호출해야 함
     UGameUIManager::Get().RemoveAllCanvases();
+
+    ShutdownBeforeLuaClose();
 
     if (Lua)
     {
@@ -1740,38 +1741,17 @@ void FLuaManager::ExposeUIFunctions()
         // NOTE: sol::protected_function을 shared_ptr로 래핑하여 람다 캡처 시 수명 문제 해결
         "SetOnClick", [](UUICanvas* Self, const std::string& Name, sol::protected_function Callback)
         {
-            if (!Self)
-            {
-                UE_LOG("[UI] SetOnClick: Self is null!\n");
-                return;
-            }
+            if (!Self) return;
             auto* Button = dynamic_cast<UButtonWidget*>(Self->FindWidget(Name));
-            if (!Button)
-            {
-                UE_LOG("[UI] SetOnClick: Button '%s' not found!\n", Name.c_str());
-                return;
-            }
-            if (!Callback.valid())
-            {
-                UE_LOG("[UI] SetOnClick: Callback is not valid!\n");
-                return;
-            }
-
-            UE_LOG("[UI] SetOnClick: Successfully set callback for button '%s'\n", Name.c_str());
+            if (!Button) return;
+            if (!Callback.valid()) return;
 
             auto CallbackPtr = std::make_shared<sol::protected_function>(Callback);
-            auto ButtonName = Name;  // 로깅용 복사
-            Button->OnClick = [CallbackPtr, ButtonName]()
+            Button->OnClick = [CallbackPtr]()
             {
-                UE_LOG("[UI] Button '%s' OnClick triggered!\n", ButtonName.c_str());
                 if (CallbackPtr && CallbackPtr->valid())
                 {
-                    sol::protected_function_result result = (*CallbackPtr)();
-                    if (!result.valid())
-                    {
-                        sol::error err = result;
-                        UE_LOG("[UI] Button '%s' OnClick error: %s\n", ButtonName.c_str(), err.what());
-                    }
+                    (*CallbackPtr)();
                 }
             };
         },
@@ -1787,12 +1767,7 @@ void FLuaManager::ExposeUIFunctions()
                 {
                     if (CallbackPtr && CallbackPtr->valid())
                     {
-                        sol::protected_function_result result = (*CallbackPtr)();
-                        if (!result.valid())
-                        {
-                            sol::error err = result;
-                            UE_LOG("[UI] Button OnHoverStart error: %s\n", err.what());
-                        }
+                        (*CallbackPtr)();
                     }
                 };
             }
@@ -1809,15 +1784,30 @@ void FLuaManager::ExposeUIFunctions()
                 {
                     if (CallbackPtr && CallbackPtr->valid())
                     {
-                        sol::protected_function_result result = (*CallbackPtr)();
-                        if (!result.valid())
-                        {
-                            sol::error err = result;
-                            UE_LOG("[UI] Button OnHoverEnd error: %s\n", err.what());
-                        }
+                        (*CallbackPtr)();
                     }
                 };
             }
+        },
+
+        // ======== 포커스 관리 ========
+
+        // 이름으로 버튼에 포커스 설정
+        "SetFocusByName", [](UUICanvas* Self, const std::string& ButtonName)
+        {
+            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->SetFocusByName(ButtonName);
+        },
+
+        // 다음 버튼으로 포커스 이동 (아래/오른쪽)
+        "MoveFocusNext", [](UUICanvas* Self)
+        {
+            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->MoveFocusNext();
+        },
+
+        // 이전 버튼으로 포커스 이동 (위/왼쪽)
+        "MoveFocusPrev", [](UUICanvas* Self)
+        {
+            if (UGameUIManager::Get().IsValidCanvas(Self)) Self->MoveFocusPrev();
         }
     );
 

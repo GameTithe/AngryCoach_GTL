@@ -55,6 +55,10 @@ local p1HP = MAX_HP
 local p2HP = MAX_HP
 local currentRoundNumber = 0  -- 현재 라운드 번호
 
+-- Portrait 진동용 이전 체력 비율 저장
+local prevP1HealthRatio = 1.0
+local prevP2HealthRatio = 1.0
+
 -- ============================================
 -- 악세사리 선택 관련
 -- ============================================
@@ -97,6 +101,7 @@ end
 -- 라운드 시작 시 플레이어 체력 초기화
 function ResetPlayerHP()
     ResetPlayersHP()  -- C++ 함수 호출
+    ResetPrevHealthRatios()  -- Portrait 진동용 이전 체력 비율 리셋
     print("[GameMode] Player HP reset")
 end
 
@@ -235,6 +240,58 @@ function UpdateHealthBars()
     end
 
     return p1Ratio, p2Ratio
+end
+
+-- ============================================
+-- Portrait 진동 효과 (피격 시)
+-- 카메라 셰이크와 비슷하게 데미지에 비례한 진동
+-- ============================================
+
+-- 데미지 비율에 따른 Portrait 진동 강도 계산
+-- 카메라 셰이크: StartCameraShake(0.3, 0.3, 0.3, DamageAmount)
+-- DamageAmount: Light=5, Heavy=10, Skill=15
+-- damageRatio: 0.05 (5%), 0.10 (10%), 0.15 (15%) 등
+function GetPortraitShakeParams(damageRatio)
+    -- 데미지 비율을 실제 데미지 수치로 환산 (MAX_HP 기준)
+    local damageAmount = damageRatio * MAX_HP
+
+    -- 카메라 셰이크와 비슷한 비율로 설정 (민감도 5배)
+    -- 진동 강도: 데미지에 비례 (5~15 데미지 → 15~75 픽셀)
+    local intensity = math.max(15, math.min(75, damageAmount * 4.0))
+
+    -- 지속 시간: 카메라와 동일하게 0.3초 기본, 큰 데미지는 좀 더 길게
+    local duration = 0.3 + (damageAmount * 0.01)
+
+    -- 진동 빈도: 데미지에 비례 (카메라 셰이크처럼)
+    local frequency = math.max(10, math.min(25, damageAmount + 5))
+
+    return intensity, duration, frequency
+end
+
+-- Portrait 진동 트리거
+-- playerIndex: 1 = P1, 2 = P2
+-- damageRatio: 받은 데미지 비율 (0.0 ~ 1.0)
+function ShakePortraitOnDamage(playerIndex, damageRatio)
+    local canvas = UI.FindCanvas(battleUICanvasName)
+    if not canvas then return end
+
+    -- 최소 데미지 임계값 (너무 작은 데미지는 무시)
+    if damageRatio < 0.01 then return end
+
+    local widgetName = (playerIndex == 1) and "P1_Portrait" or "P2_Portrait"
+    local intensity, duration, frequency = GetPortraitShakeParams(damageRatio)
+
+    -- 진동 시작 (감쇠 적용)
+    canvas:ShakeWidget(widgetName, intensity, duration, frequency, true)
+
+    print(string.format("[GameMode] Portrait shake: P%d, damage=%.1f%%, intensity=%.1f, duration=%.2f, freq=%.1f",
+        playerIndex, damageRatio * 100, intensity, duration, frequency))
+end
+
+-- 이전 체력 비율 리셋 (라운드 시작 시 호출)
+function ResetPrevHealthRatios()
+    prevP1HealthRatio = 1.0
+    prevP2HealthRatio = 1.0
 end
 
 -- ============================================
@@ -523,10 +580,32 @@ function Tick(Delta)
 
             local canvas = UI.FindCanvas(battleUICanvasName)
 
-            -- 시간이 0이 되면 진동 중지
-            -- (EndRound는 C++에서 자동 호출됨 → OnRoundEnd에서 GameSet 처리)
+            -- 시간이 0이 되면 타임아웃 처리
             if currentTime <= 0 then
                 StopTimerShake(canvas)
+
+                -- 타임아웃 승자 결정 (체력 비율 비교)
+                local p1Ratio, p2Ratio = UpdateHealthBars()
+                bBattleActive = false
+
+                -- 타임아웃 슬로모션 효과 (5초간 10% 속도)
+                SetSlomo(5.0, 0.1)
+                print("[GameMode] Timeout Slow-motion activated! (5s at 10% speed)")
+
+                local winnerIndex
+                if p1Ratio > p2Ratio then
+                    winnerIndex = 0  -- P1 승리 (체력 더 많음)
+                    print("[GameMode] Timeout! P1 wins (P1:" .. p1Ratio .. " > P2:" .. p2Ratio .. ")")
+                elseif p2Ratio > p1Ratio then
+                    winnerIndex = 1  -- P2 승리 (체력 더 많음)
+                    print("[GameMode] Timeout! P2 wins (P2:" .. p2Ratio .. " > P1:" .. p1Ratio .. ")")
+                else
+                    winnerIndex = -1  -- 무승부 (체력 동일 → 승자 없이 다음 라운드)
+                    print("[GameMode] Timeout! Draw (P1:" .. p1Ratio .. " == P2:" .. p2Ratio .. ")")
+                end
+
+                EndRound(winnerIndex)
+                return  -- 이번 프레임에서 추가 처리 방지
             else
                 -- 타이머 진동 체크 (0초 제외)
                 local shakeIntensity = GetTimerShakeIntensity(currentTime)
@@ -550,10 +629,28 @@ function Tick(Delta)
         -- 체력바 UI 업데이트 및 KO 체크
         local p1Ratio, p2Ratio = UpdateHealthBars()
 
+        -- Portrait 진동 체크 (체력이 감소했을 때)
+        if p1Ratio < prevP1HealthRatio then
+            local damageRatio = prevP1HealthRatio - p1Ratio
+            ShakePortraitOnDamage(1, damageRatio)
+        end
+        if p2Ratio < prevP2HealthRatio then
+            local damageRatio = prevP2HealthRatio - p2Ratio
+            ShakePortraitOnDamage(2, damageRatio)
+        end
+
+        -- 이전 체력 비율 업데이트
+        prevP1HealthRatio = p1Ratio
+        prevP2HealthRatio = p2Ratio
+
         -- KO 체크 (한 쪽이라도 0 이하가 되면)
         if p1Ratio <= 0 or p2Ratio <= 0 then
             -- 전투 종료
             bBattleActive = false
+
+            -- KO 슬로모션 효과 (5초간 10% 속도)
+            SetSlomo(5.0, 0.1)
+            print("[GameMode] KO Slow-motion activated! (5s at 10% speed)")
 
             -- 타이머 진동 중지
             local canvas = UI.FindCanvas(battleUICanvasName)
@@ -809,6 +906,7 @@ function OnCharacterSelectStart()
 
         -- 초기 UI 상태 설정
         UpdateAccessoryUI(canvas)
+        UpdateReadyUI(canvas)  -- Ready 위젯 초기 상태 (둘 다 false이므로 숨김)
         canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
 
         -- 초기 악세사리 미리보기 장착
@@ -854,20 +952,15 @@ function UpdateAccessoryUI(canvas)
 end
 
 -- Ready 상태 UI 업데이트
+-- P1_Ready, P2_Ready 위젯의 visible = ready 상태
 function UpdateReadyUI(canvas)
     if not canvas then return end
 
-    -- P1 Ready 체크 표시 (SubUV Frame 1 = 체크됨)
-    canvas:SetWidgetVisible("p1_ready_check", p1Ready)
-    if p1Ready then
-        canvas:SetTextureSubUVFrame("p1_ready_check", 1)
-    end
+    -- P1 Ready 표시 (visible = p1Ready)
+    canvas:SetWidgetVisible("P1_Ready", p1Ready)
 
-    -- P2 Ready 체크 표시
-    canvas:SetWidgetVisible("p2_ready_check", p2Ready)
-    if p2Ready then
-        canvas:SetTextureSubUVFrame("p2_ready_check", 1)
-    end
+    -- P2 Ready 표시 (visible = p2Ready)
+    canvas:SetWidgetVisible("P2_Ready", p2Ready)
 
     -- 둘 다 Ready면 라운드 선택 화살표 표시 (인덱스에 따라)
     if p1Ready and p2Ready then
@@ -959,9 +1052,13 @@ function SelectionInputLoop()
             end
 
             -- P1 Ready: T키 (쿨다운 적용)
-            if p1ReadyCooldown <= 0 and InputManager:IsKeyPressed("T") then
+            local tKeyPressed = InputManager:IsKeyPressed("T")
+            local numpad1Pressed = InputManager:IsKeyPressed(97)
+
+            if p1ReadyCooldown <= 0 and tKeyPressed then
                 p1Ready = not p1Ready
-                print("[GameMode] P1 Ready: " .. tostring(p1Ready))
+                print("[GameMode] P1 Ready toggled by T key: " .. tostring(p1Ready))
+                print("[GameMode]   - T pressed: " .. tostring(tKeyPressed) .. ", Numpad1 pressed: " .. tostring(numpad1Pressed))
                 UpdateReadyUI(canvas)
                 p1ReadyCooldown = READY_COOLDOWN_FRAMES
 
@@ -973,9 +1070,10 @@ function SelectionInputLoop()
             end
 
             -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97, 쿨다운 적용)
-            if p2ReadyCooldown <= 0 and InputManager:IsKeyPressed(97) then
+            if p2ReadyCooldown <= 0 and numpad1Pressed then
                 p2Ready = not p2Ready
-                print("[GameMode] P2 Ready: " .. tostring(p2Ready))
+                print("[GameMode] P2 Ready toggled by Numpad1: " .. tostring(p2Ready))
+                print("[GameMode]   - T pressed: " .. tostring(tKeyPressed) .. ", Numpad1 pressed: " .. tostring(numpad1Pressed))
                 UpdateReadyUI(canvas)
                 p2ReadyCooldown = READY_COOLDOWN_FRAMES
 
@@ -1235,6 +1333,7 @@ function OnGameOver(result)
         canvas:SetWidgetVisible("P2", false)
         canvas:SetWidgetVisible("Win", false)
         canvas:SetWidgetVisible("restart_btn", false)
+        canvas:SetWidgetVisible("exit_btn", false)
 
         -- Ghost 위젯들도 숨김
         canvas:SetWidgetVisible("P1_ghost1", false)
@@ -1277,6 +1376,16 @@ function OnGameOver(result)
                 RestartMatch()
             end)
         end)
+
+        -- Exit 버튼 클릭 이벤트 설정
+        canvas:SetOnClick("exit_btn", function()
+            print("[GameMode] Exit button clicked from GameOver!")
+            StartCoroutine(function()
+                coroutine.yield(WaitForSeconds(0.01))
+                ExitGame()
+            end)
+        end)
+        print("[GameMode] exit_btn OnClick callback set")
 
         -- 커스텀 시퀀스 시작
         StartCoroutine(function()
@@ -1467,13 +1576,19 @@ function GameOverSequence(result)
     -- 잔상 효과 완료 대기
     coroutine.yield(WaitForSeconds(1.5))
 
-    -- 5. Restart 버튼 Enter Animation
+    -- 5. Restart/Exit 버튼 Enter Animation
     canvas = UI.FindCanvas(gameOverCanvasName)
     if not canvas then return end
 
     canvas:SetWidgetVisible("restart_btn", true)
+    canvas:SetWidgetVisible("exit_btn", true)
     canvas:PlayEnterAnimation("restart_btn")
-    print("[GameMode] restart_btn enter animation playing")
+    canvas:PlayEnterAnimation("exit_btn")
+    print("[GameMode] restart_btn/exit_btn enter animation playing")
+
+    -- 초기 포커스를 restart_btn에 설정 (키보드/게임패드 네비게이션용)
+    canvas:SetFocusByName("restart_btn")
+    print("[GameMode] Initial focus set to restart_btn")
 
     print("[GameMode] GameOver Sequence complete")
 
