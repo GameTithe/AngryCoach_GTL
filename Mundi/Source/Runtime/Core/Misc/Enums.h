@@ -293,6 +293,7 @@ enum class ECollisionState : uint8
 {
     NoCollision,
     QueryOnly,
+    PhysicsOnly,      // 래그돌용: Simulation만, Scene Query 제외
     QueryAndPhysics
 };
 

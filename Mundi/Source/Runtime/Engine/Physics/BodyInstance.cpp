@@ -47,6 +47,11 @@ static void SetShapeCollisionFlags(PxShape* Shape, UPrimitiveComponent* OwnerCom
             Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
             Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
             break;
+        case ECollisionState::PhysicsOnly:
+            // 래그돌용: 물리 시뮬레이션만, Scene Query(Sweep/Raycast) 제외
+            Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+            Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+            break;
         case ECollisionState::QueryAndPhysics:
             Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
             Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);

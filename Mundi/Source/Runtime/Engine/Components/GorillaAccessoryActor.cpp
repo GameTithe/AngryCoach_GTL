@@ -34,7 +34,7 @@ AGorillaAccessoryActor::AGorillaAccessoryActor()
 	// 양손 AttackShape 생성 (왼손/오른손)
 	if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
 	{
-		LeftShape->SphereRadius = 2.f;
+		LeftShape->SphereRadius = 0.5f;
 		LeftShape->SetGenerateOverlapEvents(false);
 		LeftShape->SetBlockComponent(false);
 		LeftShape->bOverrideCollisionSetting = true;
@@ -43,7 +43,7 @@ AGorillaAccessoryActor::AGorillaAccessoryActor()
 	}
 	if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
 	{
-		RightShape->SphereRadius = 2.f;
+		RightShape->SphereRadius = 0.5f;
 		RightShape->SetGenerateOverlapEvents(false);
 		RightShape->SetBlockComponent(false);
 		RightShape->bOverrideCollisionSetting = true;
@@ -72,7 +72,7 @@ void AGorillaAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandl
 		{
 			if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
 			{
-				LeftShape->SphereRadius = 2.f;
+				LeftShape->SphereRadius = 0.5f;
 				LeftShape->SetGenerateOverlapEvents(false);
 				LeftShape->SetBlockComponent(false);
 				LeftShape->bOverrideCollisionSetting = true;
@@ -80,7 +80,7 @@ void AGorillaAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandl
 			}
 			if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
 			{
-				RightShape->SphereRadius = 2.f;
+				RightShape->SphereRadius = 0.5f;
 				RightShape->SetGenerateOverlapEvents(false);
 				RightShape->SetBlockComponent(false);
 				RightShape->bOverrideCollisionSetting = true;
@@ -95,7 +95,7 @@ void AGorillaAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandl
 			{
 				if (USphereComponent* Sphere = Cast<USphereComponent>(Shape))
 				{
-					Sphere->SphereRadius = 2.f;
+					Sphere->SphereRadius = 0.5f;
 					Sphere->SetGenerateOverlapEvents(false);
 					Sphere->SetBlockComponent(false);
 					Sphere->bOverrideCollisionSetting = true;
@@ -124,7 +124,7 @@ void AGorillaAccessoryActor::DuplicateSubObjects()
 	{
 		if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
 		{
-			LeftShape->SphereRadius = 2.f;
+			LeftShape->SphereRadius = 0.5f;
 			LeftShape->SetGenerateOverlapEvents(false);
 			LeftShape->SetBlockComponent(false);
 			LeftShape->bOverrideCollisionSetting = true;
@@ -132,7 +132,7 @@ void AGorillaAccessoryActor::DuplicateSubObjects()
 		}
 		if (USphereComponent* RightShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightAttackShape"))))
 		{
-			RightShape->SphereRadius = 2.f;
+			RightShape->SphereRadius = 0.5f;
 			RightShape->SetGenerateOverlapEvents(false);
 			RightShape->SetBlockComponent(false);
 			RightShape->bOverrideCollisionSetting = true;
@@ -145,7 +145,7 @@ void AGorillaAccessoryActor::DuplicateSubObjects()
 		{
 			if (USphereComponent* Sphere = Cast<USphereComponent>(Shape))
 			{
-				Sphere->SphereRadius = 2.f;
+				Sphere->SphereRadius = 0.5f;
 				Sphere->SetGenerateOverlapEvents(false);
 				Sphere->SetBlockComponent(false);
 				Sphere->bOverrideCollisionSetting = true;

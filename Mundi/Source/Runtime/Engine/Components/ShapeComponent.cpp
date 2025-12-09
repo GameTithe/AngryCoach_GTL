@@ -6,6 +6,10 @@
 #include "BVHierarchy.h"
 #include "GameObject.h"
 #include "Collision.h"
+#include "../Physics/BodyInstance.h"
+#include "../Physics/PhysicsTypes.h"
+#include <PxPhysicsAPI.h>
+using namespace physx;
 
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 UShapeComponent::UShapeComponent() : bShapeIsVisible(true), bShapeHiddenInGame(true)
@@ -39,12 +43,31 @@ void UShapeComponent::OnTransformUpdated()
         }
     }
 
+    // PhysX body 위치 업데이트 (Kinematic)
+    if (BodyInstance && BodyInstance->RigidActor)
+    {
+        PxRigidDynamic* Dyn = BodyInstance->RigidActor->is<PxRigidDynamic>();
+        if (Dyn && (Dyn->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC))
+        {
+            FTransform WorldTransform = GetWorldTransform();
+            PxTransform PxTM = ToPx(WorldTransform);
+            Dyn->setKinematicTarget(PxTM);
+        }
+    }
+
     //UpdateOverlaps();
     Super::OnTransformUpdated();
 }
 
 void UShapeComponent::TickComponent(float DeltaSeconds)
 {
+    // PhysX body가 있으면 자체 충돌 시스템 스킵 (PhysX가 처리)
+    if (BodyInstance && BodyInstance->RigidActor)
+    {
+        Super::TickComponent(DeltaSeconds);
+        return;
+    }
+
     // if (!bGenerateOverlapEvents || !bBlockComponent)
     // {
     //     // Super::TickComponent(DeltaSeconds);

@@ -60,7 +60,7 @@ TArray<FAnimNotifyEvent>& UAnimSequenceBase::GetAnimNotifyEvents()
             if (dot != FString::npos) Just = Just.substr(0, dot);
             if (!Just.empty()) FileName = Just;
         }
-        const FString MetaPathUtf8 = NormalizePath(GDataDir + "/" + FileName + ".anim.json");
+        const FString MetaPathUtf8 = NormalizePath(GDataDir + "/AnimNotifies/" + FileName + ".anim.json");
         std::filesystem::path MetaPath(UTF8ToWide(MetaPathUtf8));
         std::error_code ec;
 
@@ -531,5 +531,5 @@ FString UAnimSequenceBase::GetNotifyPath() const
     FWideString WString = UTF8ToWide(NormalizePath(Path));
     std::filesystem::path p(WString);
     FString stem = WideToUTF8(p.stem().wstring());
-    return NormalizePath(GDataDir + "/" + stem + ".anim.json");
+    return NormalizePath(GDataDir + "/AnimNotifies/" + stem + ".anim.json");
 }

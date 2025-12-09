@@ -1,5 +1,11 @@
 ﻿#include "pch.h"
 #include "CapsuleComponent.h"
+#include "../Physics/BodyInstance.h"
+#include "../Physics/BodySetup.h"
+#include "../Physics/PhysScene.h"
+#include "World.h"
+#include <PxPhysicsAPI.h>
+using namespace physx;
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 //BEGIN_PROPERTIES(UCapsuleComponent)
 //MARK_AS_COMPONENT("캡슐 충돌 컴포넌트", "캡슐 모양의 충돌체를 생성하는 컴포넌트입니다.")
@@ -43,6 +49,86 @@ void UCapsuleComponent::OnRegister(UWorld* World)
 
             CapsuleHalfHeight = LocalHalfHeight;
             CapsuleRadius = FMath::Max(LocalRadiusX, LocalRadiusY);
+        }
+    }
+
+    // PhysX body 생성
+    OnCreatePhysicsState(World);
+}
+
+void UCapsuleComponent::OnUnregister()
+{
+    // PhysX body 정리
+    if (BodyInstance)
+    {
+        UWorld* World = GetWorld();
+        if (World && World->GetPhysScene())
+        {
+            BodyInstance->Terminate(*World->GetPhysScene());
+        }
+        delete BodyInstance;
+        BodyInstance = nullptr;
+    }
+
+    Super::OnUnregister();
+}
+
+void UCapsuleComponent::OnCreatePhysicsState(UWorld* World)
+{
+    if (!World)
+    {
+        return;
+    }
+
+    FPhysScene* PhysScene = World->GetPhysScene();
+    if (!PhysScene)
+    {
+        return;
+    }
+
+    // 이미 있으면 정리
+    if (BodyInstance)
+    {
+        BodyInstance->Terminate(*PhysScene);
+        delete BodyInstance;
+        BodyInstance = nullptr;
+    }
+
+    // BodySetup 생성 (Capsule용)
+    UBodySetup* CapsuleBodySetup = NewObject<UBodySetup>();
+    if (!CapsuleBodySetup)
+    {
+        return;
+    }
+
+    // Capsule shape 추가
+    FKCapsuleElem CapsuleElem;
+    CapsuleElem.Center = FVector::Zero();
+    CapsuleElem.Radius = CapsuleRadius;
+    CapsuleElem.HalfLength = FMath::Max(0.0f, CapsuleHalfHeight - CapsuleRadius);
+    CapsuleElem.Rotation = FQuat::Identity();
+    CapsuleBodySetup->AddCapsule(CapsuleElem);
+
+    // CollisionState 설정
+    CapsuleBodySetup->CollisionState = CollisionEnabled;
+
+    // BodyInstance 생성
+    BodyInstance = new FBodyInstance();
+    BodyInstance->OwnerComponent = this;
+    BodyInstance->BodySetup = CapsuleBodySetup;
+
+    // Dynamic body로 초기화 (Kinematic으로 사용)
+    FTransform WorldTransform = GetWorldTransform();
+    float Mass = 10.0f; // 기본 질량
+
+    BodyInstance->InitDynamic(*PhysScene, WorldTransform, Mass, WorldTransform.Scale3D, 0);
+
+    // Kinematic으로 설정 (캐릭터 이동은 직접 제어)
+    if (BodyInstance->RigidActor)
+    {
+        if (PxRigidDynamic* Dyn = BodyInstance->RigidActor->is<PxRigidDynamic>())
+        {
+            Dyn->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
         }
     }
 }

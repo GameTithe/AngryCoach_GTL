@@ -2,6 +2,12 @@
 #include "SphereComponent.h"
 #include "Renderer.h"
 #include "Actor.h"
+#include "../Physics/BodyInstance.h"
+#include "../Physics/BodySetup.h"
+#include "../Physics/PhysScene.h"
+#include "World.h"
+#include <PxPhysicsAPI.h>
+using namespace physx;
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 USphereComponent::USphereComponent()
 {
@@ -16,6 +22,8 @@ void USphereComponent::OnRegister(UWorld* InWorld)
     constexpr float DefaultRadius = 0.5f;
     if (FMath::Abs(SphereRadius - DefaultRadius) > 1e-6f)
     {
+        // PhysX body 생성 후 리턴
+        OnCreatePhysicsState(InWorld);
         return;
     }
 
@@ -40,6 +48,76 @@ void USphereComponent::OnRegister(UWorld* InWorld)
         float LocalRadiusZ = S.Z > Eps ? WorldHalfExtent.Z / S.Z : WorldHalfExtent.Z;
 
         SphereRadius = FMath::Max(LocalRadiusX, FMath::Max(LocalRadiusY, LocalRadiusZ));
+    }
+
+    // PhysX body 생성
+    OnCreatePhysicsState(InWorld);
+}
+
+void USphereComponent::OnUnregister()
+{
+    if (BodyInstance)
+    {
+        UWorld* World = GetWorld();
+        if (World && World->GetPhysScene())
+        {
+            BodyInstance->Terminate(*World->GetPhysScene());
+        }
+        delete BodyInstance;
+        BodyInstance = nullptr;
+    }
+
+    Super::OnUnregister();
+}
+
+void USphereComponent::OnCreatePhysicsState(UWorld* World)
+{
+    if (!World)
+    {
+        return;
+    }
+
+    FPhysScene* PhysScene = World->GetPhysScene();
+    if (!PhysScene)
+    {
+        return;
+    }
+
+    if (BodyInstance)
+    {
+        BodyInstance->Terminate(*PhysScene);
+        delete BodyInstance;
+        BodyInstance = nullptr;
+    }
+
+    UBodySetup* SphereBodySetup = NewObject<UBodySetup>();
+    if (!SphereBodySetup)
+    {
+        return;
+    }
+
+    FKSphereElem SphereElem;
+    SphereElem.Center = FVector::Zero();
+    SphereElem.Radius = SphereRadius;
+    SphereBodySetup->AddSphere(SphereElem);
+
+    SphereBodySetup->CollisionState = CollisionEnabled;
+
+    BodyInstance = new FBodyInstance();
+    BodyInstance->OwnerComponent = this;
+    BodyInstance->BodySetup = SphereBodySetup;
+
+    FTransform WorldTransform = GetWorldTransform();
+    float Mass = 10.0f;
+
+    BodyInstance->InitDynamic(*PhysScene, WorldTransform, Mass, WorldTransform.Scale3D, 0);
+
+    if (BodyInstance->RigidActor)
+    {
+        if (PxRigidDynamic* Dyn = BodyInstance->RigidActor->is<PxRigidDynamic>())
+        {
+            Dyn->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+        }
     }
 }
 

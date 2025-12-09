@@ -1447,9 +1447,10 @@ void SSkeletalMeshViewerWindow::OnRender()
                     static const char* Items[] = {
                         "NoCollision",
                         "QueryOnly (Trigger)",
+                        "PhysicsOnly (Ragdoll)",
                         "Query + Physics",
                     };
-                    bool bChanged = ImGui::Combo("Collision Settings", &CurrentIndex, Items, 3);
+                    bool bChanged = ImGui::Combo("Collision Settings", &CurrentIndex, Items, 4);
                     if (bChanged)
                     {
                         Body->CollisionState = static_cast<ECollisionState>(CurrentIndex);
