@@ -2555,6 +2555,20 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
 
             ActiveState->bBoneLinesDirty = true;
         }
+
+        // 소켓에 붙은 프리뷰 메시들의 트랜스폼 업데이트
+        for (UStaticMeshComponent* PreviewMesh : ActiveState->SpawnedPreviewMeshes)
+        {
+            if (!PreviewMesh) continue;
+
+            FName SocketName = PreviewMesh->GetAttachSocketName();
+            if (!SocketName.IsValid()) continue;
+
+            FTransform SocketTransform = SkeletalMeshComponent->GetSocketTransform(SocketName);
+            FTransform LocalTransform(PreviewMesh->GetRelativeLocation(), PreviewMesh->GetRelativeRotation(), PreviewMesh->GetRelativeScale());
+            FTransform WorldTransform = SocketTransform.GetWorldTransform(LocalTransform);
+            PreviewMesh->SetWorldTransform(WorldTransform);
+        }
     }
 
     if (ActiveState->World)
