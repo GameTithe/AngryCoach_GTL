@@ -80,7 +80,7 @@ public:
     void DuplicateSubObjects() override;
 
     // Overlap event generation toggle API
-    void SetGenerateOverlapEvents(bool bEnable) { bGenerateOverlapEvents = bEnable; }
+    void SetGenerateOverlapEvents(bool bEnable) {bGenerateOverlapEvents = bEnable; } ;
     bool GetGenerateOverlapEvents() const { return bGenerateOverlapEvents; }
 
     void SetBlockComponent(bool bEnable) { bBlockComponent = bEnable; }
