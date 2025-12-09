@@ -118,7 +118,8 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 	bool bIsYKeyDown = InputManager.IsKeyDown('Y');
 	if (Player1->IsGuard())
 	{
-		if (!bIsTKeyDown || !bIsYKeyDown)
+		// 두 버튼 모두 떼야 가드 해제 (|| → &&)
+		if (!bIsTKeyDown && !bIsYKeyDown)
 		{
 			Player1->StopGuard();
 		}
@@ -161,8 +162,8 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		FQuat NewRotation = FQuat::Slerp(CurrentRotation, TargetRotation, FMath::Clamp(DeltaTime * 10.0f, 0.0f, 1.0f));
 		Player1->SetActorRotation(NewRotation);
 
-		// 이동 적용
-		Player1->AddMovementInput(WorldDir * (Player1->GetVelocity() * DeltaTime));
+		// 이동 적용 (GetVelocity는 속도 크기, DeltaTime은 AddMovementInput 내부에서 처리)
+		Player1->AddMovementInput(WorldDir * Player1->GetVelocity());
 	}
 
 	// I - 점프
@@ -187,7 +188,8 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	bool bIsNum2KeyDown = InputManager.IsKeyDown(VK_NUMPAD2);
 	if (Player2->IsGuard())
 	{
-		if (!bIsNum1KeyDown || !bIsNum2KeyDown)
+		// 두 버튼 모두 떼야 가드 해제 (|| → &&)
+		if (!bIsNum1KeyDown && !bIsNum2KeyDown)
 		{
 			Player2->StopGuard();
 		}
@@ -218,8 +220,8 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 		FQuat NewRotation = FQuat::Slerp(CurrentRotation, TargetRotation, FMath::Clamp(DeltaTime * 10.0f, 0.0f, 1.0f));
 		Player2->SetActorRotation(NewRotation);
 
-		// 이동 적용
-		Player2->AddMovementInput(WorldDir * (Player2->GetVelocity() * DeltaTime));
+		// 이동 적용 (GetVelocity는 속도 크기, DeltaTime은 AddMovementInput 내부에서 처리)
+		Player2->AddMovementInput(WorldDir * Player2->GetVelocity());
 	}
 
 	// Numpad6 - 점프

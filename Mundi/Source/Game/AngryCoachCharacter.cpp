@@ -361,7 +361,7 @@ void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiv
 	}
 
 	HitActors.Add(HitResult.HitActor);
-	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, 1.0f, this, HitResult);
+	float AppliedDamage = UGameplayStatics::ApplyDamage(HitResult.HitActor, BaseDamage, this, HitResult);
 }
 
 void AAngryCoachCharacter::OnEndOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
