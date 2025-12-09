@@ -301,7 +301,10 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
         }
     }
 
-    PrevAnimationTime = CurrentAnimationTime; 
+    // 소켓에 붙은 자식 컴포넌트들의 PhysX body 위치 업데이트
+    UpdateSocketAttachedComponents();
+
+    PrevAnimationTime = CurrentAnimationTime;
 }
 
 void USkeletalMeshComponent::EndPlay()
@@ -1032,6 +1035,24 @@ void USkeletalMeshComponent::GetAllSocketNames(TArray<FName>& OutSocketNames) co
     for (const auto& Socket : Skeleton.Sockets)
     {
         OutSocketNames.Add(FName(Socket.SocketName));
+    }
+}
+
+void USkeletalMeshComponent::UpdateSocketAttachedComponents()
+{
+    // 소켓에 붙은 자식 컴포넌트들의 OnTransformUpdated 호출
+    for (USceneComponent* Child : GetAttachChildren())
+    {
+        if (!Child)
+        {
+            continue;
+        }
+
+        // 소켓에 붙어있는 자식만 업데이트
+        if (!Child->GetAttachSocketName().ToString().empty())
+        {
+            Child->OnTransformUpdated();
+        }
     }
 }
 

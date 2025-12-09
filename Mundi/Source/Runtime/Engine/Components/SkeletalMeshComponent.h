@@ -322,6 +322,11 @@ public:
      */
     void GetAllSocketNames(TArray<FName>& OutSocketNames) const;
 
+    /**
+     * @brief 소켓에 붙은 자식 컴포넌트들의 transform 업데이트
+     */
+    void UpdateSocketAttachedComponents();
+
 private:
     UPhysicsAsset*   PhysicsAsset = nullptr;   // 이 메쉬에 쓸 물리 에셋 (콜라이더/조인트 정의)
     UPhysicsAsset*   PhysicsAssetOverride = nullptr; // Instance-level override asset (if any)
