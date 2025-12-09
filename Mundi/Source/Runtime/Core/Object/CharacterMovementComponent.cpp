@@ -479,10 +479,11 @@ bool UCharacterMovementComponent::SafeMoveUpdatedComponent(const FVector& Delta,
 		if (OutHit.HitComponent)
 		{
 			UPrimitiveComponent* HitPrimitive = Cast<UPrimitiveComponent>(OutHit.HitComponent);
-			if (HitPrimitive && HitPrimitive->BodyInstance && HitPrimitive->BodyInstance->RigidActor)
+			FBodyInstance* HitBodyInstance = HitPrimitive ? HitPrimitive->GetBodyInstance() : nullptr;
+			if (HitBodyInstance && HitBodyInstance->RigidActor)
 			{
 				// Kinematic body만 밀어내기 (Dynamic은 PhysX가 처리, Static은 밀면 안됨)
-				PxRigidDynamic* Dyn = HitPrimitive->BodyInstance->RigidActor->is<PxRigidDynamic>();
+				PxRigidDynamic* Dyn = HitBodyInstance->RigidActor->is<PxRigidDynamic>();
 				if (Dyn && (Dyn->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC))
 				{
 					// 밀어내기 방향 (내 이동 방향)

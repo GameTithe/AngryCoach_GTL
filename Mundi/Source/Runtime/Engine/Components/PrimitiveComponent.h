@@ -107,6 +107,9 @@ public:
 
     virtual void OnCreatePhysicsState();
 
+    // ───── Physics Body 접근 ────────────────────────────
+    FBodyInstance* GetBodyInstance() const { return BodyInstance; }
+
     DECLARE_DELEGATE(OnComponentBeginOverlap, UPrimitiveComponent*, UPrimitiveComponent*, const FHitResult&);    
     DECLARE_DELEGATE(OnComponentEndOverlap, UPrimitiveComponent*, UPrimitiveComponent*, const FHitResult&);    
     DECLARE_DELEGATE(OnComponentHit, UPrimitiveComponent*, UPrimitiveComponent*, const FHitResult&);    
