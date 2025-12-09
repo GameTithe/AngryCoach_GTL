@@ -470,6 +470,28 @@ bool UCharacterMovementComponent::SafeMoveUpdatedComponent(const FVector& Delta,
 		float SafeDistance = FMath::Max(0.0f, OutHit.Distance - SkinWidth);
 		FVector SafeLocation = Start + Delta.GetNormalized() * SafeDistance;
 		UpdatedComponent->SetWorldLocation(SafeLocation);
+
+		// 다른 캐릭터와 충돌 시 밀어내기
+		if (OutHit.HitActor)
+		{
+			if (ACharacter* OtherCharacter = Cast<ACharacter>(OutHit.HitActor))
+			{
+				// 밀어내기 방향 (내 이동 방향)
+				FVector PushDirection = Delta.GetNormalized();
+				PushDirection.Z = 0.0f; // 수평으로만 밀기
+				PushDirection = PushDirection.GetNormalized();
+
+				// 침투 깊이만큼 상대방 밀어내기
+				float PushDistance = FMath::Max(0.0f, Delta.Size() - SafeDistance);
+				FVector PushVector = PushDirection * PushDistance;
+
+				if (USceneComponent* OtherRoot = OtherCharacter->GetRootComponent())
+				{
+					OtherRoot->AddWorldOffset(PushVector);
+				}
+			}
+		}
+
 		return false;
 	}
 	else

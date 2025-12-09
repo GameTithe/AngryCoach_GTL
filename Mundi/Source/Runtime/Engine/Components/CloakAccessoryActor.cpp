@@ -45,7 +45,7 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 	// 양손/양발 AttackShape 생성
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
 	{
-		Shape->SphereRadius = 0.5f;
+		Shape->SphereRadius = 0.51f;
 		Shape->SetGenerateOverlapEvents(false);
 		Shape->SetBlockComponent(false);
 		Shape->bOverrideCollisionSetting = true;
@@ -54,7 +54,7 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 	}
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
 	{
-		Shape->SphereRadius = 0.5f;
+		Shape->SphereRadius = 0.51f;
 		Shape->SetGenerateOverlapEvents(false);
 		Shape->SetBlockComponent(false);
 		Shape->bOverrideCollisionSetting = true;
@@ -63,7 +63,7 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 	}
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
 	{
-		Shape->SphereRadius = 0.5f;
+		Shape->SphereRadius = 0.51f;
 		Shape->SetGenerateOverlapEvents(false);
 		Shape->SetBlockComponent(false);
 		Shape->bOverrideCollisionSetting = true;
@@ -72,7 +72,7 @@ ACloakAccessoryActor::ACloakAccessoryActor()
 	}
 	if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
 	{
-		Shape->SphereRadius = 0.5f;
+		Shape->SphereRadius = 0.51f;
 		Shape->SetGenerateOverlapEvents(false);
 		Shape->SetBlockComponent(false);
 		Shape->bOverrideCollisionSetting = true;
@@ -249,7 +249,7 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		{
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
 			{
-				Shape->SphereRadius = 0.5f;
+				Shape->SphereRadius = 0.51f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
 				Shape->bOverrideCollisionSetting = true;
@@ -257,7 +257,7 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
 			{
-				Shape->SphereRadius = 0.5f;
+				Shape->SphereRadius = 0.51f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
 				Shape->bOverrideCollisionSetting = true;
@@ -265,7 +265,7 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
 			{
-				Shape->SphereRadius = 0.5f;
+				Shape->SphereRadius = 0.51f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
 				Shape->bOverrideCollisionSetting = true;
@@ -273,7 +273,7 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			}
 			if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
 			{
-				Shape->SphereRadius = 0.5f;
+				Shape->SphereRadius = 0.51f;
 				Shape->SetGenerateOverlapEvents(false);
 				Shape->SetBlockComponent(false);
 				Shape->bOverrideCollisionSetting = true;
@@ -288,7 +288,7 @@ void ACloakAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			{
 				if (USphereComponent* Sphere = Cast<USphereComponent>(Shape))
 				{
-					Sphere->SphereRadius = 0.5f;
+					Sphere->SphereRadius = 0.51f;
 					Sphere->SetGenerateOverlapEvents(false);
 					Sphere->SetBlockComponent(false);
 					Sphere->bOverrideCollisionSetting = true;
@@ -334,7 +334,7 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 	{
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftHandAttackShape"))))
 		{
-			Shape->SphereRadius = 0.5f;
+			Shape->SphereRadius = 0.51f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
 			Shape->bOverrideCollisionSetting = true;
@@ -342,7 +342,7 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightHandAttackShape"))))
 		{
-			Shape->SphereRadius = 0.5f;
+			Shape->SphereRadius = 0.51f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
 			Shape->bOverrideCollisionSetting = true;
@@ -350,7 +350,7 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftFootAttackShape"))))
 		{
-			Shape->SphereRadius = 0.5f;
+			Shape->SphereRadius = 0.51f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
 			Shape->bOverrideCollisionSetting = true;
@@ -358,7 +358,7 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 		}
 		if (USphereComponent* Shape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("RightFootAttackShape"))))
 		{
-			Shape->SphereRadius = 0.5f;
+			Shape->SphereRadius = 0.51f;
 			Shape->SetGenerateOverlapEvents(false);
 			Shape->SetBlockComponent(false);
 			Shape->bOverrideCollisionSetting = true;
@@ -371,7 +371,7 @@ void ACloakAccessoryActor::DuplicateSubObjects()
 		{
 			if (USphereComponent* Sphere = Cast<USphereComponent>(Shape))
 			{
-				Sphere->SphereRadius = 0.5f;
+				Sphere->SphereRadius = 0.51f;
 				Sphere->SetGenerateOverlapEvents(false);
 				Sphere->SetBlockComponent(false);
 				Sphere->bOverrideCollisionSetting = true;
