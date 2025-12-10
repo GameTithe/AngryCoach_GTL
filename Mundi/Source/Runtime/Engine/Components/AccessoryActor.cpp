@@ -3,6 +3,7 @@
 #include "SceneComponent.h"
 #include "StaticMeshComponent.h"
 #include "ParticleSystemComponent.h"
+#include "Source/Runtime/Engine/Particle/ParticleSystem.h"
 #include "AngryCoachCharacter.h"
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
@@ -40,6 +41,11 @@ AAccessoryActor::AAccessoryActor()
 	BaseEffectParticle->ObjectName = FName("BaseEffectParticle");
 	BaseEffectParticle->SetupAttachment(RootComponent);
 
+	SkillEffectParticle = CreateDefaultSubobject<UParticleSystemComponent>("SkillEffectParticle");
+	SkillEffectParticle->ObjectName = FName("SkillEffectParticle");
+	SkillEffectParticle->SetupAttachment(RootComponent);
+	SkillEffectParticle->bAutoActivate = false;
+
 	// 악세서리 스킬 생성 및 등록
 	UAccessoryLightAttackSkill* LightSkill = NewObject<UAccessoryLightAttackSkill>();
 	UAccessoryHeavyAttackSkill* HeavySkill = NewObject<UAccessoryHeavyAttackSkill>();
@@ -60,6 +66,7 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		TryAttackParticle = nullptr;
 		HitAttackParticle = nullptr;
 		BaseEffectParticle = nullptr;
+		SkillEffectParticle = nullptr;
 		OwningCharacter = nullptr;
 		AttackShapes.Empty();
 
@@ -101,6 +108,10 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				else if (ParticleName.find("BaseEffect") != std::string::npos)
 				{
 					BaseEffectParticle = Particle;
+				}
+				else if (ParticleName.find("SkillEffect") != std::string::npos)
+				{
+					SkillEffectParticle = Particle;
 				}
 			}
 		}
@@ -186,6 +197,41 @@ void AAccessoryActor::StopHitParticle()
 	}
 }
 
+void AAccessoryActor::PlaySkillEffectParticle()
+{
+	if (SkillEffectParticle)
+	{
+		SkillEffectParticle->ResetAndActivate();
+
+		// 자동 종료 등록 (1초 후 StopSpawning)
+		bool bFound = false;
+		for (int32 i = 0; i < ActiveParticles.Num(); ++i)
+		{
+			if (ActiveParticles[i].Comp == SkillEffectParticle)
+			{
+				ActiveParticles[i].TimeRemaining = ParticleLifetime;
+				bFound = true;
+				break;
+			}
+		}
+		if (!bFound)
+		{
+			FActiveParticle Entry;
+			Entry.Comp = SkillEffectParticle;
+			Entry.TimeRemaining = ParticleLifetime;
+			ActiveParticles.Add(Entry);
+		}
+	}
+}
+
+void AAccessoryActor::StopSkillEffectParticle()
+{
+	if (SkillEffectParticle)
+	{
+		SkillEffectParticle->StopSpawning();
+	}
+}
+
 void AAccessoryActor::SpawnHitParticleAtLocation(const FVector& Location)
 {
     if (!HitAttackParticle)
@@ -266,6 +312,7 @@ void AAccessoryActor::DuplicateSubObjects()
 	AccessoryMesh = nullptr;
 	TryAttackParticle = nullptr;
 	HitAttackParticle = nullptr;
+	SkillEffectParticle = nullptr;
 	OwningCharacter = nullptr;
 	AttackShapes.Empty();
 
@@ -306,6 +353,10 @@ void AAccessoryActor::DuplicateSubObjects()
 			else if (ParticleName.find("HitAttack") != std::string::npos)
 			{
 				HitAttackParticle = Particle;
+			}
+			else if (ParticleName.find("SkillEffect") != std::string::npos)
+			{
+				SkillEffectParticle = Particle;
 			}
 		}
 	}
@@ -371,6 +422,13 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 			// 자신을 공격하는 걸 방지하기 위해서 owner 설정
 			Shape->SetOwner(OwnerCharacter);
 		}
+	}
+
+	// 4. SkillEffectParticle을 캐릭터 메시에 부착
+	if (SkillEffectParticle && OwnerCharacter->GetMesh())
+	{
+		SkillEffectParticle->SetupAttachment(OwnerCharacter->GetMesh());
+		SkillEffectParticle->SetRelativeLocation(FVector::Zero());
 	}
 }
 

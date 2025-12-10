@@ -30,6 +30,9 @@ void UGorillaSpecialAttackSkill::Activate(AActor* Caster)
 			FAudioDevice::PlaySoundAtLocationOneShot(Character->GetSkillSound(), Character->GetActorLocation());
 		}
 
+		// 스킬 이펙트 파티클 재생
+		SourceAccessory->PlaySkillEffectParticle();
+
 		if (!GA->GetIsGorillaForm())
 		{
 			// 변신: 몽타주 재생 (파티클 포함)

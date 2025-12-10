@@ -35,12 +35,18 @@ void UPunchSpecialAttackSkill::Activate(AActor* Caster)
 	{
 		if (!Character->GetCharacterMovement()->IsFalling() && Montage)
 		{
-			
 			// 사운드 재생
 			if (Character->GetSkillSound())
 			{
 				FAudioDevice::PlaySoundAtLocationOneShot(Character->GetSkillSound(), Character->GetActorLocation());
 			}
+
+			// 스킬 이펙트 파티클 재생
+			if (SourceAccessory)
+			{
+				SourceAccessory->PlaySkillEffectParticle();
+			}
+
 			Character->PlayMontage(Montage);
 		}
 	}

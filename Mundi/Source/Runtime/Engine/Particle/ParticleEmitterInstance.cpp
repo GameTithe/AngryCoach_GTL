@@ -17,6 +17,7 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
     Component = InComponent;
     LoopCount = 0;
     EmitterTime = 0.0f;
+    SpawnFraction = 1.0f;  // 첫 파티클 즉시 스폰
 
     UpdateModuleCache();
 
@@ -338,8 +339,14 @@ void FParticleEmitterInstance::Tick(FParticleSimulationContext& Context)
 
     float RandomValue = GetRandomFloat();
 
+    // EmitterDelay 체크: 딜레이 시간이 지나야 스폰 시작
+    float EmitterDelay = CachedRequiredModule ? CachedRequiredModule->EmitterDelay : 0.0f;
+    bool bDelayPassed = EmitterTime >= EmitterDelay;
+
+    UE_LOG("[Particle] EmitterTime=%.4f, EmitterDelay=%.4f, bDelayPassed=%d", EmitterTime, EmitterDelay, bDelayPassed);
+
     // 아직 안 끝났을 때만 스폰 시도
-    if (!bEmitterFinished && !Context.bSuppressSpawning)
+    if (!bEmitterFinished && !Context.bSuppressSpawning && bDelayPassed)
     {
         // [A] Continuous Spawn
         float SpawnRate = CachedSpawnModule ? CachedSpawnModule->GetSpawnRate(EmitterTime, RandomValue)
@@ -437,8 +444,8 @@ void FParticleEmitterInstance::Tick(FParticleSimulationContext& Context)
                 // Duration이 1.0초인데 EmitterTime이 1.05초가 됐다면,
                 // 다음 루프의 0.05초 시점에서 시작해야 파티클 간격이 일정하게 유지
                 EmitterTime -= CachedRequiredModule->EmitterDuration;
-                LoopCount++; 
             }
+            LoopCount++;  // 루프 여부와 관계없이 증가해야 bEmitterFinished가 true 됨
         }
     }
 }

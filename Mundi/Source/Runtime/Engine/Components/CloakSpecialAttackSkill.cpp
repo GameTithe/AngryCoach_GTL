@@ -41,6 +41,12 @@ void UCloakSpecialAttackSkill::Activate(AActor* Caster)
 				FAudioDevice::PlaySoundAtLocationOneShot(Character->GetSkillSound(), Character->GetActorLocation());
 			}
 
+			// 스킬 이펙트 파티클 재생
+			if (SourceAccessory)
+			{
+				SourceAccessory->PlaySkillEffectParticle();
+			}
+
 			// 강제 이동 설정: 바라보는 방향으로 일정 속도로 이동
 			FVector DashDirection = Character->GetActorRotation().GetForwardVector();
 			float DashSpeed = 5.0f;  // 대시 속도

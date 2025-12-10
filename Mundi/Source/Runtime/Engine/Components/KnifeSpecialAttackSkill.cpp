@@ -40,6 +40,13 @@ void UKnifeSpecialAttackSkill::Activate(AActor* Caster)
 			{
 				FAudioDevice::PlaySoundAtLocationOneShot(Character->GetSkillSound(), Character->GetActorLocation());
 			}
+
+			// 스킬 이펙트 파티클 재생
+			if (SourceAccessory)
+			{
+				SourceAccessory->PlaySkillEffectParticle();
+			}
+
 			Character->PlayMontage(Montage);
 		}
 	}
