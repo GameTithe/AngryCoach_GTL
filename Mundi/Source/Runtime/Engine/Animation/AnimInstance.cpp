@@ -754,7 +754,7 @@ float UAnimInstance::PlayMontage(UAnimMontage* Montage, float PlayRate)
 
     MontageState->Montage = Montage;
     MontageState->Position = 0.0f;
-    MontageState->PlayRate = PlayRate;
+    MontageState->PlayRate = PlayRate * Montage->PlayRate;  // 몽타주 자체 PlayRate 적용
     MontageState->Weight = 0.0f;
     MontageState->bPlaying = true;
     MontageState->bBlendingOut = false;
@@ -771,7 +771,7 @@ float UAnimInstance::PlayMontage(UAnimMontage* Montage, float PlayRate)
     // 노티파이 트래킹 초기화
     PreviousMontagePlayTime = 0.0f;
 
-    float Duration = Montage->GetPlayLength() / PlayRate;
+    float Duration = Montage->GetPlayLength() / MontageState->PlayRate;
 
     UE_LOG("UAnimInstance::PlayMontage - Playing montage (BlendIn: %.2f, BlendOut: %.2f, Duration: %.2f)",
         Montage->BlendInTime, Montage->BlendOutTime, Duration);
@@ -921,6 +921,9 @@ void UAnimInstance::UpdateMontage(float DeltaTime)
 
         if (MontageState->Weight <= 0.0f)
         {
+            // 몽타주 종료 전 마지막 노티파이 트리거
+            TriggerMontageNotifies(DeltaTime);
+
             MontageState->bPlaying = false;
             MontageState->Montage = nullptr;
             // UE_LOG("UAnimInstance::UpdateMontage - Montage finished");
@@ -1012,9 +1015,16 @@ void UAnimInstance::TriggerMontageNotifies(float DeltaSeconds)
 
     UAnimMontage* Montage = MontageState->Montage;
 
+    // 섹션별 재생 속도 적용
+    float SectionPlayRate = 1.0f;
+    if (Montage->HasSections() && MontageState->CurrentSectionIndex < Montage->GetNumSections())
+    {
+        SectionPlayRate = Montage->Sections[MontageState->CurrentSectionIndex].PlayRate;
+    }
+
     // 몽타주 자체 노티파이 수집 (UAnimSequenceBase 상속)
     TArray<FPendingAnimNotify> PendingNotifies;
-    float DeltaMove = DeltaSeconds * MontageState->PlayRate;
+    float DeltaMove = DeltaSeconds * MontageState->PlayRate * SectionPlayRate;
 
     // UE_LOG("[TriggerMontageNotifies] Prev=%.4f, DeltaMove=%.4f, CurrentPos=%.4f",
     //     PreviousMontagePlayTime, DeltaMove, MontageState->Position);

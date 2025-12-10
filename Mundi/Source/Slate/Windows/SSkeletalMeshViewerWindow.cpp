@@ -2292,10 +2292,11 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
             SectionPlayRate = ActiveMontage->Sections[CurrentPlaySection].PlayRate;
         }
 
-        // 재생 시간 진행 (섹션 PlayRate 적용)
+        // 재생 시간 진행 (몽타주 PlayRate * 섹션 PlayRate * 전역 PlaybackSpeed 적용)
+        float EffectivePlayRate = ActiveMontage->PlayRate * SectionPlayRate * ActiveState->PlaybackSpeed;
         if (ActiveState->bIsPlaying && MontageTotalLength > 0.0f)
         {
-            ActiveState->MontagePreviewTime += DeltaSeconds * SectionPlayRate;
+            ActiveState->MontagePreviewTime += DeltaSeconds * EffectivePlayRate;
             if (ActiveState->MontagePreviewTime >= MontageTotalLength)
             {
                 if (ActiveState->bIsLooping || ActiveMontage->bLoop)
@@ -2309,7 +2310,7 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
         }
         else if (ActiveState->bIsPlayingReverse && MontageTotalLength > 0.0f)
         {
-            ActiveState->MontagePreviewTime -= DeltaSeconds * SectionPlayRate;
+            ActiveState->MontagePreviewTime -= DeltaSeconds * EffectivePlayRate;
             if (ActiveState->MontagePreviewTime < 0.0f)
             {
                 if (ActiveState->bIsLooping || ActiveMontage->bLoop)
@@ -2516,9 +2517,10 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
 
     if (DataModel && DataModel->GetPlayLength() > 0.0f)
     {
+        float ScaledDelta = DeltaSeconds * ActiveState->PlaybackSpeed;
         if (ActiveState->bIsPlaying)
         {
-            ActiveState->CurrentAnimTime += DeltaSeconds;
+            ActiveState->CurrentAnimTime += ScaledDelta;
             if (ActiveState->CurrentAnimTime > DataModel->GetPlayLength())
             {
                 if (ActiveState->bIsLooping)
@@ -2535,8 +2537,8 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
         }
         else if (ActiveState->bIsPlayingReverse)
         {
-            ActiveState->CurrentAnimTime -= DeltaSeconds;
-            if (ActiveState->CurrentAnimTime < 0.0f) 
+            ActiveState->CurrentAnimTime -= ScaledDelta;
+            if (ActiveState->CurrentAnimTime < 0.0f)
             {
                 if (ActiveState->bIsLooping)
                 {
@@ -4087,6 +4089,23 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
         ImGui::SameLine();
         ImGui::TextDisabled("(%.2f / %.2f)", CurrentTime, PlayLength);
 
+        // 재생 속도 슬라이더
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100.0f);
+        if (ImGui::SliderFloat("##Speed", &State->PlaybackSpeed, 0.1f, 3.0f, "x%.1f"))
+        {
+            State->PlaybackSpeed = ImClamp(State->PlaybackSpeed, 0.1f, 3.0f);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Playback Speed");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("1x"))
+        {
+            State->PlaybackSpeed = 1.0f;
+        }
+
         // 몽타주 모드 표시
         if (bMontagePreviewing && PreviewMontage)
         {
@@ -4352,6 +4371,13 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                 ImGui::DragFloat("Blend In Time", &ActiveMontage->BlendInTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
                 ImGui::DragFloat("Blend Out Time", &ActiveMontage->BlendOutTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
                 ImGui::Checkbox("Loop", &ActiveMontage->bLoop);
+
+                // 전체 재생 속도
+                ImGui::DragFloat("Play Rate", &ActiveMontage->PlayRate, 0.05f, 0.1f, 3.0f, "x%.2f");
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Montage playback speed (saved to file)");
+                }
 
                 ImGui::Separator();
 
