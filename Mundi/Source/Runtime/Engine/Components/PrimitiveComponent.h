@@ -75,7 +75,11 @@ public:
     // BodySetup 설정을 무시하고 싶을 때
     bool bOverrideCollisionSetting = false;
     ECollisionState CollisionEnabled = ECollisionState::QueryAndPhysics;
-    
+
+    // 동적으로 collision 설정 변경
+    virtual void SetCollisionEnabled(ECollisionState NewState);
+    ECollisionState GetCollisionEnabled() const { return CollisionEnabled; }
+
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
 

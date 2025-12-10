@@ -554,11 +554,6 @@ void AAngryCoachCharacter::Revive()
 
 void AAngryCoachCharacter::Die()
 {
-	// Ragdoll
-	if (SkeletalMeshComp)
-	{
-		SkeletalMeshComp->SetRagDollEnabled(true);
-	}
 	// Collision - 모든 AttackShape 비활성화
 	for (UShapeComponent* Shape : CachedAttackShapes)
 	{
@@ -575,6 +570,13 @@ void AAngryCoachCharacter::Die()
 		CapsuleComponent->SetGenerateOverlapEvents(false);
 	}
 
+	// Ragdoll
+	if (SkeletalMeshComp)
+	{
+		SkeletalMeshComp->SetRagDollEnabled(true);
+		SkeletalMeshComp->SetCollisionEnabled(ECollisionState::PhysicsOnly);
+	}
+	
 	if (DieSound)
 	{
 		FAudioDevice::PlaySoundAtLocationOneShot(DieSound, GetActorLocation());

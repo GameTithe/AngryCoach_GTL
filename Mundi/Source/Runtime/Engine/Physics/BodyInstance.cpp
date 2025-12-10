@@ -40,20 +40,23 @@ static void SetShapeCollisionFlags(PxShape* Shape, UPrimitiveComponent* OwnerCom
     switch (CollisionStateToUse)
     {
         case ECollisionState::NoCollision:
+            Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
             Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
             Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
             break;
         case ECollisionState::QueryOnly:
             Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
-            Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true); 
-           Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, true); 
+            Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+            Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, true);
             break;
         case ECollisionState::PhysicsOnly:
             // 래그돌용: 물리 시뮬레이션만, Scene Query(Sweep/Raycast) 제외
+            Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
             Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
             Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
             break;
         case ECollisionState::QueryAndPhysics:
+            Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
             Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
             Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
             break;
@@ -187,12 +190,12 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
             // 균등 스케일이 아닌 경우 가장 큰 축 사용
             float MaxScale = std::max({ AbsScale.X, AbsScale.Y, AbsScale.Z });
             PxSphereGeometry Geom(Sphere.Radius * MaxScale);
-            PxShape* Shape = Physics->createShape(Geom, *Material);
+            PxShape* Shape = Physics->createShape(Geom, *Material, true);  // true = exclusive shape (런타임 플래그 수정 가능)
             if (Shape)
             {
                 SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
-                Shape->setSimulationFilterData(FilterData);  // Self-Collision 방지
+                Shape->setSimulationFilterData(FilterData);
                 DynamicActor->attachShape(*Shape);
                 Shape->release();
             }
@@ -212,12 +215,12 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
                 Box.Extents.Y * AbsScale.Y,
                 Box.Extents.Z * AbsScale.Z
             );
-            PxShape* Shape = Physics->createShape(Geom, *Material);
+            PxShape* Shape = Physics->createShape(Geom, *Material, true);  // true = exclusive shape
             if (Shape)
             {
                 SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
-                Shape->setSimulationFilterData(FilterData);  // Self-Collision 방지
+                Shape->setSimulationFilterData(FilterData);
                 DynamicActor->attachShape(*Shape);
                 Shape->release();
             }
@@ -242,12 +245,12 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
 
             PxCapsuleGeometry Geom(Capsule.Radius * RadiusScale, Capsule.HalfLength * HeightScale);
 
-            PxShape* Shape = Physics->createShape(Geom, *Material);
+            PxShape* Shape = Physics->createShape(Geom, *Material, true);  // true = exclusive shape
             if (Shape)
             {
                 SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
-                Shape->setSimulationFilterData(FilterData);  // Self-Collision 방지
+                Shape->setSimulationFilterData(FilterData);
                 DynamicActor->attachShape(*Shape);
                 Shape->release();
             }
@@ -271,11 +274,11 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
             }
             
             PxConvexMeshGeometry Geom(Convex.ConvexMesh, PxMeshScale(ToPx(AbsScale)));
-            PxShape* Shape = Physics->createShape(Geom, *Material);
+            PxShape* Shape = Physics->createShape(Geom, *Material, true);  // true = exclusive shape
             if (Shape)
             {
                 SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
-                Shape->setLocalPose(PxTransform(PxIdentity)); // Convex meshes are typically in local space already
+                Shape->setLocalPose(PxTransform(PxIdentity));
                 Shape->setSimulationFilterData(FilterData);
                 DynamicActor->attachShape(*Shape);
                 Shape->release();
@@ -284,12 +287,12 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
     }
     else
     {
-        // BodySetup이 없으면, 지금처럼 임시 박스 하나라도 붙여서 디버그용으로 사용
+        // BodySetup이 없으면, 임시 박스 하나라도 붙여서 디버그용으로 사용
         PxBoxGeometry BoxGeom(0.5f, 0.5f, 0.5f);
-        PxShape* Shape = Physics->createShape(BoxGeom, *Material);
+        PxShape* Shape = Physics->createShape(BoxGeom, *Material, true);  // true = exclusive shape
         if (Shape)
         {
-            Shape->setSimulationFilterData(FilterData);  // Self-Collision 방지
+            Shape->setSimulationFilterData(FilterData);
             SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
             DynamicActor->attachShape(*Shape);
             Shape->release();

@@ -296,6 +296,9 @@ public:
 
     void SetRagDollEnabled(bool bEnabled);
 
+    // 모든 Ragdoll body의 collision 설정 변경 (override)
+    void SetCollisionEnabled(ECollisionState NewState) override;
+
     void ChangePhysicsState();
 
     /////////////////////////////////////////////////////////////

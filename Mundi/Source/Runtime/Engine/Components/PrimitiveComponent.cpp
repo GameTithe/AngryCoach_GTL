@@ -249,6 +249,60 @@ void UPrimitiveComponent::OnCreatePhysicsState()
 
 }
 
+void UPrimitiveComponent::SetCollisionEnabled(ECollisionState NewState)
+{
+    bOverrideCollisionSetting = true;
+    CollisionEnabled = NewState;
+
+    // 기존 physics body가 있으면 shape flag 업데이트
+    if (BodyInstance && BodyInstance->RigidActor)
+    {
+        UWorld* World = GetWorld();
+        if (!World || !World->GetPhysScene())
+            return;
+
+        PxScene* PxScenePtr = World->GetPhysScene()->GetScene();
+        if (!PxScenePtr)
+            return;
+
+        SCOPED_PHYSX_WRITE_LOCK(*PxScenePtr);
+
+        PxRigidActor* Actor = BodyInstance->RigidActor;
+        PxU32 NumShapes = Actor->getNbShapes();
+        std::vector<PxShape*> Shapes(NumShapes);
+        Actor->getShapes(Shapes.data(), NumShapes);
+
+        for (PxShape* Shape : Shapes)
+        {
+            if (!Shape) continue;
+
+            switch (NewState)
+            {
+                case ECollisionState::NoCollision:
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+                    break;
+                case ECollisionState::QueryOnly:
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, true);
+                    break;
+                case ECollisionState::PhysicsOnly:
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+                    break;
+                case ECollisionState::QueryAndPhysics:
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+                    break;
+            }
+        }
+    }
+}
+
 void UPrimitiveComponent::OnBeginOverlap(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult)
 {
     UE_LOG("OnBeginOverlap");
