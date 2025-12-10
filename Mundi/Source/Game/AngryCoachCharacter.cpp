@@ -401,9 +401,21 @@ void AAngryCoachCharacter::AttackEnd()
         }
         SetCurrentState(ECharacterState::Idle);
     }
+
     // 공격 종료 시 슬롯 리셋
     CurrentAttackSlot = ESkillSlot::None;
     bIsJumpAttacking = false;
+	  
+    // 안전장치: 몽타주가 아직 재생 중이면 강제 정지
+    if (IsPlayingMontage())
+    { 
+        StopCurrentMontage(0.1f);
+    } 
+    // Safety: ensure state exits Attacking even if no shapes are present
+    if (GetCurrentState() == ECharacterState::Attacking)
+    {
+        SetCurrentState(ECharacterState::Idle);
+    }
 }
 
 void AAngryCoachCharacter::OnLanded()
