@@ -81,6 +81,18 @@ local p2Ready = false
 -- 선택 단계 (false = 악세사리 선택, true = 라운드 선택)
 local bRoundSelectionPhase = false
 
+-- Select UI 활성화 상태 (Tick에서 입력 처리용)
+local bInSelectPhase = false
+
+-- 입력 쿨다운 (프레임 단위)
+local INPUT_COOLDOWN_FRAMES = 5
+local READY_COOLDOWN_FRAMES = 15
+local p1InputCooldown = 0
+local p2InputCooldown = 0
+local p1ReadyCooldown = 0
+local p2ReadyCooldown = 0
+local roundInputCooldown = 0
+
 -- 코루틴 대기 함수 (스케줄러가 "wait_time" 태그를 기대함)
 function WaitForSeconds(seconds)
     return "wait_time", seconds
@@ -568,6 +580,9 @@ function Tick(Delta)
         return
     end
 
+    -- Select 단계 입력 처리 (프레임 동기화)
+    TickSelectInput()
+
     -- 전투 중일 때만 처리
     if bBattleActive then
         local timeRemaining = GetRoundTimeRemaining()
@@ -917,8 +932,15 @@ function OnCharacterSelectStart()
         canvas:SetWidgetVisible("left_arrow", false)
         canvas:SetWidgetVisible("right_arrow", false)
 
-        -- 키 입력 처리 코루틴 시작
-        StartCoroutine(SelectionInputLoop)
+        -- 쿨다운 초기화
+        p1InputCooldown = 0
+        p2InputCooldown = 0
+        p1ReadyCooldown = 0
+        p2ReadyCooldown = 0
+        roundInputCooldown = 0
+
+        -- Select 입력 처리 활성화 (Tick에서 처리)
+        bInSelectPhase = true
 
         print("[GameMode] Selection started - P1:A/D+T, P2:Arrows+Numpad1")
     else
@@ -977,153 +999,141 @@ function UpdateRoundArrows(canvas)
     canvas:SetWidgetVisible("right_arrow", selectedRoundIndex < 3)
 end
 
--- 통합 선택 입력 루프
-function SelectionInputLoop()
-    print("[GameMode] SelectionInputLoop started")
+-- Tick에서 호출되는 Select 입력 처리 함수 (프레임 동기화)
+function TickSelectInput()
+    if not bInSelectPhase then return end
 
-    -- 입력 쿨다운 (프레임 단위, ~60fps 기준 5프레임 ≈ 0.08초)
-    local INPUT_COOLDOWN_FRAMES = 5
-    local READY_COOLDOWN_FRAMES = 15  -- Ready 버튼은 더 긴 쿨다운 (토글 방지)
-    local p1InputCooldown = 0
-    local p2InputCooldown = 0
-    local p1ReadyCooldown = 0
-    local p2ReadyCooldown = 0
-    local roundInputCooldown = 0
+    local canvas = UI.FindCanvas(selectCanvasName)
+    if not canvas then
+        bInSelectPhase = false
+        return
+    end
 
-    while UI.FindCanvas(selectCanvasName) do
-        local canvas = UI.FindCanvas(selectCanvasName)
-        if not canvas then break end
+    -- 쿨다운 감소 (매 프레임 1씩)
+    if p1InputCooldown > 0 then p1InputCooldown = p1InputCooldown - 1 end
+    if p2InputCooldown > 0 then p2InputCooldown = p2InputCooldown - 1 end
+    if p1ReadyCooldown > 0 then p1ReadyCooldown = p1ReadyCooldown - 1 end
+    if p2ReadyCooldown > 0 then p2ReadyCooldown = p2ReadyCooldown - 1 end
+    if roundInputCooldown > 0 then roundInputCooldown = roundInputCooldown - 1 end
 
-        -- 쿨다운 감소 (매 프레임 1씩)
-        if p1InputCooldown > 0 then p1InputCooldown = p1InputCooldown - 1 end
-        if p2InputCooldown > 0 then p2InputCooldown = p2InputCooldown - 1 end
-        if p1ReadyCooldown > 0 then p1ReadyCooldown = p1ReadyCooldown - 1 end
-        if p2ReadyCooldown > 0 then p2ReadyCooldown = p2ReadyCooldown - 1 end
-        if roundInputCooldown > 0 then roundInputCooldown = roundInputCooldown - 1 end
-
-        -- ==========================================
-        -- Phase 1: 악세사리 선택 (둘 다 Ready 전)
-        -- ==========================================
-        if not bRoundSelectionPhase then
-            -- P1 악세사리 선택: A/D (Ready 전에만, 쿨다운 적용)
-            if not p1Ready and p1InputCooldown <= 0 then
-                local p1Changed = false
-                if InputManager:IsKeyPressed("A") then
-                    if p1SelectedAccessory > 1 then
-                        p1SelectedAccessory = p1SelectedAccessory - 1
-                        p1Changed = true
-                    end
-                elseif InputManager:IsKeyPressed("D") then
-                    if p1SelectedAccessory < 3 then
-                        p1SelectedAccessory = p1SelectedAccessory + 1
-                        p1Changed = true
-                    end
+    -- ==========================================
+    -- Phase 1: 악세사리 선택 (둘 다 Ready 전)
+    -- ==========================================
+    if not bRoundSelectionPhase then
+        -- P1 악세사리 선택: A/D (Ready 전에만, 쿨다운 적용)
+        if not p1Ready and p1InputCooldown <= 0 then
+            local p1Changed = false
+            if InputManager:IsKeyPressed("A") then
+                if p1SelectedAccessory > 1 then
+                    p1SelectedAccessory = p1SelectedAccessory - 1
+                    p1Changed = true
                 end
-
-                if p1Changed then
-                    print("[GameMode] P1 accessory: " .. AccessoryList[p1SelectedAccessory].name)
-                    UpdateAccessoryUI(canvas)
-                    EquipAccessoryToPlayer(1, AccessoryList[p1SelectedAccessory].prefab)
-                    p1InputCooldown = INPUT_COOLDOWN_FRAMES
+            elseif InputManager:IsKeyPressed("D") then
+                if p1SelectedAccessory < 3 then
+                    p1SelectedAccessory = p1SelectedAccessory + 1
+                    p1Changed = true
                 end
             end
 
-            -- P2 악세사리 선택: 화살표 (Ready 전에만, 쿨다운 적용)
-            if not p2Ready and p2InputCooldown <= 0 then
-                local p2Changed = false
-                if InputManager:IsKeyPressed(37) then  -- VK_LEFT
-                    if p2SelectedAccessory > 1 then
-                        p2SelectedAccessory = p2SelectedAccessory - 1
-                        p2Changed = true
-                    end
-                elseif InputManager:IsKeyPressed(39) then  -- VK_RIGHT
-                    if p2SelectedAccessory < 3 then
-                        p2SelectedAccessory = p2SelectedAccessory + 1
-                        p2Changed = true
-                    end
-                end
-
-                if p2Changed then
-                    print("[GameMode] P2 accessory: " .. AccessoryList[p2SelectedAccessory].name)
-                    UpdateAccessoryUI(canvas)
-                    EquipAccessoryToPlayer(2, AccessoryList[p2SelectedAccessory].prefab)
-                    p2InputCooldown = INPUT_COOLDOWN_FRAMES
-                end
-            end
-
-            -- P1 Ready: T키 (쿨다운 적용)
-            local tKeyPressed = InputManager:IsKeyPressed("T")
-            local numpad1Pressed = InputManager:IsKeyPressed(97)
-
-            if p1ReadyCooldown <= 0 and tKeyPressed then
-                p1Ready = not p1Ready
-                print("[GameMode] P1 Ready toggled by T key: " .. tostring(p1Ready))
-                print("[GameMode]   - T pressed: " .. tostring(tKeyPressed) .. ", Numpad1 pressed: " .. tostring(numpad1Pressed))
-                UpdateReadyUI(canvas)
-                p1ReadyCooldown = READY_COOLDOWN_FRAMES
-
-                -- 둘 다 Ready면 라운드 선택 단계로
-                if p1Ready and p2Ready then
-                    bRoundSelectionPhase = true
-                    print("[GameMode] Both players ready! Round selection enabled.")
-                end
-            end
-
-            -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97, 쿨다운 적용)
-            if p2ReadyCooldown <= 0 and numpad1Pressed then
-                p2Ready = not p2Ready
-                print("[GameMode] P2 Ready toggled by Numpad1: " .. tostring(p2Ready))
-                print("[GameMode]   - T pressed: " .. tostring(tKeyPressed) .. ", Numpad1 pressed: " .. tostring(numpad1Pressed))
-                UpdateReadyUI(canvas)
-                p2ReadyCooldown = READY_COOLDOWN_FRAMES
-
-                -- 둘 다 Ready면 라운드 선택 단계로
-                if p1Ready and p2Ready then
-                    bRoundSelectionPhase = true
-                    print("[GameMode] Both players ready! Round selection enabled.")
-                end
-            end
-
-        -- ==========================================
-        -- Phase 2: 라운드 선택 (둘 다 Ready 후)
-        -- ==========================================
-        else
-            -- 라운드 선택: A/D 또는 화살표 (쿨다운 적용)
-            if roundInputCooldown <= 0 then
-                local leftPressed = InputManager:IsKeyPressed("A") or InputManager:IsKeyPressed(37)
-                local rightPressed = InputManager:IsKeyPressed("D") or InputManager:IsKeyPressed(39)
-
-                if leftPressed and selectedRoundIndex > 1 then
-                    selectedRoundIndex = selectedRoundIndex - 1
-                    canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
-                    UpdateRoundArrows(canvas)
-                    print("[GameMode] Round to win: " .. selectedRoundIndex)
-                    roundInputCooldown = INPUT_COOLDOWN_FRAMES
-                elseif rightPressed and selectedRoundIndex < 3 then
-                    selectedRoundIndex = selectedRoundIndex + 1
-                    canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
-                    UpdateRoundArrows(canvas)
-                    print("[GameMode] Round to win: " .. selectedRoundIndex)
-                    roundInputCooldown = INPUT_COOLDOWN_FRAMES
-                end
-            end
-
-            -- 확정: Space 또는 Enter
-            if InputManager:IsKeyPressed("Space") or InputManager:IsKeyPressed(13) then
-                print("[GameMode] Selection confirmed!")
-                FinishSelection()
-                break
+            if p1Changed then
+                print("[GameMode] P1 accessory: " .. AccessoryList[p1SelectedAccessory].name)
+                UpdateAccessoryUI(canvas)
+                EquipAccessoryToPlayer(1, AccessoryList[p1SelectedAccessory].prefab)
+                p1InputCooldown = INPUT_COOLDOWN_FRAMES
             end
         end
 
-        coroutine.yield(WaitForSeconds(0.016))  -- ~60fps
-    end
+        -- P2 악세사리 선택: 화살표 (Ready 전에만, 쿨다운 적용)
+        if not p2Ready and p2InputCooldown <= 0 then
+            local p2Changed = false
+            if InputManager:IsKeyPressed(37) then  -- VK_LEFT
+                if p2SelectedAccessory > 1 then
+                    p2SelectedAccessory = p2SelectedAccessory - 1
+                    p2Changed = true
+                end
+            elseif InputManager:IsKeyPressed(39) then  -- VK_RIGHT
+                if p2SelectedAccessory < 3 then
+                    p2SelectedAccessory = p2SelectedAccessory + 1
+                    p2Changed = true
+                end
+            end
 
-    print("[GameMode] SelectionInputLoop ended")
+            if p2Changed then
+                print("[GameMode] P2 accessory: " .. AccessoryList[p2SelectedAccessory].name)
+                UpdateAccessoryUI(canvas)
+                EquipAccessoryToPlayer(2, AccessoryList[p2SelectedAccessory].prefab)
+                p2InputCooldown = INPUT_COOLDOWN_FRAMES
+            end
+        end
+
+        -- P1 Ready: T키 (쿨다운 적용)
+        local tKeyPressed = InputManager:IsKeyPressed("T")
+        local numpad1Pressed = InputManager:IsKeyPressed(97)
+
+        if p1ReadyCooldown <= 0 and tKeyPressed then
+            p1Ready = not p1Ready
+            print("[GameMode] P1 Ready toggled by T key: " .. tostring(p1Ready))
+            UpdateReadyUI(canvas)
+            p1ReadyCooldown = READY_COOLDOWN_FRAMES
+
+            -- 둘 다 Ready면 라운드 선택 단계로
+            if p1Ready and p2Ready then
+                bRoundSelectionPhase = true
+                print("[GameMode] Both players ready! Round selection enabled.")
+            end
+        end
+
+        -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97, 쿨다운 적용)
+        if p2ReadyCooldown <= 0 and numpad1Pressed then
+            p2Ready = not p2Ready
+            print("[GameMode] P2 Ready toggled by Numpad1: " .. tostring(p2Ready))
+            UpdateReadyUI(canvas)
+            p2ReadyCooldown = READY_COOLDOWN_FRAMES
+
+            -- 둘 다 Ready면 라운드 선택 단계로
+            if p1Ready and p2Ready then
+                bRoundSelectionPhase = true
+                print("[GameMode] Both players ready! Round selection enabled.")
+            end
+        end
+
+    -- ==========================================
+    -- Phase 2: 라운드 선택 (둘 다 Ready 후)
+    -- ==========================================
+    else
+        -- 라운드 선택: A/D 또는 화살표 (쿨다운 적용)
+        if roundInputCooldown <= 0 then
+            local leftPressed = InputManager:IsKeyPressed("A") or InputManager:IsKeyPressed(37)
+            local rightPressed = InputManager:IsKeyPressed("D") or InputManager:IsKeyPressed(39)
+
+            if leftPressed and selectedRoundIndex > 1 then
+                selectedRoundIndex = selectedRoundIndex - 1
+                canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
+                UpdateRoundArrows(canvas)
+                print("[GameMode] Round to win: " .. selectedRoundIndex)
+                roundInputCooldown = INPUT_COOLDOWN_FRAMES
+            elseif rightPressed and selectedRoundIndex < 3 then
+                selectedRoundIndex = selectedRoundIndex + 1
+                canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
+                UpdateRoundArrows(canvas)
+                print("[GameMode] Round to win: " .. selectedRoundIndex)
+                roundInputCooldown = INPUT_COOLDOWN_FRAMES
+            end
+        end
+
+        -- 확정: Space 또는 Enter
+        if InputManager:IsKeyPressed("Space") or InputManager:IsKeyPressed(13) then
+            print("[GameMode] Selection confirmed!")
+            FinishSelection()
+        end
+    end
 end
 
 -- 선택 완료
 function FinishSelection()
+    -- Select 입력 처리 비활성화
+    bInSelectPhase = false
+
     print("[GameMode] FinishSelection called")
     print("[GameMode] P1 accessory: " .. AccessoryList[p1SelectedAccessory].name)
     print("[GameMode] P2 accessory: " .. AccessoryList[p2SelectedAccessory].name)
