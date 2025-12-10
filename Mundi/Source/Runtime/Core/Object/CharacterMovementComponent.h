@@ -95,7 +95,7 @@ protected:
 	ACharacter* CharacterOwner = nullptr;
 	bool bIsFalling = false;
 
-	const float GLOBAL_GRAVITY_Z = -9.8f;
+	const float GLOBAL_GRAVITY_Z = -18.0f;
 	const float GravityScale = 1.0f;
 
 	// 강제 이동 상태 (스킬 사용 시)

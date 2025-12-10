@@ -14,7 +14,7 @@ public:
 
 protected:
 	// 돌진 속도 (XY 방향)
-	float LaunchSpeed = 8.0f;
+	float LaunchSpeed = 15.0f;
 	// 수직 속도 (음수면 아래로)
-	float LaunchZSpeed = -3.0f;
+	float LaunchZSpeed = -8.0f;
 };

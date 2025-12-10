@@ -18,7 +18,7 @@ UCharacterMovementComponent::UCharacterMovementComponent()
 	// 캐릭터 전용 설정 값
  	MaxWalkSpeed = 6.0f;
 	MaxAcceleration = 20.0f;
-	JumpZVelocity = 6.0f;
+	JumpZVelocity = 8.0f;
 
 	BrackingDeceleration = 20.0f; // 입력이 없을 때 감속도
 	GroundFriction = 8.0f; //바닥 마찰 계수
