@@ -1510,9 +1510,12 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 
 	// 기본 샘플러 미리 가져오기 (루프 내 반복 호출 방지)
 	ID3D11SamplerState* DefaultSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::Default);
+	ID3D11SamplerState* ClampSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::LinearClamp);
 	// Shadow PCF용 샘플러 추가
 	ID3D11SamplerState* ShadowSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::Shadow);
 	ID3D11SamplerState* VSMSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::VSM);
+	// SubUV 상태 캐시 (샘플러 변경 추적용)
+	bool bCurrentUseSubUV = false;
 
 	// 정렬된 리스트 순회
 	for (const FMeshBatchElement& Batch : InMeshBatches)
@@ -1544,7 +1547,9 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 		//
 		// 'Material' 또는 'Instance SRV' 둘 중 하나라도 바뀌면
 		// 모든 픽셀 리소스를 다시 바인딩해야 합니다.
-		if (Batch.Material != CurrentMaterial || Batch.InstanceShaderResourceView != CurrentInstanceSRV)
+		// SubUV 상태 변경 시에도 샘플러 재바인딩 필요 (WRAP vs CLAMP)
+		bool bUseSubUV = (Batch.SubImages_Horizontal > 1 || Batch.SubImages_Vertical > 1);
+		if (Batch.Material != CurrentMaterial || Batch.InstanceShaderResourceView != CurrentInstanceSRV || bUseSubUV != bCurrentUseSubUV)
 		{
 			ID3D11ShaderResourceView* DiffuseTextureSRV = nullptr; // t0
 			ID3D11ShaderResourceView* NormalTextureSRV = nullptr;  // t1
@@ -1608,8 +1613,10 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 2, Srvs);
 
 			// 2. 샘플러 바인딩
-			ID3D11SamplerState* Samplers[4] = { DefaultSampler, DefaultSampler, ShadowSampler, VSMSampler };
-			RHIDevice->GetDeviceContext()->PSSetSamplers(0, 4, Samplers);			
+			// SubUV가 활성화된 경우 CLAMP 샘플러 사용 (타일 경계 seam 방지)
+			ID3D11SamplerState* TextureSampler = bUseSubUV ? ClampSampler : DefaultSampler;
+			ID3D11SamplerState* Samplers[4] = { TextureSampler, DefaultSampler, ShadowSampler, VSMSampler };
+			RHIDevice->GetDeviceContext()->PSSetSamplers(0, 4, Samplers);
 
 			// 3. 재질 CBuffer 바인딩
 			RHIDevice->SetAndUpdateConstantBuffer(PixelConst);
@@ -1617,6 +1624,7 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			// --- 캐시 업데이트 ---
 			CurrentMaterial = Batch.Material;
 			CurrentInstanceSRV = Batch.InstanceShaderResourceView;
+			bCurrentUseSubUV = bUseSubUV;
 		}
 
 		if (Batch.GPUSkinMatrixSRV != CurrentSkinMatrixSRV || Batch.GPUSkinNormalMatrixSRV != CurrentSkinNormalMatrixSRV)

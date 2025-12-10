@@ -60,6 +60,18 @@ local prevP1HealthRatio = 1.0
 local prevP2HealthRatio = 1.0
 
 -- ============================================
+-- 체력바 잔상 (Delayed Health Bar / Trail) 관련
+-- ============================================
+local p1TrailProgress = 1.0      -- P1 잔상 현재 값
+local p2TrailProgress = 1.0      -- P2 잔상 현재 값
+local p1TrailDelayTimer = 0.0    -- P1 딜레이 타이머 (초)
+local p2TrailDelayTimer = 0.0    -- P2 딜레이 타이머 (초)
+
+-- 잔상 설정 (조절 가능)
+local TRAIL_DELAY = 0.5          -- 딜레이 시간 (초) - 줄어들기 전 대기
+local TRAIL_SHRINK_SPEED = 0.8   -- 초당 축소 속도 (0.8 = 1초에 80% 축소)
+
+-- ============================================
 -- 악세사리 선택 관련
 -- ============================================
 
@@ -238,10 +250,36 @@ function UpdateTimerUI(seconds)
 end
 
 -- ============================================
--- 체력바 UI 업데이트
+-- 체력바 UI 업데이트 (잔상 포함)
 -- ============================================
-function UpdateHealthBars()
-    -- C++ 캐릭터에서 실제 체력 퍼센트 읽기
+
+-- 잔상 업데이트 헬퍼 함수
+local function UpdateTrail(currentHP, trailProgress, delayTimer, dt)
+    if currentHP < trailProgress then
+        -- 체력 감소 → 딜레이 리셋
+        delayTimer = TRAIL_DELAY
+    elseif currentHP > trailProgress then
+        -- 체력 회복 → 잔상 즉시 동기화
+        trailProgress = currentHP
+        delayTimer = 0
+    end
+
+    if delayTimer > 0 then
+        delayTimer = delayTimer - dt
+    else
+        -- 딜레이 끝 → 선형 축소
+        if trailProgress > currentHP then
+            trailProgress = trailProgress - (TRAIL_SHRINK_SPEED * dt)
+            if trailProgress < currentHP then
+                trailProgress = currentHP
+            end
+        end
+    end
+
+    return trailProgress, delayTimer
+end
+
+function UpdateHealthBars(deltaTime)
     local p1Ratio = GetP1HealthPercent()
     local p2Ratio = GetP2HealthPercent()
 
@@ -249,6 +287,15 @@ function UpdateHealthBars()
     if canvas then
         canvas:SetProgress("P1_HP", p1Ratio)
         canvas:SetProgress("P2_HP", p2Ratio)
+
+        local dt = deltaTime or 0.016
+
+        -- 잔상 처리
+        p1TrailProgress, p1TrailDelayTimer = UpdateTrail(p1Ratio, p1TrailProgress, p1TrailDelayTimer, dt)
+        p2TrailProgress, p2TrailDelayTimer = UpdateTrail(p2Ratio, p2TrailProgress, p2TrailDelayTimer, dt)
+
+        canvas:SetProgress("P1_HP_Trail", p1TrailProgress)
+        canvas:SetProgress("P2_HP_Trail", p2TrailProgress)
     end
 
     return p1Ratio, p2Ratio
@@ -285,50 +332,49 @@ end
 -- damageRatio: 받은 데미지 비율 (0.0 ~ 1.0)
 function ShakePortraitOnDamage(playerIndex, damageRatio)
     local canvas = UI.FindCanvas(battleUICanvasName)
-    if not canvas then return end
-
-    -- 최소 데미지 임계값 (너무 작은 데미지는 무시)
-    if damageRatio < 0.01 then return end
+    if not canvas or damageRatio < 0.01 then return end
 
     local widgetName = (playerIndex == 1) and "P1_Portrait" or "P2_Portrait"
     local intensity, duration, frequency = GetPortraitShakeParams(damageRatio)
-
-    -- 진동 시작 (감쇠 적용)
     canvas:ShakeWidget(widgetName, intensity, duration, frequency, true)
-
-    print(string.format("[GameMode] Portrait shake: P%d, damage=%.1f%%, intensity=%.1f, duration=%.2f, freq=%.1f",
-        playerIndex, damageRatio * 100, intensity, duration, frequency))
 end
 
 -- 이전 체력 비율 리셋 (라운드 시작 시 호출)
 function ResetPrevHealthRatios()
     prevP1HealthRatio = 1.0
     prevP2HealthRatio = 1.0
+    -- 잔상도 리셋
+    p1TrailProgress = 1.0
+    p2TrailProgress = 1.0
+    p1TrailDelayTimer = 0.0
+    p2TrailDelayTimer = 0.0
 end
 
 -- ============================================
 -- 타이머 진동 효과
 -- 시간이 줄어들수록 강도 증가
 -- ============================================
+local TIMER_SHAKE_STAGES = {
+    { threshold = 10, intensity = 0 },   -- 10초 이상: 진동 없음
+    { threshold = 7,  intensity = 3 },   -- 10~7초: 약한 진동
+    { threshold = 4,  intensity = 6 },   -- 7~4초: 중간 진동
+    { threshold = 0,  intensity = 10 },  -- 4초 이하: 강한 진동
+}
+
 function GetTimerShakeIntensity(seconds)
-    if seconds >= TIMER_SHAKE_THRESHOLD then
-        return 0  -- 10초 이상이면 진동 없음
-    elseif seconds >= 7 then
-        return 3  -- 10~7초: 약한 진동
-    elseif seconds >= 4 then
-        return 6  -- 7~4초: 중간 진동
-    else
-        return 10 -- 4초 이하: 강한 진동
+    for _, stage in ipairs(TIMER_SHAKE_STAGES) do
+        if seconds >= stage.threshold then
+            return stage.intensity
+        end
     end
+    return TIMER_SHAKE_STAGES[#TIMER_SHAKE_STAGES].intensity
 end
 
 function StartTimerShake(canvas, intensity)
     if not canvas then return end
-    -- 무한 진동, 감쇠 없음 (계속 유지)
     canvas:ShakeWidget("timer_tens", intensity, 0, 15, false)
     canvas:ShakeWidget("timer_ones", intensity, 0, 15, false)
     bTimerShaking = true
-    print("[GameMode] Timer shake started! Intensity: " .. intensity)
 end
 
 function UpdateTimerShake(canvas, intensity)
@@ -341,13 +387,10 @@ function UpdateTimerShake(canvas, intensity)
 end
 
 function StopTimerShake(canvas)
-    if not canvas then return end
-    if bTimerShaking then
-        canvas:StopShake("timer_tens")
-        canvas:StopShake("timer_ones")
-        bTimerShaking = false
-        print("[GameMode] Timer shake stopped")
-    end
+    if not canvas or not bTimerShaking then return end
+    canvas:StopShake("timer_tens")
+    canvas:StopShake("timer_ones")
+    bTimerShaking = false
 end
 
 -- ============================================
@@ -641,22 +684,19 @@ function Tick(Delta)
             end
         end
 
-        -- 체력바 UI 업데이트 및 KO 체크
-        local p1Ratio, p2Ratio = UpdateHealthBars()
+        -- 체력바 UI 업데이트 및 KO 체크 (Delta 전달로 잔상 애니메이션 처리)
+        local p1Ratio, p2Ratio = UpdateHealthBars(Delta)
 
-        -- Portrait 진동 체크 (체력이 감소했을 때)
-        if p1Ratio < prevP1HealthRatio then
-            local damageRatio = prevP1HealthRatio - p1Ratio
-            ShakePortraitOnDamage(1, damageRatio)
+        -- Portrait 진동 체크 (체력 감소 시)
+        local function CheckPortraitShake(playerIndex, currentRatio, prevRatio)
+            if currentRatio < prevRatio then
+                ShakePortraitOnDamage(playerIndex, prevRatio - currentRatio)
+            end
         end
-        if p2Ratio < prevP2HealthRatio then
-            local damageRatio = prevP2HealthRatio - p2Ratio
-            ShakePortraitOnDamage(2, damageRatio)
-        end
+        CheckPortraitShake(1, p1Ratio, prevP1HealthRatio)
+        CheckPortraitShake(2, p2Ratio, prevP2HealthRatio)
 
-        -- 이전 체력 비율 업데이트
-        prevP1HealthRatio = p1Ratio
-        prevP2HealthRatio = p2Ratio
+        prevP1HealthRatio, prevP2HealthRatio = p1Ratio, p2Ratio
 
         -- KO 체크 (한 쪽이라도 0 이하가 되면)
         if p1Ratio <= 0 or p2Ratio <= 0 then
