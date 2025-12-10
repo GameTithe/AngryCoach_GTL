@@ -137,9 +137,9 @@ void FSimulationEventCallback::onTrigger(physx::PxTriggerPair* pairs, physx::PxU
 		{
 			continue;
 		}
-
-		// bGenerateOverlapEvents가 false인 컴포넌트는 이벤트 무시
-		if (!TriggerComp->GetGenerateOverlapEvents())
+ 
+		// 둘 중 하나라도 false면 이벤트 발생 안 함
+		if (!TriggerComp->GetGenerateOverlapEvents() || !OtherComp->GetGenerateOverlapEvents())
 		{
 			continue;
 		}
