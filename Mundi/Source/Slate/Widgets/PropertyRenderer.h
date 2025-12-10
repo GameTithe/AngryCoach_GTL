@@ -50,7 +50,8 @@ private:
 	static bool RenderSoundSelectionCombo(const char* Label, USound* CurrentSound, USound*& OutNewSound);
 	// Simplified sound combo without thumbnails
 	static bool RenderSoundSelectionComboSimple(const char* Label, USound* CurrentSound, USound*& OutNewSound);
-
+	static bool RenderTextureSelectionComboFromCache(const char* Label, UTexture* CurrentTexture, UTexture*& OutNewTexture,
+	  const TArray<FString>& Paths, const TArray<const char*>& Items);
 
 	// Transform 프로퍼티 렌더링 헬퍼 함수
 	static bool RenderTransformProperty(const FProperty& Prop, void* Instance);
@@ -84,4 +85,6 @@ private:
 	static TArray<const char*> CachedScriptItems;
 	static TArray<FString> CachedClothWeightAssetPaths;
 	static TArray<FString> CachedClothWeightAssetItems;
+	static TArray<FString> CachedDecalTexturePaths;
+	static TArray<const char*> CachedDecalTextureItems;
 };
