@@ -36,6 +36,7 @@
 #include "Source/Runtime/Engine/Animation/AnimNotify_CallFunction.h"
 #include "Source/Runtime/Engine/Animation/AnimNotify_ParticleStart.h"
 #include "Source/Runtime/Engine/Animation/AnimNotify_ParticleEnd.h"
+#include "Source/Runtime/Engine/Particle/ParticleSystem.h"
 namespace
 {
     using FBoneNameSet = std::unordered_set<FName>;
@@ -3549,29 +3550,63 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                         bool bHover = ImGui::IsMouseHoveringRect(RMin, RMax);
                         bool bPressed = bHover && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
                         bool bDoubleClicked = bHover && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
-                        
 
-                        // Styling
-                        ImU32 FillCol = IM_COL32(100, 100, 255, bHover ? 140 : 100);
-                        ImU32 LineCol = IM_COL32(200, 200, 255, 150);
+                        // 노티파이 타입별 색상 지정
+                        ImU32 FillCol, LineCol;
+                        FString Label = Notify.NotifyName.ToString();
+
+                        if (Notify.Notify && Notify.Notify->IsA<UAnimNotify_PlaySound>())
+                        {
+                            // 사운드: 파란색
+                            FillCol = IM_COL32(80, 120, 220, bHover ? 180 : 140);
+                            LineCol = IM_COL32(120, 160, 255, 200);
+                            if (Label.empty()) Label = "PlaySound";
+                        }
+                        else if (Notify.Notify && Notify.Notify->IsA<UAnimNotify_CallFunction>())
+                        {
+                            // 함수 호출: 노란색
+                            FillCol = IM_COL32(200, 180, 60, bHover ? 180 : 140);
+                            LineCol = IM_COL32(240, 220, 100, 200);
+                            if (Label.empty())
+                            {
+                                UAnimNotify_CallFunction* CF = static_cast<UAnimNotify_CallFunction*>(Notify.Notify);
+                                Label = "Func: " + CF->FunctionName.ToString();
+                            }
+                        }
+                        else if (Notify.Notify && Notify.Notify->IsA<UAnimNotify_ParticleStart>())
+                        {
+                            // 파티클 시작: 초록색
+                            FillCol = IM_COL32(60, 180, 80, bHover ? 180 : 140);
+                            LineCol = IM_COL32(100, 220, 120, 200);
+                            if (Label.empty()) Label = "ParticleStart";
+                        }
+                        else if (Notify.Notify && Notify.Notify->IsA<UAnimNotify_ParticleEnd>())
+                        {
+                            // 파티클 종료: 빨간색
+                            FillCol = IM_COL32(180, 60, 60, bHover ? 180 : 140);
+                            LineCol = IM_COL32(220, 100, 100, 200);
+                            if (Label.empty()) Label = "ParticleEnd";
+                        }
+                        else
+                        {
+                            // 기본: 보라색
+                            FillCol = IM_COL32(140, 100, 180, bHover ? 180 : 140);
+                            LineCol = IM_COL32(180, 140, 220, 200);
+                            if (Label.empty()) Label = "Notify";
+                        }
+
                         DrawList->AddRectFilled(
                             ImVec2(ViewXStart, P.y),
                             ImVec2(ViewXEnd, P.y + Size.y),
                             FillCol
                         );
                         DrawList->AddRect(
-                            ImVec2(ViewXStart, P.y), 
-                            ImVec2(ViewXEnd, P.y + Size.y), 
+                            ImVec2(ViewXStart, P.y),
+                            ImVec2(ViewXEnd, P.y + Size.y),
                             LineCol
                         );
-                        
+
                         ImGui::PushClipRect(ImVec2(ViewXStart, P.y), ImVec2(ViewXEnd, P.y + Size.y), true);
-                        // Label: use NotifyName if set, otherwise fallback based on type
-                        FString Label = Notify.NotifyName.ToString();
-                        if (Label.empty())
-                        {
-                            Label = Notify.Notify && Notify.Notify->IsA<UAnimNotify_PlaySound>() ? "PlaySound" : "Notify";
-                        }
                         DrawList->AddText(ImVec2(XStart + 2, P.y + 2), IM_COL32_WHITE, Label.c_str());
                         ImGui::PopClipRect();
 
@@ -3691,9 +3726,103 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                             }
                         }
                     }
+                    else if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_CallFunction>())
+                    {
+                        // CallFunction 노티파이 편집
+                        UAnimNotify_CallFunction* CF = static_cast<UAnimNotify_CallFunction*>(Evt.Notify);
+
+                        ImGui::Text("Call Function Notify");
+                        ImGui::Separator();
+
+                        // 현재 함수 이름
+                        static char FuncNameBuffer[256] = "";
+                        FString CurrentFuncName = CF->FunctionName.ToString();
+                        strncpy_s(FuncNameBuffer, sizeof(FuncNameBuffer), CurrentFuncName.c_str(), _TRUNCATE);
+
+                        if (ImGui::InputText("Function Name", FuncNameBuffer, sizeof(FuncNameBuffer)))
+                        {
+                            CF->FunctionName = FName(FString(FuncNameBuffer));
+                            Evt.NotifyName = FName((FString("CallFunc: ") + FuncNameBuffer).c_str());
+                        }
+
+                        ImGui::Separator();
+                        ImGui::TextDisabled("Available functions:");
+                        ImGui::TextDisabled("  - AttackBegin");
+                        ImGui::TextDisabled("  - AttackEnd");
+                        ImGui::TextDisabled("  - ToggleGorillaFormOnAccessory");
+                    }
+                    else if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_ParticleStart>())
+                    {
+                        // ParticleStart 노티파이 편집
+                        UAnimNotify_ParticleStart* PStart = static_cast<UAnimNotify_ParticleStart*>(Evt.Notify);
+
+                        ImGui::Text("Particle Start Notify");
+                        ImGui::Separator();
+
+                        // Socket 이름 편집
+                        static char SocketBuffer[128] = "";
+                        strncpy_s(SocketBuffer, sizeof(SocketBuffer), PStart->SocketName.ToString().c_str(), _TRUNCATE);
+                        if (ImGui::InputText("Socket Name", SocketBuffer, sizeof(SocketBuffer)))
+                        {
+                            PStart->SocketName = FName(FString(SocketBuffer));
+                        }
+
+                        // 파티클 시스템 경로 선택
+                        UResourceManager& ResMgr = UResourceManager::GetInstance();
+                        TArray<FString> ParticlePaths = ResMgr.GetAllFilePaths<UParticleSystem>();
+
+                        FString CurrentPath = PStart->ParticleSystemPath;
+                        FString Preview = CurrentPath.empty() ? FString("None") : CurrentPath;
+
+                        if (ImGui::BeginCombo("Particle System", Preview.c_str()))
+                        {
+                            if (ImGui::Selectable("None", CurrentPath.empty()))
+                            {
+                                PStart->ParticleSystemPath = "";
+                            }
+
+                            for (const FString& Path : ParticlePaths)
+                            {
+                                bool selected = (Path == CurrentPath);
+                                if (ImGui::Selectable(Path.c_str(), selected))
+                                {
+                                    PStart->ParticleSystemPath = Path;
+                                    std::filesystem::path p(Path);
+                                    Evt.NotifyName = FName((FString("ParticleStart: ") + p.filename().string()).c_str());
+                                }
+                                if (selected) ImGui::SetItemDefaultFocus();
+                            }
+                            ImGui::EndCombo();
+                        }
+                    }
+                    else if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_ParticleEnd>())
+                    {
+                        // ParticleEnd 노티파이 편집
+                        ImGui::Text("Particle End Notify");
+                        ImGui::Separator();
+                        ImGui::TextDisabled("This notify stops active particles.");
+                    }
                     else
                     {
-                        ImGui::TextDisabled("This notify type is not editable.");
+                        ImGui::TextDisabled("Unknown notify type.");
+                    }
+
+                    // 공통: TriggerTime 편집
+                    ImGui::Separator();
+                    float TriggerTime = Evt.TriggerTime;
+                    if (ImGui::DragFloat("Trigger Time", &TriggerTime, 0.01f, 0.0f, PlayLength, "%.3f sec"))
+                    {
+                        Evt.TriggerTime = TriggerTime;
+                    }
+
+                    // Duration 편집 (State 노티파이용)
+                    if (Evt.Duration > 0.0f || Evt.NotifyState)
+                    {
+                        float Duration = Evt.Duration;
+                        if (ImGui::DragFloat("Duration", &Duration, 0.01f, 0.0f, PlayLength, "%.3f sec"))
+                        {
+                            Evt.Duration = Duration;
+                        }
                     }
                 }
 
