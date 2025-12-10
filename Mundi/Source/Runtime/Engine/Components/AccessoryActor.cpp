@@ -22,6 +22,7 @@ AAccessoryActor::AAccessoryActor()
 
 	// Mesh와 Particle들을 SceneRoot의 자식으로 attach
 	AccessoryMesh = CreateDefaultSubobject<UStaticMeshComponent>("AccessoryMesh");
+	AccessoryMesh->SetEnableCollision(false);  // 메쉬 자체는 충돌 불필요 (AttackShape가 담당)
 	RootComponent = AccessoryMesh;
 
 	//AccessoryMesh->SetupAttachment(SceneRoot);

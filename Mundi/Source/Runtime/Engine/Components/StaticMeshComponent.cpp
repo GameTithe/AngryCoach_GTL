@@ -95,6 +95,11 @@ void UStaticMeshComponent::OnCollisionShapeChanged()
 
 void UStaticMeshComponent::InitCollisionShape()
 {
+	if (!StaticMesh)
+	{
+		return;
+	}
+
 	EAggCollisionShapeType CurrentShapeType = static_cast<EAggCollisionShapeType>(CollisionType);
 	if (CurrentShapeType != EAggCollisionShapeType::Convex)
 	{
