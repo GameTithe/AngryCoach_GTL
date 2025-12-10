@@ -56,20 +56,21 @@ void AAngryCoachCharacter::BeginPlay()
 	 * 구현에 따라서 AAngryCoachCharacter에서 바인딩할 지 결정
 	 */
 	Super::BeginPlay();
-	FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
-	AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	//FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+	//AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	//
+	//if (KnifeAccessory)
+	//{
+	//	EquipAccessory(KnifeAccessory);
+	//
+	//	if (SkillComponent)
+	//	{
+	//		SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
+	//	}
+	//	
+	//	KnifeAccessory->GetRootComponent()->SetOwner(this);
+	//}
 	
-	if (KnifeAccessory)
-	{
-		EquipAccessory(KnifeAccessory);
-	
-		if (SkillComponent)
-		{
-			SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
-		}
-		
-		KnifeAccessory->GetRootComponent()->SetOwner(this);
-	}
 	
 	////FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
 	//AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
@@ -84,27 +85,21 @@ void AAngryCoachCharacter::BeginPlay()
 	//	GorillaAccessory->GetRootComponent()->SetOwner(this);
 	//}
 	
-	// FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-	// ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-	//
-	// if (CloakAccessory)
-	// {
-	// 	EquipAccessory(CloakAccessory);
-	// 	FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
-	// 	ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-	//
-	// 	if (CloakAccessory)
-	// 	{
-	// 		EquipAccessory(CloakAccessory);
-	//
-	// 		if (SkillComponent)
-	// 		{
-	// 			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
-	// 		}
-	//
-	// 		CloakAccessory->GetRootComponent()->SetOwner(this);
-	// 	}
-	//}
+	 FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+	 ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	 
+	 	if (CloakAccessory)
+	 	{
+	 		EquipAccessory(CloakAccessory);
+	
+	 		if (SkillComponent)
+	 		{
+	 			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
+	 		}
+	
+	 		CloakAccessory->GetRootComponent()->SetOwner(this);
+	 	}
+	 
 }
 
 void AAngryCoachCharacter::Tick(float DeltaSeconds)
