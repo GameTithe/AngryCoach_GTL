@@ -246,6 +246,9 @@ void AAngryCoachCharacter::UnequipAccessory()
 	if (!CurrentAccessory)
 		return;
 
+	// 캐시된 AttackShapes 정리 (dangling pointer 방지)
+	ClearAttackShapes();
+
 	// 악세서리의 Unequip 로직 실행
 	CurrentAccessory->Unequip();
 

@@ -521,7 +521,13 @@ void FBodyInstance::Terminate(FPhysScene& World)
         return;
     }
 
-    
+    // 콜백에서 dangling pointer 접근 방지 (먼저 null 처리)
+    OwnerComponent = nullptr;
+
+    // userData도 null 처리 - PhysX 콜백에서 dangling BodyInstance 접근 방지
+    // (fetchResults 시점에 userData가 삭제된 FBodyInstance를 가리키는 것 방지)
+    RigidActor->userData = nullptr;
+
     PxScene* Scene = World.GetScene();
     if (Scene)
     {

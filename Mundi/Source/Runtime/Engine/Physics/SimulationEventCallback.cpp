@@ -43,12 +43,24 @@ void FSimulationEventCallback::onContact(const PxContactPairHeader& PairHeader, 
 
 		if (PrimCompA && PrimCompB)
 		{
+			// 컴포넌트가 이미 unregister 중이면 스킵 (Owner가 dangling일 수 있음)
+			if (!PrimCompA->IsRegistered() || !PrimCompB->IsRegistered())
+			{
+				return;
+			}
+
 			AActor* OwnerA = PrimCompA->GetOwner();
 			AActor* OwnerB = PrimCompB->GetOwner();
 
 			if (OwnerA && OwnerB)
 			{
-				// 3. 충돌 정보 채우기 
+				// Pending destroy 체크 (dangling pointer 방지)
+				if (OwnerA->IsPendingDestroy() || OwnerB->IsPendingDestroy())
+				{
+					return;
+				}
+
+				// 3. 충돌 정보 채우기
 				AActor::FContactHit ContactHit;
 				ContactHit.ActorTo = OwnerA;
 				ContactHit.ActorFrom = OwnerB;
@@ -123,11 +135,23 @@ void FSimulationEventCallback::onTrigger(physx::PxTriggerPair* pairs, physx::PxU
 		{
 			continue;
 		}
-	
+
+		// 컴포넌트가 이미 unregister 중이면 스킵 (Owner가 dangling일 수 있음)
+		if (!TriggerComp->IsRegistered() || !OtherComp->IsRegistered())
+		{
+			continue;
+		}
+
 		AActor* TriggerOwner = TriggerComp->GetOwner();
 		AActor* OtherOwner = OtherComp->GetOwner();
 
 		if (!TriggerOwner || !OtherOwner)
+		{
+			continue;
+		}
+
+		// Pending destroy 체크 (dangling pointer 추가 방지)
+		if (TriggerOwner->IsPendingDestroy() || OtherOwner->IsPendingDestroy())
 		{
 			continue;
 		}

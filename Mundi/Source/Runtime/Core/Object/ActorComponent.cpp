@@ -62,8 +62,9 @@ void UActorComponent::UnregisterComponent()
         return;
     }
 
-    OnUnregister();
+    // 먼저 false로 설정 (OnUnregister에서 WaitForSimulation 시 콜백에서 체크용)
     bRegistered = false;
+    OnUnregister();
 }
 
 // Override시 Super::OnRegister() 권장
