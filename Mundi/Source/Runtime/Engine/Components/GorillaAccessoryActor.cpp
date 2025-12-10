@@ -30,6 +30,7 @@ AGorillaAccessoryActor::AGorillaAccessoryActor()
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
+	GrantedSkills.Add(ESkillSlot::JumpAttack, nullptr);  // 고릴라는 점프 공격 비활성화
 
 	// 양손 AttackShape 생성 (왼손/오른손)
 	if (USphereComponent* LeftShape = Cast<USphereComponent>(CreateAttackShape<USphereComponent>(FName("LeftAttackShape"))))
@@ -66,6 +67,7 @@ void AGorillaAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandl
 		GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 		GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 		GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
+		GrantedSkills.Add(ESkillSlot::JumpAttack, nullptr);  // 고릴라는 점프 공격 비활성화
 
 		// AttackShape 설정 (있으면 업데이트, 없으면 재생성)
 		if (AttackShapes.Num() == 0)
@@ -118,6 +120,7 @@ void AGorillaAccessoryActor::DuplicateSubObjects()
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
+	GrantedSkills.Add(ESkillSlot::JumpAttack, nullptr);  // 고릴라는 점프 공격 비활성화
 
 	// AttackShape 설정 (있으면 업데이트, 없으면 재생성)
 	if (AttackShapes.Num() == 0)

@@ -290,6 +290,33 @@ void AAngryCoachCharacter::ClearAttackShapes()
 }
 
 // ===== 스킬 =====
+void AAngryCoachCharacter::OnJumpAttackInput(const FVector& InputDirection)
+{
+    if (!SkillComponent)
+        return;
+
+    // 점프 중이 아니면 무시
+    if (CurrentState != ECharacterState::Jumping || bIsJumpAttacking)
+        return;
+
+    // 방향 저장 (스킬에서 사용)
+    JumpAttackDirection = InputDirection;
+    if (JumpAttackDirection.IsZero())
+    {
+        // 입력이 없으면 현재 회전에서 방향 계산
+        FVector Euler = GetActorRotation().ToEulerZYXDeg();
+        float Yaw = Euler.Z * (PI / 180.0f);
+        JumpAttackDirection = FVector(std::cos(Yaw), std::sin(Yaw), 0.0f);
+    }
+    JumpAttackDirection.Z = 0.0f;
+    JumpAttackDirection.Normalize();
+
+    CurrentAttackSlot = ESkillSlot::JumpAttack;
+    BaseDamage = 8.0f;  // 점프 공격 데미지
+    bIsJumpAttacking = true;
+    SkillComponent->HandleInput(ESkillSlot::JumpAttack);
+}
+
 void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 {
     if (!SkillComponent)
@@ -379,6 +406,23 @@ void AAngryCoachCharacter::AttackEnd()
     }
     // 공격 종료 시 슬롯 리셋
     CurrentAttackSlot = ESkillSlot::None;
+    bIsJumpAttacking = false;
+}
+
+void AAngryCoachCharacter::OnLanded()
+{
+    // 점프 공격 중 착지 시 몽타주 정지 + 공격 종료
+    if (bIsJumpAttacking)
+    {
+        StopCurrentMontage(0.2f);
+        AttackEnd();
+
+        // 속도 초기화 (미끄러짐 방지)
+        if (CharacterMovement)
+        {
+            CharacterMovement->SetVelocity(FVector::Zero());
+        }
+    }
 }
 
 void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)

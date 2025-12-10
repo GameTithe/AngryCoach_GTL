@@ -44,8 +44,14 @@ public:
 
 	// ===== 스킬 =====
     void OnAttackInput(EAttackInput Input);
+    void OnJumpAttackInput(const FVector& InputDirection);
     USkillComponent* GetSkillComponent() const { return SkillComponent; }
     ESkillSlot GetCurrentAttackSlot() const { return CurrentAttackSlot; }
+    FVector GetJumpAttackDirection() const { return JumpAttackDirection; }
+    bool IsJumpAttacking() const { return bIsJumpAttacking; }
+
+	// 착지 시 호출 (CharacterMovementComponent에서 호출)
+	void OnLanded();
 
 	// 노티파이용 함수
 	void AttackBegin() override;
@@ -97,6 +103,10 @@ protected:
 
     // 현재 공격 슬롯(약/강/스페셜 분기용)
     ESkillSlot CurrentAttackSlot = ESkillSlot::None;
+
+    // 점프 공격 방향 (스킬에서 사용)
+    FVector JumpAttackDirection = FVector::Zero();
+    bool bIsJumpAttacking = false;
 
 	UAnimMontage* HitReationMontage = nullptr;
 	UAnimMontage* GuardMontage = nullptr;
