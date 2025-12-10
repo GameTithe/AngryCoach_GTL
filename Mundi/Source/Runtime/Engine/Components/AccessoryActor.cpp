@@ -335,9 +335,13 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	// 1. 캐릭터의 Mesh 소켓에 부착
 	USkeletalMeshComponent* CharacterMesh = OwnerCharacter->GetMesh();
 	if (CharacterMesh && AccessoryMesh && AttachSocketName.IsValid())
-	{ 
+	{
 		AccessoryMesh->SetupAttachment(CharacterMesh, AttachSocketName);
 		AccessoryMesh->RegisterComponent(OwnerCharacter->GetWorld());
+
+		// 소켓 위치에 정확히 부착 (상대 위치/회전을 0으로 설정)
+		AccessoryMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		AccessoryMesh->SetRelativeRotation(FQuat::Identity());
 
 		// 월드 스케일 1이 되도록 상대 스케일 계산 (부모 스케일 상쇄)
 		FTransform SocketWorld = CharacterMesh->GetSocketTransform(AttachSocketName);
@@ -348,7 +352,7 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 			SocketWorldScale.Z != 0.0f ? 1.0f / SocketWorldScale.Z : 1.0f
 		);
 
-		AccessoryMesh->SetRelativeScale(RelativeScaleForWorldOne); 
+		AccessoryMesh->SetRelativeScale(RelativeScaleForWorldOne);
 	}
 
 	// 2. 캐릭터의 스킬 컴포넌트 찾기 및 스킬 등록

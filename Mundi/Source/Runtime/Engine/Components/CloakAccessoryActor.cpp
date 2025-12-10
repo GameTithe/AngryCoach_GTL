@@ -146,6 +146,11 @@ void ACloakAccessoryActor::AttachAttackShapesToLimbs(USkeletalMeshComponent* Cha
 		Shape->SetupAttachment(CharacterMesh, TargetSocket);
 		if (OwningCharacter)
 			Shape->RegisterComponent(OwningCharacter->GetWorld());
+
+		// 소켓 위치에 정확히 부착 (상대 위치/회전을 0으로 설정)
+		Shape->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		Shape->SetRelativeRotation(FQuat::Identity());
+
 		UE_LOG("[CloakAccessory] %s attached to %s", ShapeName.c_str(), TargetSocket.ToString().c_str());
 	}
 }

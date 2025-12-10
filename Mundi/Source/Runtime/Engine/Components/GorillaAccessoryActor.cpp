@@ -190,6 +190,9 @@ void AGorillaAccessoryActor::ReattachAttackShapesToHands(USkeletalMeshComponent*
 			Shape->SetupAttachment(CharacterMesh, LeftHandSocket);
 			if (OwningCharacter)
 				Shape->RegisterComponent(OwningCharacter->GetWorld());
+			// 소켓 위치에 정확히 부착 (상대 위치/회전을 0으로 설정)
+			Shape->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+			Shape->SetRelativeRotation(FQuat::Identity());
 			UE_LOG("[GorillaAccessory] LeftAttackShape attached to %s", LeftHandSocket.ToString().c_str());
 		}
 		else if (ShapeName.find("Right") != std::string::npos)
@@ -197,6 +200,9 @@ void AGorillaAccessoryActor::ReattachAttackShapesToHands(USkeletalMeshComponent*
 			Shape->SetupAttachment(CharacterMesh, RightHandSocket);
 			if (OwningCharacter)
 				Shape->RegisterComponent(OwningCharacter->GetWorld());
+			// 소켓 위치에 정확히 부착 (상대 위치/회전을 0으로 설정)
+			Shape->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+			Shape->SetRelativeRotation(FQuat::Identity());
 			UE_LOG("[GorillaAccessory] RightAttackShape attached to %s", RightHandSocket.ToString().c_str());
 		}
 	}
