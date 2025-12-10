@@ -4,6 +4,7 @@
 #include "AngryCoachCharacter.h"
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
 #include "CharacterMovementComponent.h"
+#include "FAudioDevice.h"
 
 
 UCloakSpecialAttackSkill::UCloakSpecialAttackSkill()
@@ -34,6 +35,12 @@ void UCloakSpecialAttackSkill::Activate(AActor* Caster)
 	{
 		if (!Character->GetCharacterMovement()->IsFalling() && Montage)
 		{
+			// 사운드 재생
+			if (Character->GetSkillSound())
+			{
+				FAudioDevice::PlaySoundAtLocationOneShot(Character->GetSkillSound(), Character->GetActorLocation());
+			}
+
 			// 강제 이동 설정: 바라보는 방향으로 일정 속도로 이동
 			FVector DashDirection = Character->GetActorRotation().GetForwardVector();
 			float DashSpeed = 5.0f;  // 대시 속도

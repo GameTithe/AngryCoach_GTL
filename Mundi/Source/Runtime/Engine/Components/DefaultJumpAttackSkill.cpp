@@ -35,8 +35,9 @@ void UDefaultJumpAttackSkill::Activate(AActor* Caster)
 	if (Direction.IsZero())
 	{
 		// 입력 없으면 현재 회전에서 방향 계산
+		// ToEulerZYXDeg: X=pitch, Y=yaw, Z=roll (라디안 반환)
 		FVector Euler = Character->GetActorRotation().ToEulerZYXDeg();
-		float Yaw = Euler.Z * (PI / 180.0f);
+		float Yaw = Euler.Y;  // Y가 yaw, 이미 라디안
 		Direction = FVector(std::cos(Yaw), std::sin(Yaw), 0.0f);
 	}
 

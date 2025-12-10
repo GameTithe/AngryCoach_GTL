@@ -304,8 +304,9 @@ void AAngryCoachCharacter::OnJumpAttackInput(const FVector& InputDirection)
     if (JumpAttackDirection.IsZero())
     {
         // 입력이 없으면 현재 회전에서 방향 계산
+        // ToEulerZYXDeg: X=pitch, Y=yaw, Z=roll (라디안 반환)
         FVector Euler = GetActorRotation().ToEulerZYXDeg();
-        float Yaw = Euler.Z * (PI / 180.0f);
+        float Yaw = Euler.Y;  // Y가 yaw, 이미 라디안
         JumpAttackDirection = FVector(std::cos(Yaw), std::sin(Yaw), 0.0f);
     }
     JumpAttackDirection.Z = 0.0f;
@@ -349,10 +350,6 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 			 * Skil별 데미지 적용
 			 */
 			BaseDamage = 15.0f;
-			if (SkillSound)
-			{
-				FAudioDevice::PlaySoundAtLocationOneShot(SkillSound, GetActorLocation());
-			}
 			break;
 		}
 	}

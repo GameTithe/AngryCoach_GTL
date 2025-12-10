@@ -4,6 +4,7 @@
 #include "AngryCoachCharacter.h"
 #include "Source/Runtime/Engine/Animation/AnimMontage.h"
 #include "CharacterMovementComponent.h"
+#include "FAudioDevice.h"
 
 
 UKnifeSpecialAttackSkill::UKnifeSpecialAttackSkill()
@@ -34,6 +35,11 @@ void UKnifeSpecialAttackSkill::Activate(AActor* Caster)
 	{
 		if (!Character->GetCharacterMovement()->IsFalling() && Montage)
 		{
+			// 사운드 재생
+			if (Character->GetSkillSound())
+			{
+				FAudioDevice::PlaySoundAtLocationOneShot(Character->GetSkillSound(), Character->GetActorLocation());
+			}
 			Character->PlayMontage(Montage);
 		}
 	}

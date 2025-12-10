@@ -3,6 +3,7 @@
 
 #include "AngryCoachCharacter.h"
 #include "GorillaAccessoryActor.h" // AGorillaAccessoryActor
+#include "FAudioDevice.h"
 
 UGorillaSpecialAttackSkill::UGorillaSpecialAttackSkill()
 {
@@ -21,11 +22,21 @@ void UGorillaSpecialAttackSkill::Activate(AActor* Caster)
 	AGorillaAccessoryActor* GA = Cast<AGorillaAccessoryActor>(SourceAccessory);
 	if (GA)
 	{
+		AAngryCoachCharacter* Character = SourceAccessory->GetOwningCharacter();
+
+		// 사운드 재생
+		if (Character && Character->GetSkillSound())
+		{
+			FAudioDevice::PlaySoundAtLocationOneShot(Character->GetSkillSound(), Character->GetActorLocation());
+		}
+
 		if (!GA->GetIsGorillaForm())
 		{
 			// 변신: 몽타주 재생 (파티클 포함)
-			AAngryCoachCharacter* Character = SourceAccessory->GetOwningCharacter();
-			Character->PlayMontage(Montage);
+			if (Character)
+			{
+				Character->PlayMontage(Montage);
+			}
 		}
 		else
 		{

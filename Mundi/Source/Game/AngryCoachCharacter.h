@@ -49,6 +49,7 @@ public:
     ESkillSlot GetCurrentAttackSlot() const { return CurrentAttackSlot; }
     FVector GetJumpAttackDirection() const { return JumpAttackDirection; }
     bool IsJumpAttacking() const { return bIsJumpAttacking; }
+    USound* GetSkillSound() const { return SkillSound; }
 
 	// 착지 시 호출 (CharacterMovementComponent에서 호출)
 	void OnLanded();
