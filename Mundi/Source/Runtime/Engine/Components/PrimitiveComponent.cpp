@@ -6,7 +6,6 @@
 #include "WorldPartitionManager.h"
 #include "../Physics/BodyInstance.h"
 
-
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 UPrimitiveComponent::UPrimitiveComponent() : bGenerateOverlapEvents(true)
 {
@@ -249,3 +248,4 @@ bool UPrimitiveComponent::IsOverlappingActor(const AActor* Other) const
     }
     return false;
 }
+ 

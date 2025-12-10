@@ -1796,14 +1796,6 @@ void SSkeletalMeshViewerWindow::OnRender()
                     {
                         FSkeletalMeshSocket& SelectedSocket = Skeleton->Sockets[ActiveState->SelectedSocketIndex];
 
-                        // 기즈모 이동 등으로 변경된 값 동기화 (UI 드래그 중이 아닐 때만)
-                        if (!ImGui::IsAnyItemActive())
-                        {
-                            ActiveState->EditSocketLocation = SelectedSocket.RelativeLocation;
-                            ActiveState->EditSocketRotation = SelectedSocket.RelativeRotation.ToEulerZYXDeg();
-                            ActiveState->EditSocketScale = SelectedSocket.RelativeScale;
-                        }
-
                         // Selected socket header
                         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
                         ImGui::Text("> Selected Socket");
