@@ -343,7 +343,7 @@ void FParticleEmitterInstance::Tick(FParticleSimulationContext& Context)
     float EmitterDelay = CachedRequiredModule ? CachedRequiredModule->EmitterDelay : 0.0f;
     bool bDelayPassed = EmitterTime >= EmitterDelay;
 
-    UE_LOG("[Particle] EmitterTime=%.4f, EmitterDelay=%.4f, bDelayPassed=%d", EmitterTime, EmitterDelay, bDelayPassed);
+    //UE_LOG("[Particle] EmitterTime=%.4f, EmitterDelay=%.4f, bDelayPassed=%d", EmitterTime, EmitterDelay, bDelayPassed);
 
     // 아직 안 끝났을 때만 스폰 시도
     if (!bEmitterFinished && !Context.bSuppressSpawning && bDelayPassed)
