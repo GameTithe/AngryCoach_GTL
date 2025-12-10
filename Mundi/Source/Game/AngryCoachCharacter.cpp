@@ -68,13 +68,7 @@ void AAngryCoachCharacter::BeginPlay()
 		}
  	
 		GorillaAccessory->GetRootComponent()->SetOwner(this);
-	}
-
-
-
-
-
-
+	} 
 }
 
 void AAngryCoachCharacter::Tick(float DeltaSeconds)

@@ -24,6 +24,10 @@ AAccessoryActor::AAccessoryActor()
 	AccessoryMesh = CreateDefaultSubobject<UStaticMeshComponent>("AccessoryMesh");
 	RootComponent = AccessoryMesh;
 
+	// 액세서리 메시 자체로는 충돌 차단/오버랩을 끄고, 공격 판정은 AttackShape로만 처리
+	AccessoryMesh->SetBlockComponent(false);
+	AccessoryMesh->SetGenerateOverlapEvents(false);
+
 	//AccessoryMesh->SetupAttachment(SceneRoot);
 
 	TryAttackParticle = CreateDefaultSubobject<UParticleSystemComponent>("TryAttackParticle");
