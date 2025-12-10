@@ -737,6 +737,17 @@ void SSkeletalMeshViewerWindow::OnRender()
                                     ActiveState->EditSocketRotation = NewSocket.RelativeRotation.ToEulerZYXDeg();
                                     ActiveState->EditSocketScale = NewSocket.RelativeScale;
 
+                                    // 기즈모를 새 소켓 위치로 이동 (이전 소켓에 대한 writeback 방지)
+                                    if (ActiveState->PreviewActor)
+                                    {
+                                        ActiveState->PreviewActor->RepositionAnchorToSocket(ActiveState->SelectedSocketIndex);
+                                        if (USceneComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                                        {
+                                            ActiveState->World->GetSelectionManager()->SelectActor(ActiveState->PreviewActor);
+                                            ActiveState->World->GetSelectionManager()->SelectComponent(Anchor);
+                                        }
+                                    }
+
                                     // 변경 플래그 설정
                                     ActiveState->bSocketTransformChanged = true;
 
@@ -1796,6 +1807,15 @@ void SSkeletalMeshViewerWindow::OnRender()
                     {
                         FSkeletalMeshSocket& SelectedSocket = Skeleton->Sockets[ActiveState->SelectedSocketIndex];
 
+                        // 매 프레임 Socket 값을 EditSocket에 동기화 (기즈모 변경 반영)
+                        // UI 슬라이더가 활성화되어 있지 않을 때만 동기화 (드래그 중엔 유지)
+                        if (!ImGui::IsAnyItemActive())
+                        {
+                            ActiveState->EditSocketLocation = SelectedSocket.RelativeLocation;
+                            ActiveState->EditSocketRotation = SelectedSocket.RelativeRotation.ToEulerZYXDeg();
+                            ActiveState->EditSocketScale = SelectedSocket.RelativeScale;
+                        }
+
                         // Selected socket header
                         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.9f, 0.4f, 1.0f));
                         ImGui::Text("> Selected Socket");
@@ -1899,6 +1919,17 @@ void SSkeletalMeshViewerWindow::OnRender()
                             SelectedSocket.RelativeRotation = FQuat::MakeFromEulerZYX(ActiveState->EditSocketRotation);
                             SelectedSocket.RelativeScale = ActiveState->EditSocketScale;
                             ActiveState->bSocketTransformChanged = true;
+
+                            // 앵커 위치도 동기화 (writeback 방지를 위해 Editable을 잠시 끔)
+                            if (ActiveState->PreviewActor)
+                            {
+                                if (UBoneAnchorComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                                {
+                                    Anchor->SetEditability(false);
+                                    Anchor->UpdateAnchorFromBone();
+                                    Anchor->SetEditability(true);
+                                }
+                            }
 
                             // 이 소켓에 붙은 프리뷰 메시들 트랜스폼 dirty 플래그 설정
                             for (UStaticMeshComponent* PreviewMesh : ActiveState->SpawnedPreviewMeshes)

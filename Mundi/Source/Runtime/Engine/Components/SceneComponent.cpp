@@ -342,11 +342,49 @@ void USceneComponent::SetupAttachment(USceneComponent* InParent, EAttachmentRule
 
 void USceneComponent::SetupAttachment(USceneComponent* InParent, const FName& InSocketName, EAttachmentRule Rule)
 {
-    // 기본 부착 로직 수행
-    SetupAttachment(InParent, Rule);
+    if (AttachParent == InParent && AttachSocketName == InSocketName) return;
+    const FTransform OldWorld = GetWorldTransform();
 
-    // 소켓 이름 설정
+    // 기존 부모에서 제거
+    if (AttachParent)
+    {
+        auto& Siblings = AttachParent->AttachChildren;
+        Siblings.erase(std::remove(Siblings.begin(), Siblings.end(), this), Siblings.end());
+    }
+
+    // 새 부모 및 소켓 설정
+    AttachParent = InParent;
     AttachSocketName = InSocketName;
+
+    if (AttachParent)
+    {
+        AttachParent->AttachChildren.push_back(this);
+        if (Rule == EAttachmentRule::KeepWorld)
+        {
+            // 소켓이 있으면 소켓 트랜스폼 기준으로 RelativeTransform 계산
+            USkeletalMeshComponent* SkelMeshParent = Cast<USkeletalMeshComponent>(AttachParent);
+            if (SkelMeshParent && !InSocketName.ToString().empty() && SkelMeshParent->DoesSocketExist(InSocketName))
+            {
+                FTransform SocketWorld = SkelMeshParent->GetSocketTransform(InSocketName);
+                RelativeTransform = SocketWorld.GetRelativeTransform(OldWorld);
+            }
+            else
+            {
+                const FTransform ParentWorld = AttachParent->GetWorldTransform();
+                RelativeTransform = ParentWorld.GetRelativeTransform(OldWorld);
+            }
+        }
+        // KeepRelative: 기존 RelativeTransform 유지
+    }
+    else
+    {
+        if (Rule == EAttachmentRule::KeepWorld)
+            RelativeTransform = OldWorld;
+    }
+
+    RelativeLocation = RelativeTransform.Translation;
+    RelativeRotation = RelativeTransform.Rotation;
+    RelativeScale = RelativeTransform.Scale3D;
 }
 
 void USceneComponent::DetachFromParent(bool bKeepWorld)
@@ -401,6 +439,11 @@ void USceneComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         // 부모 찾기
         FJsonSerializer::ReadUint32(InOutHandle, "ParentId", ParentId);
 
+        // 소켓 이름 로드
+        FString SocketNameStr;
+        FJsonSerializer::ReadString(InOutHandle, "AttachSocketName", SocketNameStr, "", false);
+        AttachSocketName = FName(SocketNameStr);
+
         RelativeRotation = FQuat::MakeFromEulerZYX(RelativeRotationEuler).GetNormalized();
 
         // 해당 객체의 Transform을 위에서 읽은 값을 기반으로 변경 후, 자식에게 전파
@@ -419,6 +462,12 @@ void USceneComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		{
 			InOutHandle["ParentId"] = 0;
 		}
+
+        // 소켓 이름 저장
+        if (AttachSocketName.IsValid())
+        {
+            InOutHandle["AttachSocketName"] = AttachSocketName.ToString();
+        }
 	}
 }
 

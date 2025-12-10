@@ -1008,15 +1008,6 @@ FTransform USkeletalMeshComponent::GetSocketTransform(const FName& SocketName) c
     SocketRelativeTransform.Rotation = Socket->RelativeRotation;
     SocketRelativeTransform.Scale3D = Socket->RelativeScale;
 
-    // RightHandSocket, LeftHandSocket의 경우 로컬 X 방향으로 1만큼 오프셋 적용
-    // (손 소켓이 캐릭터 손 방향과 맞지 않아 앞으로 조금 이동)
-    FString SocketNameStr = SocketName.ToString();
-    if (SocketNameStr == "RightHandSocket" || SocketNameStr == "LeftHandSocket")
-    {
-        // 로컬 X 방향으로 1만큼 이동 (소켓의 로컬 공간에서)
-        SocketRelativeTransform.Translation.X += 10.0f;
-    }
-
     // 본 트랜스폼에 소켓 상대 트랜스폼 적용
     return BoneWorldTransform.GetWorldTransform(SocketRelativeTransform);
 }
