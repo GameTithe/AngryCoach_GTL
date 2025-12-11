@@ -109,6 +109,12 @@ private:
 	static constexpr float TECH_WAIT_DURATION = 2.0f;     // Tech (phys, dx, power) 후 대기 시간
 	static constexpr float MEMBERS_WAIT_DURATION = 1.0f;  // Members Enter 후 대기 시간
 
+	// === Skip 위젯 깜빡임 설정 ===
+	static constexpr float SKIP_BLINK_SPEED = 0.7f;       // 깜빡임 속도 (Hz)
+	static constexpr float SKIP_OPACITY_MIN = 0.3f;       // 최소 Opacity
+	static constexpr float SKIP_OPACITY_MAX = 1.0f;       // 최대 Opacity
+	float SkipBlinkTime = 0.0f;                           // 깜빡임 타이머
+
 	// === 내부 함수 ===
 
 	/**

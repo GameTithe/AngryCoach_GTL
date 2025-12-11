@@ -78,30 +78,29 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 	}
 
 	UpdateGamePadVibration(DeltaSeconds);
-	if (bEnableP1Vibration && P1VibrationTime <= 0.0f)
-	{
-		bEnableP1Vibration = false;
-		P1VibrationTime = 0.0f;
-		GamePadIndex = 0;
-		GamePadIndex = -1;
-		InputManager.StopGamepadVibration(0);
-	}
-	if (bEnableP2Vibration && P2VibrationTime <= 0.0f)
-	{
-		bEnableP2Vibration = false;
-		P2VibrationTime = 0.0f;
-		GamePadIndex = 0;
-		GamePadIndex = -1;
-		InputManager.StopGamepadVibration(1);
-	}
+
+	// P1 진동 타이머 처리
 	if (bEnableP1Vibration)
 	{
 		P1VibrationTime -= DeltaSeconds;
+		if (P1VibrationTime <= 0.0f)
+		{
+			bEnableP1Vibration = false;
+			P1VibrationTime = 0.0f;
+			InputManager.StopGamepadVibration(0);
+		}
 	}
 
+	// P2 진동 타이머 처리
 	if (bEnableP2Vibration)
 	{
 		P2VibrationTime -= DeltaSeconds;
+		if (P2VibrationTime <= 0.0f)
+		{
+			bEnableP2Vibration = false;
+			P2VibrationTime = 0.0f;
+			InputManager.StopGamepadVibration(1);
+		}
 	}
 
 	// 카메라 위치 업데이트
