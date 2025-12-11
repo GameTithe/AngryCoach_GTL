@@ -57,6 +57,8 @@ public:
 
 	// === 춤 ====
 	void DancingCoach();
+	void StopDancingCoach();
+	AActor* CachedDiscoBall;
 
 	// ===== 이동 =====
 	void AddMovementInput(FVector Direction, float Scale) override;

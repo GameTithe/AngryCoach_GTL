@@ -58,6 +58,27 @@ void AAngryCoachCharacter::BeginPlay()
 	 * 구현에 따라서 AAngryCoachCharacter에서 바인딩할 지 결정
 	 */
 	Super::BeginPlay();
+
+	// ⭐ DiscoBall 생성 및 부착 (BeginPlay에서 안전하게 스폰)
+	if (!CachedDiscoBall)
+	{
+		FString DiscoBallPath = "Data/Prefabs/DiscoBall.prefab";
+		AActor* DiscoBall = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(DiscoBallPath)));
+		if (DiscoBall)
+		{
+			CachedDiscoBall = DiscoBall;
+
+			// 캐릭터의 루트 컴포넌트에 부착
+			if (USceneComponent* DiscoRootComp = CachedDiscoBall->GetRootComponent())
+			{
+				DiscoRootComp->SetupAttachment(GetRootComponent());
+				DiscoRootComp->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
+			}
+
+			CachedDiscoBall->SetActorActive(false);
+		}
+	}
+
 	FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
 	AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
 	
@@ -196,13 +217,7 @@ void AAngryCoachCharacter::StopCurrentMontage(float BlendOutTime)
 	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
 	if (!AnimInstance) return;
 
-	AnimInstance->StopMontage(BlendOutTime);
-
-	// ⭐ 몽타주 중단 시 춤 플래그도 리셋
-	if (bIsDancing)
-	{
-		bIsDancing = false;
-	}
+	AnimInstance->StopMontage(BlendOutTime); 
 }
 
 bool AAngryCoachCharacter::IsPlayingMontage() const
@@ -538,17 +553,39 @@ void AAngryCoachCharacter::DancingCoach()
 {
 	bIsDancing = true;
 	PlayMontage(DacingMontage);
+	
+
+	// On Light
+	if (CachedDiscoBall)
+	{ 
+		
+		CachedDiscoBall->SetActorActive(true); 
+	}
+	
+}
+
+void AAngryCoachCharacter::StopDancingCoach()
+{
+	bIsDancing = false;
+
+	StopCurrentMontage(0.2f);  
+
+
+	// OffLight
+	if (CachedDiscoBall)
+	{
+		CachedDiscoBall->SetActorActive(false);
+	}
 }
 
 void AAngryCoachCharacter::AddMovementInput(FVector Direction, float Scale)
 {
-	// ⭐ 춤 중이고 이동 입력이 있으면 즉시 중단
+	// 춤 중이고 이동 입력이 있으면 즉시 중단
 	if (bIsDancing && Direction.SizeSquared() > 0.0f)
 	{
-		StopCurrentMontage(0.2f);
-		bIsDancing = false;
+		StopDancingCoach();
 	}
-
+	 
 	// 부모 클래스 호출 (실제 이동 처리)
 	Super::AddMovementInput(Direction, Scale);
 }
