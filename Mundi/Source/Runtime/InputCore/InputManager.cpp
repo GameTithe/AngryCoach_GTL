@@ -400,6 +400,40 @@ bool UInputManager::IsKeyReleased(int KeyCode) const
     return false;
 }
 
+bool UInputManager::IsAnyKeyPressed() const
+{
+    // 키보드 체크
+    for (int i = 0; i < 256; ++i)
+    {
+        if (KeyStates[i] && !PreviousKeyStates[i]) return true;
+    }
+
+    // 게임패드 버튼 체크
+    static const EGamepadButton GamepadButtons[] = {
+        EGamepadButton::A, EGamepadButton::B, EGamepadButton::X, EGamepadButton::Y,
+        EGamepadButton::Start, EGamepadButton::Back,
+        EGamepadButton::LeftShoulder, EGamepadButton::RightShoulder,
+        EGamepadButton::LeftThumb, EGamepadButton::RightThumb,
+        EGamepadButton::DPadUp, EGamepadButton::DPadDown,
+        EGamepadButton::DPadLeft, EGamepadButton::DPadRight
+    };
+    for (int g = 0; g < MaxGamepads; ++g)
+    {
+        if (!IsGamepadConnected(g)) continue;
+        for (EGamepadButton btn : GamepadButtons)
+        {
+            if (IsGamepadButtonPressed(g, btn)) return true;
+        }
+    }
+
+    // 마우스 버튼 체크
+    for (int i = 0; i < MaxMouseButtons; ++i)
+    {
+        if (MouseButtons[i] && !PreviousMouseButtons[i]) return true;
+    }
+    return false;
+}
+
 void UInputManager::UpdateMousePosition(int X, int Y)
 {
     MousePosition.X = static_cast<float>(X);

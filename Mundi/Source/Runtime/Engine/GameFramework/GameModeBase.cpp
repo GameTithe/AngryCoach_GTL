@@ -62,10 +62,17 @@ void AGameModeBase::Tick(float DeltaTime)
 		return;
 	}
 
-	// 인트로 컷신 업데이트
+	// 인트로 컷신 업데이트 (아무 키 입력 시 스킵)
 	if (IntroCutscene && !IntroCutscene->IsFinished())
 	{
-		IntroCutscene->Update(DeltaTime);
+		if (UInputManager::GetInstance().IsAnyKeyPressed())
+		{
+			IntroCutscene->Skip();
+		}
+		else
+		{
+			IntroCutscene->Update(DeltaTime);
+		}
 		return;
 	}
 
