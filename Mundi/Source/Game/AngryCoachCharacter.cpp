@@ -24,6 +24,7 @@
 #include "FAudioDevice.h"
 #include "PlayerCameraManager.h"
 #include "DecalComponent.h"
+#include "SpotLightComponent.h"
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
@@ -481,31 +482,58 @@ void AAngryCoachCharacter::PaintPlayer1Decal()
     {
         return;
     }
-  
-
-    FString PrefabPath = "Data/Prefabs/CGCDecal.prefab";
-    AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath))); 
-    if (!DecalActor)
-    {
-        return;
-    }
-	
+	 
+	FString PrefabPath = "Data/Prefabs/CGCDecal.prefab";
+	AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	if (DecalActor == nullptr)
+	{
+		return;
+	} 
 	const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset); 
-    DecalActor->SetActorLocation(PlacePos);
-    DecalActor->SetActorScale(DecalScale);
-
-    // Ensure decal opacity starts at 1
-    for (UActorComponent* Comp : DecalActor->GetOwnedComponents())
-    {
-        if (auto* Decal = Cast<UDecalComponent>(Comp))
-        {
-            Decal->SetOpacity(1.0f);
-            break;
-        }
-    }
-
-    LastDecalSpawnPos = ImpactPoint; 
-    LastDecalTime[0] = 0.0f;
+	DecalActor->SetActorLocation(PlacePos);
+	DecalActor->SetActorScale(DecalScale);
+	
+	// Ensure decal opacity starts at 1
+	for (UActorComponent* Comp : DecalActor->GetOwnedComponents())
+	{
+	    if (auto* Decal = Cast<UDecalComponent>(Comp))
+	    {
+	        Decal->SetOpacity(1.0f);
+	        break;
+	    }
+	}
+	
+	LastDecalSpawnPos = ImpactPoint; 
+	LastDecalTime[0] = 0.0f;
+	 
+	//	CachedDecal[0] = DecalActor;
+	// 1개만 생성하는 코드 약간의 버그.. 
+	//if (CachedDecal[0] == nullptr)
+	//{
+	//	FString PrefabPath = "Data/Prefabs/CGCDecal.prefab";
+	//	AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	//	if (DecalActor == nullptr)
+	//	{
+	//		return;
+	//	} 
+	//	CachedDecal[0] = DecalActor;
+	//} 
+	//const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset); 
+	//CachedDecal[0]->SetActorLocation(PlacePos);
+	//CachedDecal[0]->SetActorScale(DecalScale);
+	//
+    //// Ensure decal opacity starts at 1
+    //for (UActorComponent* Comp : CachedDecal[0]->GetOwnedComponents())
+    //{
+    //    if (auto* Decal = Cast<UDecalComponent>(Comp))
+    //    {
+    //        Decal->SetOpacity(1.0f);
+    //        break;
+    //    }
+    //}
+	//
+    //LastDecalSpawnPos = ImpactPoint; 
+    //LastDecalTime[0] = 0.0f;
 }
 
 void AAngryCoachCharacter::PaintPlayer2Decal()
@@ -525,28 +553,56 @@ void AAngryCoachCharacter::PaintPlayer2Decal()
     const FVector ImpactPoint = FloorHit.ImpactPoint;
     const FVector ImpactNormal = FloorHit.ImpactNormal;
 	 
-    FString PrefabPath = "Data/Prefabs/SHCDecal.prefab";
-    AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-    if (!DecalActor)
-    {
-        return;
-    }
+	FString PrefabPath = "Data/Prefabs/SHCDecal.prefab";
+	AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	if (DecalActor == nullptr)
+	{
+		return;
+	}
+	const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset);
+	DecalActor->SetActorLocation(PlacePos);
+	DecalActor->SetActorScale(DecalScale);
 
-    const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset);
-    DecalActor->SetActorLocation(PlacePos);
-     DecalActor->SetActorScale(DecalScale);
+	// Ensure decal opacity starts at 1
+	for (UActorComponent* Comp : DecalActor->GetOwnedComponents())
+	{
+		if (auto* Decal = Cast<UDecalComponent>(Comp))
+		{
+			Decal->SetOpacity(1.0f);
+			break;
+		}
+	}
 
-    for (UActorComponent* Comp : DecalActor->GetOwnedComponents())
-    {
-        if (auto* Decal = Cast<UDecalComponent>(Comp))
-        {
-            Decal->SetOpacity(1.0f);
-            break;
-        }
-    }
+	LastDecalSpawnPos = ImpactPoint;
+	LastDecalTime[1] = 0.0f;
 
-    LastDecalSpawnPos = ImpactPoint; 
-    LastDecalTime[1] = 0.0f;
+	//if (CachedDecal[1] == nullptr)
+	//{
+	//	FString PrefabPath = "Data/Prefabs/SHCDecal.prefab";
+	//	AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	//	if (!DecalActor)
+	//	{
+	//		return;
+	//	}
+	//
+	//	CachedDecal[1] = DecalActor;
+	//}
+   	//
+    //const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset);
+	//CachedDecal[1]->SetActorLocation(PlacePos);
+	//CachedDecal[1]->SetActorScale(DecalScale);
+	//
+    //for (UActorComponent* Comp : CachedDecal[1]->GetOwnedComponents())
+    //{
+    //    if (auto* Decal = Cast<UDecalComponent>(Comp))
+    //    {
+    //        Decal->SetOpacity(1.0f);
+    //        break;
+    //    }
+    //}
+	//
+    //LastDecalSpawnPos = ImpactPoint; 
+    //LastDecalTime[1] = 0.0f;
 }
 
 void AAngryCoachCharacter::DancingCoach()
@@ -555,11 +611,22 @@ void AAngryCoachCharacter::DancingCoach()
 	PlayMontage(DacingMontage);
 	
 
-	// On Light
+	// ⭐ DiscoBall 및 자식 SpotLight 컴포넌트들 켜기
 	if (CachedDiscoBall)
-	{ 
-		
-		CachedDiscoBall->SetActorActive(true); 
+	{
+		CachedDiscoBall->SetActorActive(true);
+
+		// DiscoBall의 모든 자식 컴포넌트 순회
+		TArray<USceneComponent*> AllComponents;
+		AllComponents = CachedDiscoBall->GetSceneComponents();
+
+		for (USceneComponent* Comp : AllComponents)
+		{
+			if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(Comp))
+			{
+				SpotLight->SetActive(true);
+			}
+		}
 	}
 	
 }
@@ -571,10 +638,22 @@ void AAngryCoachCharacter::StopDancingCoach()
 	StopCurrentMontage(0.2f);  
 
 
-	// OffLight
+	// ⭐ DiscoBall 및 자식 SpotLight 컴포넌트들 끄기
 	if (CachedDiscoBall)
 	{
 		CachedDiscoBall->SetActorActive(false);
+
+		// DiscoBall의 모든 자식 컴포넌트 순회
+		TArray<USceneComponent*> AllComponents;
+		AllComponents = CachedDiscoBall->GetSceneComponents();
+
+		for (USceneComponent* Comp : AllComponents)
+		{
+			if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(Comp))
+			{
+				SpotLight->SetActive(false);
+			}
+		}
 	}
 }
 

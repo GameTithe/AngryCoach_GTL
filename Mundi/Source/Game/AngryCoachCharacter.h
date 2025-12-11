@@ -111,7 +111,7 @@ protected:
     FVector DecalScale = FVector(0.2f, 2.0f, 2.0f); 
 
     UPROPERTY(EditAnywhere, Category="[Decal]")
-    float DecalSurfaceOffset = 0.01f;
+    float DecalSurfaceOffset = 0.1f;
 
     UPROPERTY(EditAnywhere, Category="[Decal]")
     float DecalMinDistance = 0.6f;   
@@ -153,6 +153,9 @@ protected:
 
 	// 춤 관련
 	bool bIsDancing = false;  // 춤 중인지 플래그
+
+	// decal
+	TArray<AActor*> CachedDecal = { nullptr, nullptr } ;
 
 	UAnimMontage* DacingMontage = nullptr;
 };
