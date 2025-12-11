@@ -62,9 +62,15 @@ void ACharacter::Tick(float DeltaSecond)
 
 void ACharacter::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-	LastFrameLocation = GetActorLocation();
+    LastFrameLocation = GetActorLocation();
+    // 스켈레탈 메시(렌더용)는 충돌을 발생시키지 않도록 비활성화
+    if (SkeletalMeshComp)
+    {
+        SkeletalMeshComp->SetBlockComponent(false);
+        SkeletalMeshComp->SetGenerateOverlapEvents(false);
+    }
 	// Hardcode: equip FlowKnife prefab on PIE start (moved from Lua to C++)
 	//if (GWorld && GWorld->bPie)
 	//{

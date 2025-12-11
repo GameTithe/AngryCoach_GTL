@@ -106,6 +106,7 @@ public:
     bool IsKeyDown(int KeyCode) const;
     bool IsKeyPressed(int KeyCode) const; // 이번 프레임에 눌림
     bool IsKeyReleased(int KeyCode) const; // 이번 프레임에 떼짐
+    bool IsAnyKeyPressed() const; // 아무 키나 이번 프레임에 눌림
 
     // 마우스 휠 함수들
     float GetMouseWheelDelta() const { return MouseWheelDelta; }

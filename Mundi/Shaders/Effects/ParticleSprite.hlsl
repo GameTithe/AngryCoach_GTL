@@ -125,6 +125,14 @@ float4 mainPS(PSInput In) : SV_TARGET
         // float Index를 클램프
         float I = clamp(In.SubImageIndex, 0.0, float(TotalFrames - 1));
 
+        // SubUV 타일 크기 및 half-texel inset 계산 (seam 방지)
+        float2 tileSize = float2(1.0 / SubImages_Horizontal, 1.0 / SubImages_Vertical);
+
+        // 텍스처 크기를 알 수 없으므로 타일 크기 기준으로 inset 계산
+        // 일반적으로 0.5 texel 정도 inset하면 seam이 사라짐
+        // 타일당 대략 64~256 픽셀이라 가정하면 0.001~0.005 정도가 적당
+        float2 inset = tileSize * 0.01; // 타일 크기의 1% inset
+
         // 보간 없음 (None)
         if (InterpMethod == 0)
         {
@@ -132,10 +140,11 @@ float4 mainPS(PSInput In) : SV_TARGET
             int tileX = frame % SubImages_Horizontal;
             int tileY = frame / SubImages_Horizontal;
 
-            float2 scale = float2(1.0 / SubImages_Horizontal, 1.0 / SubImages_Vertical);
-            float2 offset = float2(tileX, tileY) * scale;
+            float2 offset = float2(tileX, tileY) * tileSize;
 
-            uv = In.UV * scale + offset;
+            // UV를 inset만큼 안쪽으로 축소하여 타일 경계 샘플링 방지
+            float2 uvInTile = In.UV * (tileSize - inset * 2.0) + inset;
+            uv = uvInTile + offset;
         }
         // LinearBlend (두 프레임 보간)
         else if (InterpMethod == 1)
@@ -147,15 +156,16 @@ float4 mainPS(PSInput In) : SV_TARGET
             // Frame 0 UV 계산
             int tileX0 = frame0 % SubImages_Horizontal;
             int tileY0 = frame0 / SubImages_Horizontal;
-            float2 scale = float2(1.0 / SubImages_Horizontal, 1.0 / SubImages_Vertical);
-            float2 offset0 = float2(tileX0, tileY0) * scale;
-            float2 uv0 = In.UV * scale + offset0;
+            float2 offset0 = float2(tileX0, tileY0) * tileSize;
+            float2 uvInTile0 = In.UV * (tileSize - inset * 2.0) + inset;
+            float2 uv0 = uvInTile0 + offset0;
 
             // Frame 1 UV 계산
             int tileX1 = frame1 % SubImages_Horizontal;
             int tileY1 = frame1 / SubImages_Horizontal;
-            float2 offset1 = float2(tileX1, tileY1) * scale;
-            float2 uv1 = In.UV * scale + offset1;
+            float2 offset1 = float2(tileX1, tileY1) * tileSize;
+            float2 uvInTile1 = In.UV * (tileSize - inset * 2.0) + inset;
+            float2 uv1 = uvInTile1 + offset1;
 
             // 두 프레임 샘플 후 보간
             float4 c0 = ParticleTex.Sample(ParticleSampler, uv0);
@@ -163,13 +173,11 @@ float4 mainPS(PSInput In) : SV_TARGET
             float4 tex = lerp(c0, c1, alpha);
             float4 finalColor = tex * In.Color;
 
-            // 알파가 0에 가까우면 discard
-            // 근데 굳이 해야할 필요 못느끼겠음 어차피 사라지는데 이게 뭐하는짓임?
             if (finalColor.a < 0.01)
             {
                 discard;
             }
-            
+
             return finalColor;
         }
     }
