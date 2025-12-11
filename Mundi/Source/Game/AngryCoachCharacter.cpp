@@ -74,11 +74,10 @@ void AAngryCoachCharacter::BeginPlay()
 			{
 				DiscoRootComp->SetupAttachment(GetRootComponent());
 				DiscoRootComp->SetRelativeLocation(FVector(0.0f, 0.0f, 3.0f));
-			}
-
-			CachedDiscoBall->SetActorActive(false);
+			} 
 		}
 	}
+	StopDancingCoach();
 
 	FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
 	AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
@@ -332,14 +331,14 @@ void AAngryCoachCharacter::OnJumpAttackInput(const FVector& InputDirection)
     // 방향 저장 (스킬에서 사용)
     JumpAttackDirection = InputDirection;
     if (JumpAttackDirection.IsZero())
-    {
-        // 입력이 없으면 현재 회전에서 방향 계산
-        // ToEulerZYXDeg: X=pitch, Y=yaw, Z=roll (라디안 반환)
-        FVector Euler = GetActorRotation().ToEulerZYXDeg();
-        float Yaw = Euler.Y;  // Y가 yaw, 이미 라디안
-        JumpAttackDirection = FVector(std::cos(Yaw), std::sin(Yaw), 0.0f);
+    { 
+        JumpAttackDirection = GetActorRotation().GetForwardVector();
+        JumpAttackDirection.Z = 0.0f;  // 수평 방향만 사용
     }
-    JumpAttackDirection.Z = 0.0f;
+    else
+    {
+        JumpAttackDirection.Z = 0.0f;
+    }
     JumpAttackDirection.Normalize();
 
     CurrentAttackSlot = ESkillSlot::JumpAttack;
