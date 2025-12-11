@@ -81,7 +81,7 @@ cbuffer FLightShadowmBufferType : register(b5)
 };
 
 #if USE_CARTOON_SHADING
-cbuffer CartoonParamsBuffer : register(b6)
+cbuffer CartoonParamsBuffer : register(b13)
 {
     float CartoonOutlineThreshold;   // Outline detection threshold
     int CartoonShadingLevels;        // Number of cel shading levels

@@ -345,7 +345,7 @@ CONSTANT_BUFFER_INFO(FTileCullingBufferType, 11, false, true)  // b11, PS only (
 CONSTANT_BUFFER_INFO(FPointLightShadowBufferType, 12, true, true)  // b12, VS+PS
 CONSTANT_BUFFER_INFO(FSubUVBufferType, 2, true, true)  // b2, VS+PS (ParticleSprite.hlsl용)
 CONSTANT_BUFFER_INFO(FParticleEmitterType, 3, true, false)  // b3, VS (ParticleSprite.hlsl용)
-CONSTANT_BUFFER_INFO(FCartoonParamsBufferType, 6, false, true)  // b6, PS only (Cartoon Shading)
+CONSTANT_BUFFER_INFO(FCartoonParamsBufferType, 13, false, true)  // b13, PS only (Cartoon Shading)
 
 
 

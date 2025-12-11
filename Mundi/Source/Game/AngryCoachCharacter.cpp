@@ -342,7 +342,7 @@ void AAngryCoachCharacter::OnJumpAttackInput(const FVector& InputDirection)
     JumpAttackDirection.Normalize();
 
     CurrentAttackSlot = ESkillSlot::JumpAttack;
-    BaseDamage = 8.0f;  // 점프 공격 데미지
+    BaseDamage = 10.0f;  // 점프 공격 데미지
     bIsJumpAttacking = true;
     SkillComponent->HandleInput(ESkillSlot::JumpAttack);
 }
@@ -368,14 +368,14 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 	{
 	case EAttackInput::Light:
 		{
-			Slot = ESkillSlot::LightAttack;			
-			BaseDamage = 5.0f;
+			Slot = ESkillSlot::LightAttack;
+			BaseDamage = 6.0f;
 			break;
 		}
 	case EAttackInput::Heavy:
 		{
 			Slot = ESkillSlot::HeavyAttack;
-			BaseDamage = 10.0f;
+			BaseDamage = 12.0f;
 			break;
 		}
 	case EAttackInput::Skill:
@@ -385,7 +385,7 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 			 * TODO
 			 * Skil별 데미지 적용
 			 */
-			BaseDamage = 15.0f;
+			BaseDamage = 18.0f;
 			break;
 		}
 	}
