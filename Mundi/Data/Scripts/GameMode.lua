@@ -66,6 +66,9 @@ local p1TrailProgress = 1.0      -- P1 잔상 현재 값
 local p2TrailProgress = 1.0      -- P2 잔상 현재 값
 local p1TrailDelayTimer = 0.0    -- P1 딜레이 타이머 (초)
 local p2TrailDelayTimer = 0.0    -- P2 딜레이 타이머 (초)
+local bTrailAnimating = false    -- Trail 애니메이션 진행 중 (KO 후에도 계속)
+local lastP1HP = 1.0             -- KO 후 trail 업데이트용 마지막 HP
+local lastP2HP = 1.0
 
 -- 잔상 설정 (조절 가능)
 local TRAIL_DELAY = 0.5          -- 딜레이 시간 (초) - 줄어들기 전 대기
@@ -254,16 +257,20 @@ end
 -- ============================================
 
 -- 잔상 업데이트 헬퍼 함수
-local function UpdateTrail(currentHP, trailProgress, delayTimer, dt)
-    if currentHP < trailProgress then
-        -- 체력 감소 → 딜레이 리셋
+-- prevHP: 이전 프레임의 체력 (새로운 데미지 감지용)
+local function UpdateTrail(currentHP, trailProgress, delayTimer, dt, prevHP)
+    -- 실제로 체력이 감소했을 때만 딜레이 리셋 (prevHP와 비교)
+    if prevHP and currentHP < prevHP then
         delayTimer = TRAIL_DELAY
-    elseif currentHP > trailProgress then
-        -- 체력 회복 → 잔상 즉시 동기화
+    end
+
+    -- 체력 회복 → 잔상 즉시 동기화
+    if currentHP > trailProgress then
         trailProgress = currentHP
         delayTimer = 0
     end
 
+    -- 딜레이 처리
     if delayTimer > 0 then
         delayTimer = delayTimer - dt
     else
@@ -290,15 +297,41 @@ function UpdateHealthBars(deltaTime)
 
         local dt = deltaTime or 0.016
 
-        -- 잔상 처리
-        p1TrailProgress, p1TrailDelayTimer = UpdateTrail(p1Ratio, p1TrailProgress, p1TrailDelayTimer, dt)
-        p2TrailProgress, p2TrailDelayTimer = UpdateTrail(p2Ratio, p2TrailProgress, p2TrailDelayTimer, dt)
+        -- 잔상 처리 (prevHP 전달로 새 데미지 감지)
+        p1TrailProgress, p1TrailDelayTimer = UpdateTrail(p1Ratio, p1TrailProgress, p1TrailDelayTimer, dt, prevP1HealthRatio)
+        p2TrailProgress, p2TrailDelayTimer = UpdateTrail(p2Ratio, p2TrailProgress, p2TrailDelayTimer, dt, prevP2HealthRatio)
 
         canvas:SetProgress("P1_HP_Trail", p1TrailProgress)
         canvas:SetProgress("P2_HP_Trail", p2TrailProgress)
+
+        -- KO 후 trail 애니메이션 계속하기 위해 상태 저장
+        lastP1HP = p1Ratio
+        lastP2HP = p2Ratio
+        bTrailAnimating = (math.abs(p1TrailProgress - p1Ratio) > 0.001) or (math.abs(p2TrailProgress - p2Ratio) > 0.001)
     end
 
     return p1Ratio, p2Ratio
+end
+
+-- KO 후에도 trail만 계속 업데이트하는 함수
+function UpdateTrailOnly(deltaTime)
+    local canvas = UI.FindCanvas(battleUICanvasName)
+    if not canvas then
+        bTrailAnimating = false
+        return
+    end
+
+    local dt = deltaTime or 0.016
+
+    -- Trail만 업데이트 (새 데미지 감지 없이, prevHP = nil)
+    p1TrailProgress, p1TrailDelayTimer = UpdateTrail(lastP1HP, p1TrailProgress, p1TrailDelayTimer, dt, nil)
+    p2TrailProgress, p2TrailDelayTimer = UpdateTrail(lastP2HP, p2TrailProgress, p2TrailDelayTimer, dt, nil)
+
+    canvas:SetProgress("P1_HP_Trail", p1TrailProgress)
+    canvas:SetProgress("P2_HP_Trail", p2TrailProgress)
+
+    -- Trail이 HP에 도달했는지 체크
+    bTrailAnimating = (math.abs(p1TrailProgress - lastP1HP) > 0.001) or (math.abs(p2TrailProgress - lastP2HP) > 0.001)
 end
 
 -- ============================================
@@ -348,6 +381,9 @@ function ResetPrevHealthRatios()
     p2TrailProgress = 1.0
     p1TrailDelayTimer = 0.0
     p2TrailDelayTimer = 0.0
+    bTrailAnimating = false
+    lastP1HP = 1.0
+    lastP2HP = 1.0
 end
 
 -- ============================================
@@ -732,6 +768,9 @@ function Tick(Delta)
             -- (라운드 승리 카운트, 매치 종료 여부는 C++에서 처리됨)
             EndRound(winnerIndex)
         end
+    elseif bTrailAnimating then
+        -- 전투 종료 후에도 trail 애니메이션 계속 (KO 슬로모션 중)
+        UpdateTrailOnly(Delta)
     end
 end
 
