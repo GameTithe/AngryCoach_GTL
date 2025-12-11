@@ -3,6 +3,7 @@
 
 #include "AngryCoachCharacter.h"
 #include "GorillaAccessoryActor.h"
+#include "ParticleSystemComponent.h"
 
 UGorillaLightAttackSkill::UGorillaLightAttackSkill()
 {
@@ -18,7 +19,7 @@ void UGorillaLightAttackSkill::Activate(AActor* Caster)
 	{
 		return;
 	}
-	
+
 	AGorillaAccessoryActor* GA = Cast<AGorillaAccessoryActor>(SourceAccessory);
 	if (GA)
 	{
@@ -26,6 +27,12 @@ void UGorillaLightAttackSkill::Activate(AActor* Caster)
 		{
 			AAngryCoachCharacter* Character = SourceAccessory->GetOwningCharacter();
 			Character->PlayMontage(Montage);
+
+			// 베이스 이펙트 파티클 재생
+			if (SourceAccessory->BaseEffectParticle)
+			{
+				SourceAccessory->BaseEffectParticle->ResetAndActivate();
+			}
 		}
 		else
 		{

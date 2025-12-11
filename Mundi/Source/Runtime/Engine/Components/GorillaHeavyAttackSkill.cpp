@@ -4,6 +4,7 @@
 #include "AccessoryActor.h"
 #include "AngryCoachCharacter.h"
 #include "GorillaAccessoryActor.h"
+#include "ParticleSystemComponent.h"
 
 UGorillaHeavyAttackSkill::UGorillaHeavyAttackSkill()
 {
@@ -19,7 +20,7 @@ void UGorillaHeavyAttackSkill::Activate(AActor* Caster)
 	{
 		return;
 	}
-	
+
 	AGorillaAccessoryActor* GA = Cast<AGorillaAccessoryActor>(SourceAccessory);
 	if (GA)
 	{
@@ -27,6 +28,12 @@ void UGorillaHeavyAttackSkill::Activate(AActor* Caster)
 		{
 			AAngryCoachCharacter* Character = SourceAccessory->GetOwningCharacter();
 			Character->PlayMontage(Montage);
+
+			// 베이스 이펙트 파티클 재생
+			if (SourceAccessory->BaseEffectParticle)
+			{
+				SourceAccessory->BaseEffectParticle->ResetAndActivate();
+			}
 		}
 		else
 		{

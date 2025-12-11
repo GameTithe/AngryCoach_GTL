@@ -31,8 +31,11 @@ AKnifeAccessoryActor::AKnifeAccessoryActor()
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
-	AttackShape =  Cast<UBoxComponent>(CreateAttackShape<UBoxComponent>(FName("AttackShape")));	
+	AttackShape = Cast<UBoxComponent>(CreateAttackShape<UBoxComponent>(FName("AttackShape")));
 	AttackShape->SetGenerateOverlapEvents(false);
+	AttackShape->SetBlockComponent(false);
+	AttackShape->bOverrideCollisionSetting = true;
+	AttackShape->CollisionEnabled = ECollisionState::QueryOnly;
 }
 
 void AKnifeAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -49,6 +52,19 @@ void AKnifeAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 		GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 		GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
+
+		// AttackShape 포인터 복구
+		AttackShape = nullptr;
+		for (UShapeComponent* Shape : AttackShapes)
+		{
+			if (UBoxComponent* Box = Cast<UBoxComponent>(Shape))
+			{
+				AttackShape = Box;
+				AttackShape->bOverrideCollisionSetting = true;
+				AttackShape->CollisionEnabled = ECollisionState::QueryOnly;
+				break;
+			}
+		}
 	}
 }
 
@@ -64,4 +80,17 @@ void AKnifeAccessoryActor::DuplicateSubObjects()
 	GrantedSkills.Add(ESkillSlot::LightAttack, LightSkill);
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
+
+	// AttackShape 포인터 복구
+	AttackShape = nullptr;
+	for (UShapeComponent* Shape : AttackShapes)
+	{
+		if (UBoxComponent* Box = Cast<UBoxComponent>(Shape))
+		{
+			AttackShape = Box;
+			AttackShape->bOverrideCollisionSetting = true;
+			AttackShape->CollisionEnabled = ECollisionState::QueryOnly;
+			break;
+		}
+	}
 }
