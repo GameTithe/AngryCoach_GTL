@@ -7,7 +7,7 @@ struct FHitResult;
 struct FPhysScene;
  
 class UCharacterMovementComponent : public UPawnMovementComponent
-{	
+{	 
 public:
 	GENERATED_REFLECTION_BODY()
 
@@ -54,7 +54,14 @@ public:
 	void ClearForcedMovement();
 	bool IsForcedMovement() const { return bForceMovement; }
 
-	void LaunchCharacter(FVector LaunchVelocity, bool bXYOverride, bool bZOverride);
+    void LaunchCharacter(FVector LaunchVelocity, bool bXYOverride, bool bZOverride);
+	/**
+	 * @brief 바닥 검사 (아래로 Sweep)
+	 * @param OutHit 바닥 충돌 결과
+	 * @return 바닥에 서있는지 여부
+	 */
+	bool CheckFloor(FHitResult& OutHit);
+	 
 protected:
 	void PhysWalking(float DeltaSecond);
 	void PhysFalling(float DeltaSecond);
@@ -76,13 +83,6 @@ protected:
 	 * @return 슬라이딩 후 남은 이동 벡터
 	 */
 	FVector SlideAlongSurface(const FVector& Delta, const FHitResult& Hit);
-
-	/**
-	 * @brief 바닥 검사 (아래로 Sweep)
-	 * @param OutHit 바닥 충돌 결과
-	 * @return 바닥에 서있는지 여부
-	 */
-	bool CheckFloor(FHitResult& OutHit);
 
 	/** 캡슐 컴포넌트 크기 가져오기 */
 	void GetCapsuleSize(float& OutRadius, float& OutHalfHeight) const;

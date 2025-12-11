@@ -23,6 +23,7 @@
 #include "CloakAccessoryActor.h" 
 #include "FAudioDevice.h"
 #include "PlayerCameraManager.h"
+#include "DecalComponent.h"
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
@@ -115,6 +116,12 @@ void AAngryCoachCharacter::Tick(float DeltaSeconds)
 	{
 		Die();
 	}
+
+	// Decal 쿨
+	for (float& Last : LastDecalTime)
+	{ 
+		Last += DeltaSeconds;
+	}  
 }
 
 void AAngryCoachCharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -416,6 +423,101 @@ void AAngryCoachCharacter::AttackEnd()
     {
         SetCurrentState(ECharacterState::Idle);
     }
+}
+
+void AAngryCoachCharacter::PaintPlayer1Decal(float DeltaTime)
+{ 
+
+    if (!CharacterMovement)
+    {
+        return;
+    }
+
+    FHitResult FloorHit;
+    if (!CharacterMovement->CheckFloor(FloorHit))
+    {
+        return;
+    }
+
+    const FVector ImpactPoint = FloorHit.ImpactPoint;
+    const FVector ImpactNormal = FloorHit.ImpactNormal; 
+
+	// 바닥과의 거리가 멀거나 ( 공중에 있을 때)
+    if (FVector::Distance(ImpactPoint, LastDecalSpawnPos) < DecalMinDistance)
+    {
+        return;
+    }
+	// 너무 빠르게 다시 사용할 때
+    if (LastDecalTime[0] < DecalMinInterval[0])
+    {
+        return;
+    }
+  
+
+    FString PrefabPath = "Data/Prefabs/CGCDecal.prefab";
+    AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+    if (!DecalActor)
+    {
+        return;
+    }
+
+    const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset); 
+    DecalActor->SetActorLocation(PlacePos);
+    DecalActor->SetActorScale(DecalScale);
+
+    // Ensure decal opacity starts at 1
+    for (UActorComponent* Comp : DecalActor->GetOwnedComponents())
+    {
+        if (auto* Decal = Cast<UDecalComponent>(Comp))
+        {
+            Decal->SetOpacity(1.0f);
+            break;
+        }
+    }
+
+    LastDecalSpawnPos = ImpactPoint; 
+    LastDecalTime[0] = 0.0f;
+}
+
+void AAngryCoachCharacter::PaintPlayer2Decal(float DeltaTime)
+{
+
+    if (!CharacterMovement)
+    {
+        return;
+    }
+
+    FHitResult FloorHit;
+    if (!CharacterMovement->CheckFloor(FloorHit))
+    {
+        return;
+    }
+
+    const FVector ImpactPoint = FloorHit.ImpactPoint;
+    const FVector ImpactNormal = FloorHit.ImpactNormal;
+	 
+    FString PrefabPath = "Data/Prefabs/SHCDecal.prefab";
+    AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+    if (!DecalActor)
+    {
+        return;
+    }
+
+    const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset);
+    DecalActor->SetActorLocation(PlacePos);
+     DecalActor->SetActorScale(DecalScale);
+
+    for (UActorComponent* Comp : DecalActor->GetOwnedComponents())
+    {
+        if (auto* Decal = Cast<UDecalComponent>(Comp))
+        {
+            Decal->SetOpacity(1.0f);
+            break;
+        }
+    }
+
+    LastDecalSpawnPos = ImpactPoint; 
+    LastDecalTime[1] = 0.0f;
 }
 
 void AAngryCoachCharacter::OnLanded()

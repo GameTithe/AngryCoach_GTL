@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "PlayerController.h"
 #include "AAngryCoachPlayerController.generated.h"
 
@@ -31,9 +31,11 @@ protected:
 private:
 	// 헬퍼 함수
 	void ProcessPlayer1Attack(float DeltaTime);
-	void ProcessPlayer2Attack(float DeltaTime);
+	void ProcessPlayer2Attack(float DeltaTime); 
+
 	void ResetInputBuffer(bool& bIsInputBuffering, char& PendingKey, float& InputBufferTime);
 	void UpdateGamePadVibration(float DeltaTime);
+	
 
 protected:
 	AAngryCoachCharacter* Player1 = nullptr;

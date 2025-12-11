@@ -172,9 +172,16 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		Player1->Jump();
 	}
 
+	// 공격
 	if (bIsP1InputBuffering || Player1->CanAttack())
 	{
 		ProcessPlayer1Attack(DeltaTime);
+	}
+	
+	// decal
+	if (InputManager.IsKeyPressed('G'))
+	{
+		Player1->PaintPlayer1Decal(DeltaTime);
 	}
 }
 
@@ -233,6 +240,12 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	if (bIsP2InputBuffering || Player2->CanAttack())
 	{
 		ProcessPlayer2Attack(DeltaTime);
+	}
+
+	// decal
+	if (InputManager.IsKeyPressed(VK_NUMPAD4))
+	{
+		Player1->PaintPlayer1Decal(DeltaTime);
 	}
 }
 
@@ -337,6 +350,13 @@ void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
 		ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
 		return;
 	}
+	
+	// painting 즉발로 처리
+	if (InputManager.IsKeyPressed('G'))
+	{
+		ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
+		return;
+	}
 
 	if (bIsP1InputBuffering)
 	{
@@ -376,6 +396,7 @@ void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
 			bIsP1InputBuffering = false;
 		}
 	}
+
 	// 새로운 입력 발생 (대기 상태)
 	else
 	{

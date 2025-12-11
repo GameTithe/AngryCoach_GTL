@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Character.h"
 #include "Source/Runtime/Engine/Skill/SkillTypes.h"
 #include "AAngryCoachCharacter.generated.h"
@@ -51,6 +51,10 @@ public:
     bool IsJumpAttacking() const { return bIsJumpAttacking; }
     USound* GetSkillSound() const { return SkillSound; }
 
+	// ==== Decal Painting ====
+	void PaintPlayer1Decal(float DeltaTime);
+	void PaintPlayer2Decal(float DeltaTime);
+
 	// 착지 시 호출 (CharacterMovementComponent에서 호출)
 	void OnLanded();
 
@@ -88,6 +92,24 @@ public:
 	// 애니메이션 노티파이용 함수
 	void ToggleGorillaFormOnAccessory();
 
+protected:
+
+	//TODO: 다른 컴포넌트를 만들어서 관리하는게 맞는 방법 같은데,
+	// 게임을 위한 컴포넌트를 cpp로 추가하기 싫어서 coach한테,  인자 몇개 만듦.. .
+	// Decal 생성 쿨타임
+    UPROPERTY(EditAnywhere, Category="[Decal]")
+    FVector DecalScale = FVector(0.02f, 0.6f, 0.6f); 
+
+    UPROPERTY(EditAnywhere, Category="[Decal]")
+    float DecalSurfaceOffset = 0.01f;
+
+    UPROPERTY(EditAnywhere, Category="[Decal]")
+    float DecalMinDistance = 0.6f;   
+	TArray<float> DecalMinInterval = { 0.8f , 0.8f };
+	TArray<float> LastDecalTime = { 0,0 };
+
+    FVector LastDecalSpawnPos = FVector::Zero(); 
+    
 private:
 	// 델리게이트 바인딩 헬퍼 함수
 	void DelegateBindToCachedShape();
