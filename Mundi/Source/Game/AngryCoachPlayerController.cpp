@@ -245,7 +245,7 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	// decal
 	if (InputManager.IsKeyPressed(VK_NUMPAD4))
 	{
-		Player1->PaintPlayer1Decal(DeltaTime);
+		Player2->PaintPlayer2Decal(DeltaTime);
 	}
 }
 

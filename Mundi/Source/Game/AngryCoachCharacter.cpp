@@ -455,13 +455,13 @@ void AAngryCoachCharacter::PaintPlayer1Decal(float DeltaTime)
   
 
     FString PrefabPath = "Data/Prefabs/CGCDecal.prefab";
-    AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+    AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath))); 
     if (!DecalActor)
     {
         return;
     }
-
-    const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset); 
+	
+	const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset); 
     DecalActor->SetActorLocation(PlacePos);
     DecalActor->SetActorScale(DecalScale);
 
@@ -490,7 +490,7 @@ void AAngryCoachCharacter::PaintPlayer2Decal(float DeltaTime)
     FHitResult FloorHit;
     if (!CharacterMovement->CheckFloor(FloorHit))
     {
-        return;
+        return;	
     }
 
     const FVector ImpactPoint = FloorHit.ImpactPoint;
