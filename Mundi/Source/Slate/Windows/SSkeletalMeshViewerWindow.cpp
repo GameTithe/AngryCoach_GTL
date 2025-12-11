@@ -36,6 +36,7 @@
 #include "Source/Runtime/Engine/Animation/AnimNotify_CallFunction.h"
 #include "Source/Runtime/Engine/Animation/AnimNotify_ParticleStart.h"
 #include "Source/Runtime/Engine/Animation/AnimNotify_ParticleEnd.h"
+#include "Source/Runtime/Engine/Particle/ParticleSystem.h"
 namespace
 {
     using FBoneNameSet = std::unordered_set<FName>;
@@ -736,6 +737,17 @@ void SSkeletalMeshViewerWindow::OnRender()
                                     ActiveState->EditSocketLocation = NewSocket.RelativeLocation;
                                     ActiveState->EditSocketRotation = NewSocket.RelativeRotation.ToEulerZYXDeg();
                                     ActiveState->EditSocketScale = NewSocket.RelativeScale;
+
+                                    // 기즈모를 새 소켓 위치로 이동 (이전 소켓에 대한 writeback 방지)
+                                    if (ActiveState->PreviewActor)
+                                    {
+                                        ActiveState->PreviewActor->RepositionAnchorToSocket(ActiveState->SelectedSocketIndex);
+                                        if (USceneComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                                        {
+                                            ActiveState->World->GetSelectionManager()->SelectActor(ActiveState->PreviewActor);
+                                            ActiveState->World->GetSelectionManager()->SelectComponent(Anchor);
+                                        }
+                                    }
 
                                     // 변경 플래그 설정
                                     ActiveState->bSocketTransformChanged = true;
@@ -1796,7 +1808,8 @@ void SSkeletalMeshViewerWindow::OnRender()
                     {
                         FSkeletalMeshSocket& SelectedSocket = Skeleton->Sockets[ActiveState->SelectedSocketIndex];
 
-                        // 기즈모 이동 등으로 변경된 값 동기화 (UI 드래그 중이 아닐 때만)
+                        // 매 프레임 Socket 값을 EditSocket에 동기화 (기즈모 변경 반영)
+                        // UI 슬라이더가 활성화되어 있지 않을 때만 동기화 (드래그 중엔 유지)
                         if (!ImGui::IsAnyItemActive())
                         {
                             ActiveState->EditSocketLocation = SelectedSocket.RelativeLocation;
@@ -1907,6 +1920,17 @@ void SSkeletalMeshViewerWindow::OnRender()
                             SelectedSocket.RelativeRotation = FQuat::MakeFromEulerZYX(ActiveState->EditSocketRotation);
                             SelectedSocket.RelativeScale = ActiveState->EditSocketScale;
                             ActiveState->bSocketTransformChanged = true;
+
+                            // 앵커 위치도 동기화 (writeback 방지를 위해 Editable을 잠시 끔)
+                            if (ActiveState->PreviewActor)
+                            {
+                                if (UBoneAnchorComponent* Anchor = ActiveState->PreviewActor->GetBoneGizmoAnchor())
+                                {
+                                    Anchor->SetEditability(false);
+                                    Anchor->UpdateAnchorFromBone();
+                                    Anchor->SetEditability(true);
+                                }
+                            }
 
                             // 이 소켓에 붙은 프리뷰 메시들 트랜스폼 dirty 플래그 설정
                             for (UStaticMeshComponent* PreviewMesh : ActiveState->SpawnedPreviewMeshes)
@@ -2268,10 +2292,11 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
             SectionPlayRate = ActiveMontage->Sections[CurrentPlaySection].PlayRate;
         }
 
-        // 재생 시간 진행 (섹션 PlayRate 적용)
+        // 재생 시간 진행 (몽타주 PlayRate * 섹션 PlayRate * 전역 PlaybackSpeed 적용)
+        float EffectivePlayRate = ActiveMontage->PlayRate * SectionPlayRate * ActiveState->PlaybackSpeed;
         if (ActiveState->bIsPlaying && MontageTotalLength > 0.0f)
         {
-            ActiveState->MontagePreviewTime += DeltaSeconds * SectionPlayRate;
+            ActiveState->MontagePreviewTime += DeltaSeconds * EffectivePlayRate;
             if (ActiveState->MontagePreviewTime >= MontageTotalLength)
             {
                 if (ActiveState->bIsLooping || ActiveMontage->bLoop)
@@ -2285,7 +2310,7 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
         }
         else if (ActiveState->bIsPlayingReverse && MontageTotalLength > 0.0f)
         {
-            ActiveState->MontagePreviewTime -= DeltaSeconds * SectionPlayRate;
+            ActiveState->MontagePreviewTime -= DeltaSeconds * EffectivePlayRate;
             if (ActiveState->MontagePreviewTime < 0.0f)
             {
                 if (ActiveState->bIsLooping || ActiveMontage->bLoop)
@@ -2492,9 +2517,10 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
 
     if (DataModel && DataModel->GetPlayLength() > 0.0f)
     {
+        float ScaledDelta = DeltaSeconds * ActiveState->PlaybackSpeed;
         if (ActiveState->bIsPlaying)
         {
-            ActiveState->CurrentAnimTime += DeltaSeconds;
+            ActiveState->CurrentAnimTime += ScaledDelta;
             if (ActiveState->CurrentAnimTime > DataModel->GetPlayLength())
             {
                 if (ActiveState->bIsLooping)
@@ -2511,8 +2537,8 @@ void SSkeletalMeshViewerWindow::OnUpdate(float DeltaSeconds)
         }
         else if (ActiveState->bIsPlayingReverse)
         {
-            ActiveState->CurrentAnimTime -= DeltaSeconds;
-            if (ActiveState->CurrentAnimTime < 0.0f) 
+            ActiveState->CurrentAnimTime -= ScaledDelta;
+            if (ActiveState->CurrentAnimTime < 0.0f)
             {
                 if (ActiveState->bIsLooping)
                 {
@@ -3526,29 +3552,63 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                         bool bHover = ImGui::IsMouseHoveringRect(RMin, RMax);
                         bool bPressed = bHover && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
                         bool bDoubleClicked = bHover && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
-                        
 
-                        // Styling
-                        ImU32 FillCol = IM_COL32(100, 100, 255, bHover ? 140 : 100);
-                        ImU32 LineCol = IM_COL32(200, 200, 255, 150);
+                        // 노티파이 타입별 색상 지정
+                        ImU32 FillCol, LineCol;
+                        FString Label = Notify.NotifyName.ToString();
+
+                        if (Notify.Notify && Notify.Notify->IsA<UAnimNotify_PlaySound>())
+                        {
+                            // 사운드: 파란색
+                            FillCol = IM_COL32(80, 120, 220, bHover ? 180 : 140);
+                            LineCol = IM_COL32(120, 160, 255, 200);
+                            if (Label.empty()) Label = "PlaySound";
+                        }
+                        else if (Notify.Notify && Notify.Notify->IsA<UAnimNotify_CallFunction>())
+                        {
+                            // 함수 호출: 노란색
+                            FillCol = IM_COL32(200, 180, 60, bHover ? 180 : 140);
+                            LineCol = IM_COL32(240, 220, 100, 200);
+                            if (Label.empty())
+                            {
+                                UAnimNotify_CallFunction* CF = static_cast<UAnimNotify_CallFunction*>(Notify.Notify);
+                                Label = "Func: " + CF->FunctionName.ToString();
+                            }
+                        }
+                        else if (Notify.Notify && Notify.Notify->IsA<UAnimNotify_ParticleStart>())
+                        {
+                            // 파티클 시작: 초록색
+                            FillCol = IM_COL32(60, 180, 80, bHover ? 180 : 140);
+                            LineCol = IM_COL32(100, 220, 120, 200);
+                            if (Label.empty()) Label = "ParticleStart";
+                        }
+                        else if (Notify.Notify && Notify.Notify->IsA<UAnimNotify_ParticleEnd>())
+                        {
+                            // 파티클 종료: 빨간색
+                            FillCol = IM_COL32(180, 60, 60, bHover ? 180 : 140);
+                            LineCol = IM_COL32(220, 100, 100, 200);
+                            if (Label.empty()) Label = "ParticleEnd";
+                        }
+                        else
+                        {
+                            // 기본: 보라색
+                            FillCol = IM_COL32(140, 100, 180, bHover ? 180 : 140);
+                            LineCol = IM_COL32(180, 140, 220, 200);
+                            if (Label.empty()) Label = "Notify";
+                        }
+
                         DrawList->AddRectFilled(
                             ImVec2(ViewXStart, P.y),
                             ImVec2(ViewXEnd, P.y + Size.y),
                             FillCol
                         );
                         DrawList->AddRect(
-                            ImVec2(ViewXStart, P.y), 
-                            ImVec2(ViewXEnd, P.y + Size.y), 
+                            ImVec2(ViewXStart, P.y),
+                            ImVec2(ViewXEnd, P.y + Size.y),
                             LineCol
                         );
-                        
+
                         ImGui::PushClipRect(ImVec2(ViewXStart, P.y), ImVec2(ViewXEnd, P.y + Size.y), true);
-                        // Label: use NotifyName if set, otherwise fallback based on type
-                        FString Label = Notify.NotifyName.ToString();
-                        if (Label.empty())
-                        {
-                            Label = Notify.Notify && Notify.Notify->IsA<UAnimNotify_PlaySound>() ? "PlaySound" : "Notify";
-                        }
                         DrawList->AddText(ImVec2(XStart + 2, P.y + 2), IM_COL32_WHITE, Label.c_str());
                         ImGui::PopClipRect();
 
@@ -3668,9 +3728,103 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                             }
                         }
                     }
+                    else if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_CallFunction>())
+                    {
+                        // CallFunction 노티파이 편집
+                        UAnimNotify_CallFunction* CF = static_cast<UAnimNotify_CallFunction*>(Evt.Notify);
+
+                        ImGui::Text("Call Function Notify");
+                        ImGui::Separator();
+
+                        // 현재 함수 이름
+                        static char FuncNameBuffer[256] = "";
+                        FString CurrentFuncName = CF->FunctionName.ToString();
+                        strncpy_s(FuncNameBuffer, sizeof(FuncNameBuffer), CurrentFuncName.c_str(), _TRUNCATE);
+
+                        if (ImGui::InputText("Function Name", FuncNameBuffer, sizeof(FuncNameBuffer)))
+                        {
+                            CF->FunctionName = FName(FString(FuncNameBuffer));
+                            Evt.NotifyName = FName((FString("CallFunc: ") + FuncNameBuffer).c_str());
+                        }
+
+                        ImGui::Separator();
+                        ImGui::TextDisabled("Available functions:");
+                        ImGui::TextDisabled("  - AttackBegin");
+                        ImGui::TextDisabled("  - AttackEnd");
+                        ImGui::TextDisabled("  - ToggleGorillaFormOnAccessory");
+                    }
+                    else if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_ParticleStart>())
+                    {
+                        // ParticleStart 노티파이 편집
+                        UAnimNotify_ParticleStart* PStart = static_cast<UAnimNotify_ParticleStart*>(Evt.Notify);
+
+                        ImGui::Text("Particle Start Notify");
+                        ImGui::Separator();
+
+                        // Socket 이름 편집
+                        static char SocketBuffer[128] = "";
+                        strncpy_s(SocketBuffer, sizeof(SocketBuffer), PStart->SocketName.ToString().c_str(), _TRUNCATE);
+                        if (ImGui::InputText("Socket Name", SocketBuffer, sizeof(SocketBuffer)))
+                        {
+                            PStart->SocketName = FName(FString(SocketBuffer));
+                        }
+
+                        // 파티클 시스템 경로 선택
+                        UResourceManager& ResMgr = UResourceManager::GetInstance();
+                        TArray<FString> ParticlePaths = ResMgr.GetAllFilePaths<UParticleSystem>();
+
+                        FString CurrentPath = PStart->ParticleSystemPath;
+                        FString Preview = CurrentPath.empty() ? FString("None") : CurrentPath;
+
+                        if (ImGui::BeginCombo("Particle System", Preview.c_str()))
+                        {
+                            if (ImGui::Selectable("None", CurrentPath.empty()))
+                            {
+                                PStart->ParticleSystemPath = "";
+                            }
+
+                            for (const FString& Path : ParticlePaths)
+                            {
+                                bool selected = (Path == CurrentPath);
+                                if (ImGui::Selectable(Path.c_str(), selected))
+                                {
+                                    PStart->ParticleSystemPath = Path;
+                                    std::filesystem::path p(Path);
+                                    Evt.NotifyName = FName((FString("ParticleStart: ") + p.filename().string()).c_str());
+                                }
+                                if (selected) ImGui::SetItemDefaultFocus();
+                            }
+                            ImGui::EndCombo();
+                        }
+                    }
+                    else if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_ParticleEnd>())
+                    {
+                        // ParticleEnd 노티파이 편집
+                        ImGui::Text("Particle End Notify");
+                        ImGui::Separator();
+                        ImGui::TextDisabled("This notify stops active particles.");
+                    }
                     else
                     {
-                        ImGui::TextDisabled("This notify type is not editable.");
+                        ImGui::TextDisabled("Unknown notify type.");
+                    }
+
+                    // 공통: TriggerTime 편집
+                    ImGui::Separator();
+                    float TriggerTime = Evt.TriggerTime;
+                    if (ImGui::DragFloat("Trigger Time", &TriggerTime, 0.01f, 0.0f, PlayLength, "%.3f sec"))
+                    {
+                        Evt.TriggerTime = TriggerTime;
+                    }
+
+                    // Duration 편집 (State 노티파이용)
+                    if (Evt.Duration > 0.0f || Evt.NotifyState)
+                    {
+                        float Duration = Evt.Duration;
+                        if (ImGui::DragFloat("Duration", &Duration, 0.01f, 0.0f, PlayLength, "%.3f sec"))
+                        {
+                            Evt.Duration = Duration;
+                        }
                     }
                 }
 
@@ -3934,6 +4088,23 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
         }
         ImGui::SameLine();
         ImGui::TextDisabled("(%.2f / %.2f)", CurrentTime, PlayLength);
+
+        // 재생 속도 슬라이더
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100.0f);
+        if (ImGui::SliderFloat("##Speed", &State->PlaybackSpeed, 0.1f, 3.0f, "x%.1f"))
+        {
+            State->PlaybackSpeed = ImClamp(State->PlaybackSpeed, 0.1f, 3.0f);
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Playback Speed");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("1x"))
+        {
+            State->PlaybackSpeed = 1.0f;
+        }
 
         // 몽타주 모드 표시
         if (bMontagePreviewing && PreviewMontage)
@@ -4200,6 +4371,13 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                 ImGui::DragFloat("Blend In Time", &ActiveMontage->BlendInTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
                 ImGui::DragFloat("Blend Out Time", &ActiveMontage->BlendOutTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
                 ImGui::Checkbox("Loop", &ActiveMontage->bLoop);
+
+                // 전체 재생 속도
+                ImGui::DragFloat("Play Rate", &ActiveMontage->PlayRate, 0.05f, 0.1f, 3.0f, "x%.2f");
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Montage playback speed (saved to file)");
+                }
 
                 ImGui::Separator();
 

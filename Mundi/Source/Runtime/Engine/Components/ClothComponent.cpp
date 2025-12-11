@@ -18,9 +18,21 @@ UClothComponent::UClothComponent()
 	bClothInitialized = false;
 	cloth = nullptr;
 	fabric = nullptr;
-	phases = nullptr; 
+	phases = nullptr;
 
 	bHasSavedOriginalState = false;
+
+	// UPROPERTY 기본값을 ClothSettings에 동기화
+	ClothSettings.Mass = Mass;
+	ClothSettings.Damping = Damping;
+	ClothSettings.LinearDrag = LinearDrag;
+	ClothSettings.AngularDrag = AngularDrag;
+	ClothSettings.Friction = Friction;
+	ClothSettings.bUseGravity = bUseGravity;
+	ClothSettings.GravityOverride = GravityOverride;
+	ClothSettings.WindVelocity = WindVelocity;
+	ClothSettings.WindDrag = WindDrag;
+	ClothSettings.WindLift = WindLift;
 }
 
 UClothComponent::~UClothComponent()
@@ -90,6 +102,8 @@ void UClothComponent::TickComponent(float DeltaTime)
 	{
 		InitializeComponent();
 	}
+
+	CheckClothSetting();
 
 	UpdateClothSimulation(DeltaTime);
 }
@@ -175,7 +189,8 @@ void UClothComponent::ApplyClothProperties()
 		ClothSettings.Damping
 	));
 
-	cloth->setFriction(0.5f);
+	// 마찰 설정 반영
+	cloth->setFriction(ClothSettings.Friction);
 
 	// 선형/각속도 저항
 	cloth->setLinearDrag(physx::PxVec3(
@@ -211,6 +226,30 @@ void UClothComponent::ApplyTetherConstraint()
 
 	cloth->setTetherConstraintScale(ClothSettings.TetherScale);
 	cloth->setTetherConstraintStiffness(ClothSettings.TetherStiffness);
+}
+
+void UClothComponent::UpdatePhysicsSettings()
+{
+	// UPROPERTY 변수들을 ClothSettings 구조체에 동기화
+	ClothSettings.Mass = Mass;
+	ClothSettings.Damping = Damping;
+	ClothSettings.LinearDrag = LinearDrag;
+	ClothSettings.AngularDrag = AngularDrag;
+	ClothSettings.Friction = Friction;
+	ClothSettings.bUseGravity = bUseGravity;
+	ClothSettings.GravityOverride = GravityOverride;
+	ClothSettings.WindVelocity = WindVelocity;
+	ClothSettings.WindDrag = WindDrag;
+	ClothSettings.WindLift = WindLift;
+
+	// ApplyClothProperties를 호출하여 설정을 즉시 반영
+	ApplyClothProperties();
+
+	UE_LOG("UClothComponent: Physics settings updated - Mass(%.2f), Gravity(%.2f, %.2f, %.2f), Friction(%.2f), Damping(%.2f), LinearDrag(%.2f), Wind(%.1f, %.1f, %.1f), WindDrag(%.2f), WindLift(%.2f)",
+		Mass, GravityOverride.X, GravityOverride.Y, GravityOverride.Z,
+		Friction, Damping, LinearDrag,
+		WindVelocity.X, WindVelocity.Y, WindVelocity.Z,
+		WindDrag, WindLift);
 }
 
 void UClothComponent::SetWindVelocity(const FVector& InWindVelocity)
@@ -362,6 +401,24 @@ void UClothComponent::SaveOriginalState()
 	// 현재 ClothParticles의 초기 상태를 저장
 	CacheOriginalParticles = ClothParticles;
 	bHasSavedOriginalState = true;
+}
+
+void UClothComponent::CheckClothSetting()
+{
+	// UPROPERTY 값들을 ClothSettings에 동기화
+	ClothSettings.Mass = Mass;
+	ClothSettings.Damping = Damping;
+	ClothSettings.LinearDrag = LinearDrag;
+	ClothSettings.AngularDrag = AngularDrag;
+	ClothSettings.Friction = Friction;
+	ClothSettings.bUseGravity = bUseGravity;
+	ClothSettings.GravityOverride = GravityOverride;
+	ClothSettings.WindVelocity = WindVelocity;
+	ClothSettings.WindDrag = WindDrag;
+	ClothSettings.WindLift = WindLift;
+
+	// NvCloth에 즉시 적용 ⭐ 핵심!
+	ApplyClothProperties();
 }
 
 void UClothComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)

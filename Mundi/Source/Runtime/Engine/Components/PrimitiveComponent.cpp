@@ -5,7 +5,8 @@
 #include "Pawn.h"
 #include "WorldPartitionManager.h"
 #include "../Physics/BodyInstance.h"
-
+#include "../Physics/PhysScene.h"
+#include "World.h"
 
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 UPrimitiveComponent::UPrimitiveComponent() : bGenerateOverlapEvents(true)
@@ -17,6 +18,23 @@ UPrimitiveComponent::~UPrimitiveComponent()
 {
     if (BodyInstance)
     {
+        // PhysScene에서 RigidActor를 먼저 제거해야 dangling pointer 방지
+        if (GWorld && !GWorld->IsTearingDown())
+        {
+            if (FPhysScene* PhysScene = GWorld->GetPhysScene())
+            {
+                // 콜백에서 이 컴포넌트 접근 방지 (WaitForSimulation 전에!)
+                BodyInstance->OwnerComponent = nullptr;
+                // userData도 미리 null - fetchResults 중 dangling FBodyInstance 접근 방지
+                if (BodyInstance->RigidActor)
+                {
+                    BodyInstance->RigidActor->userData = nullptr;
+                }
+                // 시뮬레이션 완료 대기 후 제거
+                PhysScene->WaitForSimulation();
+                BodyInstance->Terminate(*PhysScene);
+            }
+        }
         delete BodyInstance;
         BodyInstance = nullptr;
     }
@@ -163,6 +181,26 @@ void UPrimitiveComponent::OnRegister(UWorld* InWorld)
 
 void UPrimitiveComponent::OnUnregister()
 {
+    // 피직스 바디를 먼저 정리 (시뮬레이션 콜백에서 dangling pointer 방지)
+    if (BodyInstance && GWorld && !GWorld->IsTearingDown())
+    {
+        if (FPhysScene* PhysScene = GWorld->GetPhysScene())
+        {
+            // 콜백에서 이 컴포넌트 접근 방지 (WaitForSimulation 전에!)
+            BodyInstance->OwnerComponent = nullptr;
+            // userData도 미리 null - fetchResults 중 dangling FBodyInstance 접근 방지
+            if (BodyInstance->RigidActor)
+            {
+                BodyInstance->RigidActor->userData = nullptr;
+            }
+            // 시뮬레이션 완료 대기 (시뮬레이션 중 removeActor 호출 방지)
+            PhysScene->WaitForSimulation();
+            BodyInstance->Terminate(*PhysScene);
+        }
+        delete BodyInstance;
+        BodyInstance = nullptr;
+    }
+
     // PIE 종료 시 World가 이미 파괴 중일 수 있으므로
     // GWorld가 유효하고 파괴 중이 아닐 때만 Partition 접근
     if (GWorld && !GWorld->IsTearingDown())
@@ -211,6 +249,60 @@ void UPrimitiveComponent::OnCreatePhysicsState()
 
 }
 
+void UPrimitiveComponent::SetCollisionEnabled(ECollisionState NewState)
+{
+    bOverrideCollisionSetting = true;
+    CollisionEnabled = NewState;
+
+    // 기존 physics body가 있으면 shape flag 업데이트
+    if (BodyInstance && BodyInstance->RigidActor)
+    {
+        UWorld* World = GetWorld();
+        if (!World || !World->GetPhysScene())
+            return;
+
+        PxScene* PxScenePtr = World->GetPhysScene()->GetScene();
+        if (!PxScenePtr)
+            return;
+
+        SCOPED_PHYSX_WRITE_LOCK(*PxScenePtr);
+
+        PxRigidActor* Actor = BodyInstance->RigidActor;
+        PxU32 NumShapes = Actor->getNbShapes();
+        std::vector<PxShape*> Shapes(NumShapes);
+        Actor->getShapes(Shapes.data(), NumShapes);
+
+        for (PxShape* Shape : Shapes)
+        {
+            if (!Shape) continue;
+
+            switch (NewState)
+            {
+                case ECollisionState::NoCollision:
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+                    break;
+                case ECollisionState::QueryOnly:
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, true);
+                    break;
+                case ECollisionState::PhysicsOnly:
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+                    break;
+                case ECollisionState::QueryAndPhysics:
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+                    break;
+            }
+        }
+    }
+}
+
 void UPrimitiveComponent::OnBeginOverlap(UPrimitiveComponent* A, UPrimitiveComponent* B, const FHitResult& HitResult)
 {
     UE_LOG("OnBeginOverlap");
@@ -249,3 +341,4 @@ bool UPrimitiveComponent::IsOverlappingActor(const AActor* Other) const
     }
     return false;
 }
+ 

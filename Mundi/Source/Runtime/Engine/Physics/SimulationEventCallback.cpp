@@ -43,12 +43,24 @@ void FSimulationEventCallback::onContact(const PxContactPairHeader& PairHeader, 
 
 		if (PrimCompA && PrimCompB)
 		{
+			// 컴포넌트가 이미 unregister 중이면 스킵 (Owner가 dangling일 수 있음)
+			if (!PrimCompA->IsRegistered() || !PrimCompB->IsRegistered())
+			{
+				return;
+			}
+
 			AActor* OwnerA = PrimCompA->GetOwner();
 			AActor* OwnerB = PrimCompB->GetOwner();
 
 			if (OwnerA && OwnerB)
 			{
-				// 3. 충돌 정보 채우기 
+				// Pending destroy 체크 (dangling pointer 방지)
+				if (OwnerA->IsPendingDestroy() || OwnerB->IsPendingDestroy())
+				{
+					return;
+				}
+
+				// 3. 충돌 정보 채우기
 				AActor::FContactHit ContactHit;
 				ContactHit.ActorTo = OwnerA;
 				ContactHit.ActorFrom = OwnerB;
@@ -98,8 +110,7 @@ void FSimulationEventCallback::onTrigger(physx::PxTriggerPair* pairs, physx::PxU
 	if (bIsShuttingDown.load() || !OwnerScene)
 	{
 		return;
-	}
-
+	} 
 	for (PxU32 i = 0; i < count; ++i)
 	{
 		const PxTriggerPair& Pair = pairs[i];
@@ -125,10 +136,34 @@ void FSimulationEventCallback::onTrigger(physx::PxTriggerPair* pairs, physx::PxU
 			continue;
 		}
 
+		// 컴포넌트가 이미 unregister 중이면 스킵 (Owner가 dangling일 수 있음)
+		if (!TriggerComp->IsRegistered() || !OtherComp->IsRegistered())
+		{
+			continue;
+		}
+
 		AActor* TriggerOwner = TriggerComp->GetOwner();
 		AActor* OtherOwner = OtherComp->GetOwner();
 
 		if (!TriggerOwner || !OtherOwner)
+		{
+			continue;
+		}
+
+		// Pending destroy 체크 (dangling pointer 추가 방지)
+		if (TriggerOwner->IsPendingDestroy() || OtherOwner->IsPendingDestroy())
+		{
+			continue;
+		}
+
+		// Self-collision 방지
+		if (TriggerOwner == OtherOwner)
+		{
+			continue;
+		}
+ 
+		// 둘 중 하나라도 false면 이벤트 발생 안 함
+		if (!TriggerComp->GetGenerateOverlapEvents() || !OtherComp->GetGenerateOverlapEvents())
 		{
 			continue;
 		}
@@ -143,16 +178,30 @@ void FSimulationEventCallback::onTrigger(physx::PxTriggerPair* pairs, physx::PxU
 		{
 			// Trigger Enter
 			TriggerHit.bIsEnter = true;
-			
+
+			// Actor delegates
 			TriggerOwner->OnComponentBeginOverlap.Broadcast(TriggerComp, OtherComp, &TriggerHit);
 			OtherOwner->OnComponentBeginOverlap.Broadcast(TriggerComp, OtherComp, &TriggerHit);
 
+			// Component delegates - FHitResult 형태로 변환해서 전달
+			FHitResult HitResult;
+			HitResult.HitComponent = OtherComp;
+			HitResult.HitActor = OtherOwner;
+			HitResult.bBlockingHit = false;
+			TriggerComp->OnComponentBeginOverlap.Broadcast(TriggerComp, OtherComp, HitResult);
+
+			FHitResult HitResult2;
+			HitResult2.HitComponent = TriggerComp;
+			HitResult2.HitActor = TriggerOwner;
+			HitResult2.bBlockingHit = false;
+			OtherComp->OnComponentBeginOverlap.Broadcast(OtherComp, TriggerComp, HitResult2);
 		}
 		else if (Pair.status & PxPairFlag::eNOTIFY_TOUCH_LOST)
 		{
 			// Trigger Leave
 			TriggerHit.bIsEnter = false;
 
+			// Actor delegates
 			TriggerOwner->OnComponentEndOverlap.Broadcast(TriggerComp, OtherComp, &TriggerHit);
 			OtherOwner->OnComponentEndOverlap.Broadcast(TriggerComp, OtherComp, &TriggerHit);
 		}

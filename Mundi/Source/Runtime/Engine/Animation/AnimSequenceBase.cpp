@@ -387,6 +387,12 @@ bool UAnimSequenceBase::SaveMeta(const FString& MetaPathUTF8) const
             const UAnimNotify_CallFunction* CF = static_cast<const UAnimNotify_CallFunction*>(Evt.Notify);
             Data["FunctionName"] = CF->FunctionName.ToString().c_str();
         }
+        else if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_ParticleStart>())
+        {
+            const UAnimNotify_ParticleStart* PStart = static_cast<const UAnimNotify_ParticleStart*>(Evt.Notify);
+            Data["SocketName"] = PStart->SocketName.ToString().c_str();
+            Data["ParticleSystemPath"] = PStart->ParticleSystemPath.c_str();
+        }
         Item["Data"] = Data;
 
         NotifyArray.append(Item);
@@ -482,6 +488,17 @@ bool UAnimSequenceBase::LoadMeta(const FString& MetaPathUTF8)
         else if (ClassStr == "UAnimNotify_ParticleStart" || ClassStr == "ParticleStart")
         {
             UAnimNotify_ParticleStart* PStart = NewObject<UAnimNotify_ParticleStart>();
+            if (PStart && DataPtr)
+            {
+                if (DataPtr->hasKey("SocketName"))
+                {
+                    PStart->SocketName = FName(DataPtr->at("SocketName").ToString());
+                }
+                if (DataPtr->hasKey("ParticleSystemPath"))
+                {
+                    PStart->ParticleSystemPath = DataPtr->at("ParticleSystemPath").ToString();
+                }
+            }
             Evt.Notify = PStart;
             Evt.NotifyState = nullptr;
         }

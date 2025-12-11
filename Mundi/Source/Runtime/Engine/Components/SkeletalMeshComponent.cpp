@@ -940,6 +940,65 @@ void USkeletalMeshComponent::SetRagDollEnabled(bool bEnabled)
     }
 }
 
+void USkeletalMeshComponent::SetCollisionEnabled(ECollisionState NewState)
+{
+    bOverrideCollisionSetting = true;
+    CollisionEnabled = NewState;
+
+    UWorld* World = GetWorld();
+    if (!World || !World->GetPhysScene())
+        return;
+
+    PxScene* PxScenePtr = World->GetPhysScene()->GetScene();
+    if (!PxScenePtr)
+        return;
+
+    SCOPED_PHYSX_WRITE_LOCK(*PxScenePtr);
+
+    // 모든 Bodies의 shape flag 업데이트
+    for (FBodyInstance* BI : Bodies)
+    {
+        if (!BI || !BI->RigidActor)
+            continue;
+
+        PxU32 NumShapes = BI->RigidActor->getNbShapes();
+        std::vector<PxShape*> Shapes(NumShapes);
+        BI->RigidActor->getShapes(Shapes.data(), NumShapes);
+
+        for (PxShape* Shape : Shapes)
+        {
+            if (!Shape) continue;
+
+            switch (NewState)
+            {
+                case ECollisionState::NoCollision:
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+                    break;
+                case ECollisionState::QueryOnly:
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, true);
+                    break;
+                case ECollisionState::PhysicsOnly:
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+                    break;
+                case ECollisionState::QueryAndPhysics:
+                    Shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, false);
+                    Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                    Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+                    break;
+            }
+        }
+
+        // 플래그 변경 후 필터링 재설정 (broadphase에 반영)
+        PxScenePtr->resetFiltering(*BI->RigidActor);
+    }
+}
+
 void USkeletalMeshComponent::ChangePhysicsState()
 {
     // 플레이어 컨트롤러가 제어하는 Pawn인지 확인
@@ -993,6 +1052,7 @@ FTransform USkeletalMeshComponent::GetSocketTransform(const FName& SocketName) c
 
     // 소켓이 부착된 본의 인덱스 찾기
     int32 BoneIndex = Skeleton.FindBoneIndex(FName(Socket->BoneName));
+ 
     if (BoneIndex == INDEX_NONE)
     {
         return GetWorldTransform();

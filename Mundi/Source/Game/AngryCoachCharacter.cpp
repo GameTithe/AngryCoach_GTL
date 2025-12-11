@@ -23,6 +23,7 @@
 #include "CloakAccessoryActor.h" 
 #include "FAudioDevice.h"
 #include "PlayerCameraManager.h"
+#include "DecalComponent.h"
 
 AAngryCoachCharacter::AAngryCoachCharacter()
 {
@@ -56,19 +57,50 @@ void AAngryCoachCharacter::BeginPlay()
 	 * 구현에 따라서 AAngryCoachCharacter에서 바인딩할 지 결정
 	 */
 	Super::BeginPlay();
-
-	FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
-	AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
-	if (GorillaAccessory)
+	FString PrefabPath = "Data/Prefabs/FlowerKnife.prefab";
+	AKnifeAccessoryActor * KnifeAccessory = Cast<AKnifeAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	
+	if (KnifeAccessory)
 	{
-		EquipAccessory(GorillaAccessory);
+		EquipAccessory(KnifeAccessory);
+	
 		if (SkillComponent)
 		{
-			SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+			SkillComponent->OverrideSkills(KnifeAccessory->GetGrantedSkills(), KnifeAccessory);
 		}
- 	
-		GorillaAccessory->GetRootComponent()->SetOwner(this);
-	} 
+		
+		KnifeAccessory->GetRootComponent()->SetOwner(this);
+	}
+	
+	
+	////FString PrefabPath = "Data/Prefabs/Gorilla.prefab";
+	//AGorillaAccessoryActor * GorillaAccessory = Cast<AGorillaAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	//if (GorillaAccessory)
+	//{
+	//	EquipAccessory(GorillaAccessory);
+	//	if (SkillComponent)
+	//	{
+	//		SkillComponent->OverrideSkills(GorillaAccessory->GetGrantedSkills(), GorillaAccessory);
+	//	}
+	//	
+	//	GorillaAccessory->GetRootComponent()->SetOwner(this);
+	//}
+	
+	 //FString PrefabPath = "Data/Prefabs/CloakAcce.prefab";
+	 //ACloakAccessoryActor* CloakAccessory = Cast<ACloakAccessoryActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+	 //
+	 //	if (CloakAccessory)
+	 //	{
+	 //		EquipAccessory(CloakAccessory);
+	 //
+	 //		if (SkillComponent)
+	 //		{
+	 //			SkillComponent->OverrideSkills(CloakAccessory->GetGrantedSkills(), CloakAccessory);
+	 //		}
+	 //
+	 //		CloakAccessory->GetRootComponent()->SetOwner(this);
+	 //	}
+
 }
 
 void AAngryCoachCharacter::Tick(float DeltaSeconds)
@@ -84,6 +116,12 @@ void AAngryCoachCharacter::Tick(float DeltaSeconds)
 	{
 		Die();
 	}
+
+	// Decal 쿨
+	for (float& Last : LastDecalTime)
+	{ 
+		Last += DeltaSeconds;
+	}  
 }
 
 void AAngryCoachCharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
@@ -215,6 +253,9 @@ void AAngryCoachCharacter::UnequipAccessory()
 	if (!CurrentAccessory)
 		return;
 
+	// 캐시된 AttackShapes 정리 (dangling pointer 방지)
+	ClearAttackShapes();
+
 	// 악세서리의 Unequip 로직 실행
 	CurrentAccessory->Unequip();
 
@@ -256,6 +297,34 @@ void AAngryCoachCharacter::ClearAttackShapes()
 }
 
 // ===== 스킬 =====
+void AAngryCoachCharacter::OnJumpAttackInput(const FVector& InputDirection)
+{
+    if (!SkillComponent)
+        return;
+
+    // 점프 중이 아니면 무시
+    if (CurrentState != ECharacterState::Jumping || bIsJumpAttacking)
+        return;
+
+    // 방향 저장 (스킬에서 사용)
+    JumpAttackDirection = InputDirection;
+    if (JumpAttackDirection.IsZero())
+    {
+        // 입력이 없으면 현재 회전에서 방향 계산
+        // ToEulerZYXDeg: X=pitch, Y=yaw, Z=roll (라디안 반환)
+        FVector Euler = GetActorRotation().ToEulerZYXDeg();
+        float Yaw = Euler.Y;  // Y가 yaw, 이미 라디안
+        JumpAttackDirection = FVector(std::cos(Yaw), std::sin(Yaw), 0.0f);
+    }
+    JumpAttackDirection.Z = 0.0f;
+    JumpAttackDirection.Normalize();
+
+    CurrentAttackSlot = ESkillSlot::JumpAttack;
+    BaseDamage = 8.0f;  // 점프 공격 데미지
+    bIsJumpAttacking = true;
+    SkillComponent->HandleInput(ESkillSlot::JumpAttack);
+}
+
 void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 {
     if (!SkillComponent)
@@ -288,10 +357,6 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
 			 * Skil별 데미지 적용
 			 */
 			BaseDamage = 15.0f;
-			if (SkillSound)
-			{
-				FAudioDevice::PlaySoundAtLocationOneShot(SkillSound, GetActorLocation());
-			}
 			break;
 		}
 	}
@@ -343,8 +408,132 @@ void AAngryCoachCharacter::AttackEnd()
         }
         SetCurrentState(ECharacterState::Idle);
     }
+
     // 공격 종료 시 슬롯 리셋
     CurrentAttackSlot = ESkillSlot::None;
+    bIsJumpAttacking = false;
+	  
+    // 안전장치: 몽타주가 아직 재생 중이면 강제 정지
+    if (IsPlayingMontage())
+    { 
+        StopCurrentMontage(0.1f);
+    } 
+    // Safety: ensure state exits Attacking even if no shapes are present
+    if (GetCurrentState() == ECharacterState::Attacking)
+    {
+        SetCurrentState(ECharacterState::Idle);
+    }
+}
+
+void AAngryCoachCharacter::PaintPlayer1Decal(float DeltaTime)
+{ 
+
+    if (!CharacterMovement)
+    {
+        return;
+    }
+
+    FHitResult FloorHit;
+    if (!CharacterMovement->CheckFloor(FloorHit))
+    {
+        return;
+    }
+
+    const FVector ImpactPoint = FloorHit.ImpactPoint;
+    const FVector ImpactNormal = FloorHit.ImpactNormal; 
+
+	// 바닥과의 거리가 멀거나 ( 공중에 있을 때)
+    if (FVector::Distance(ImpactPoint, LastDecalSpawnPos) < DecalMinDistance)
+    {
+        return;
+    }
+	// 너무 빠르게 다시 사용할 때
+    if (LastDecalTime[0] < DecalMinInterval[0])
+    {
+        return;
+    }
+  
+
+    FString PrefabPath = "Data/Prefabs/CGCDecal.prefab";
+    AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+    if (!DecalActor)
+    {
+        return;
+    }
+
+    const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset); 
+    DecalActor->SetActorLocation(PlacePos);
+    DecalActor->SetActorScale(DecalScale);
+
+    // Ensure decal opacity starts at 1
+    for (UActorComponent* Comp : DecalActor->GetOwnedComponents())
+    {
+        if (auto* Decal = Cast<UDecalComponent>(Comp))
+        {
+            Decal->SetOpacity(1.0f);
+            break;
+        }
+    }
+
+    LastDecalSpawnPos = ImpactPoint; 
+    LastDecalTime[0] = 0.0f;
+}
+
+void AAngryCoachCharacter::PaintPlayer2Decal(float DeltaTime)
+{
+
+    if (!CharacterMovement)
+    {
+        return;
+    }
+
+    FHitResult FloorHit;
+    if (!CharacterMovement->CheckFloor(FloorHit))
+    {
+        return;
+    }
+
+    const FVector ImpactPoint = FloorHit.ImpactPoint;
+    const FVector ImpactNormal = FloorHit.ImpactNormal;
+	 
+    FString PrefabPath = "Data/Prefabs/SHCDecal.prefab";
+    AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));
+    if (!DecalActor)
+    {
+        return;
+    }
+
+    const FVector PlacePos = ImpactPoint - (ImpactNormal * DecalSurfaceOffset);
+    DecalActor->SetActorLocation(PlacePos);
+     DecalActor->SetActorScale(DecalScale);
+
+    for (UActorComponent* Comp : DecalActor->GetOwnedComponents())
+    {
+        if (auto* Decal = Cast<UDecalComponent>(Comp))
+        {
+            Decal->SetOpacity(1.0f);
+            break;
+        }
+    }
+
+    LastDecalSpawnPos = ImpactPoint; 
+    LastDecalTime[1] = 0.0f;
+}
+
+void AAngryCoachCharacter::OnLanded()
+{
+    // 점프 공격 중 착지 시 몽타주 정지 + 공격 종료
+    if (bIsJumpAttacking)
+    {
+        StopCurrentMontage(0.2f);
+        AttackEnd();
+
+        // 속도 초기화 (미끄러짐 방지)
+        if (CharacterMovement)
+        {
+            CharacterMovement->SetVelocity(FVector::Zero());
+        }
+    }
 }
 
 void AAngryCoachCharacter::OnBeginOverlap(UPrimitiveComponent* MyComp, UPrimitiveComponent* OtherComp, const FHitResult& HitResult)
@@ -520,11 +709,6 @@ void AAngryCoachCharacter::Revive()
 
 void AAngryCoachCharacter::Die()
 {
-	// Ragdoll
-	if (SkeletalMeshComp)
-	{
-		SkeletalMeshComp->SetRagDollEnabled(true);
-	}
 	// Collision - 모든 AttackShape 비활성화
 	for (UShapeComponent* Shape : CachedAttackShapes)
 	{
@@ -541,6 +725,13 @@ void AAngryCoachCharacter::Die()
 		CapsuleComponent->SetGenerateOverlapEvents(false);
 	}
 
+	// Ragdoll
+	if (SkeletalMeshComp)
+	{
+		SkeletalMeshComp->SetRagDollEnabled(true);
+		SkeletalMeshComp->SetCollisionEnabled(ECollisionState::PhysicsOnly);
+	}
+	
 	if (DieSound)
 	{
 		FAudioDevice::PlaySoundAtLocationOneShot(DieSound, GetActorLocation());

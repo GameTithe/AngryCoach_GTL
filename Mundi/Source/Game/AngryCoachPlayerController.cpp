@@ -171,9 +171,16 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		Player1->Jump();
 	}
 
+	// 공격
 	if (bIsP1InputBuffering || Player1->CanAttack())
 	{
 		ProcessPlayer1Attack(DeltaTime);
+	}
+	
+	// decal
+	if (InputManager.IsKeyPressed('G'))
+	{
+		Player1->PaintPlayer1Decal(DeltaTime);
 	}
 }
 
@@ -232,6 +239,12 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	if (bIsP2InputBuffering || Player2->CanAttack())
 	{
 		ProcessPlayer2Attack(DeltaTime);
+	}
+
+	// decal
+	if (InputManager.IsKeyPressed(VK_NUMPAD4))
+	{
+		Player1->PaintPlayer1Decal(DeltaTime);
 	}
 }
 
@@ -311,10 +324,35 @@ void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
 	bool bIsTKeyDown = InputManager.IsKeyDown('T');
 	bool bIsYKeyDown = InputManager.IsKeyDown('Y');
 
+	// 점프 중 공격 → 점프 공격
+	if (Player1->GetCurrentState() == ECharacterState::Jumping)
+	{
+		if (bIsTKeyDown || bIsYKeyDown)
+		{
+			FVector InputDir = FVector::Zero();
+			if (InputManager.IsKeyDown('W')) InputDir.X += 1.0f;
+			if (InputManager.IsKeyDown('S')) InputDir.X -= 1.0f;
+			if (InputManager.IsKeyDown('D')) InputDir.Y += 1.0f;
+			if (InputManager.IsKeyDown('A')) InputDir.Y -= 1.0f;
+
+			Player1->OnJumpAttackInput(InputDir);
+			ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
+			return;
+		}
+		return;  // 점프 중엔 일반 공격 처리 안함
+	}
+
 	// 스킬은 즉발로 처리
 	if (InputManager.IsKeyPressed('U'))
 	{
 		Player1->OnAttackInput(EAttackInput::Skill);
+		ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
+		return;
+	}
+	
+	// painting 즉발로 처리
+	if (InputManager.IsKeyPressed('G'))
+	{
 		ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
 		return;
 	}
@@ -357,6 +395,7 @@ void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
 			bIsP1InputBuffering = false;
 		}
 	}
+
 	// 새로운 입력 발생 (대기 상태)
 	else
 	{
@@ -382,9 +421,27 @@ void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
 void AAngryCoachPlayerController::ProcessPlayer2Attack(float DeltaTime)
 {
 	UInputManager& InputManager = UInputManager::GetInstance();
-	
+
 	bool bIsNum1KeyDown = InputManager.IsKeyDown(VK_NUMPAD1);
 	bool bIsNum2KeyDown = InputManager.IsKeyDown(VK_NUMPAD2);
+
+	// 점프 중 공격 → 점프 공격
+	if (Player2->GetCurrentState() == ECharacterState::Jumping)
+	{
+		if (bIsNum1KeyDown || bIsNum2KeyDown)
+		{
+			FVector InputDir = FVector::Zero();
+			if (InputManager.IsKeyDown(VK_UP))    InputDir.X += 1.0f;
+			if (InputManager.IsKeyDown(VK_DOWN))  InputDir.X -= 1.0f;
+			if (InputManager.IsKeyDown(VK_RIGHT)) InputDir.Y += 1.0f;
+			if (InputManager.IsKeyDown(VK_LEFT))  InputDir.Y -= 1.0f;
+
+			Player2->OnJumpAttackInput(InputDir);
+			ResetInputBuffer(bIsP2InputBuffering, P2PendingKey, P2InputBufferTime);
+			return;
+		}
+		return;  // 점프 중엔 일반 공격 처리 안함
+	}
 
 	// 테스트용
 	if (InputManager.IsKeyPressed('M'))

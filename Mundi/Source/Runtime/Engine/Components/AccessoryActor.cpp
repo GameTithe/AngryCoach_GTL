@@ -3,6 +3,7 @@
 #include "SceneComponent.h"
 #include "StaticMeshComponent.h"
 #include "ParticleSystemComponent.h"
+#include "Source/Runtime/Engine/Particle/ParticleSystem.h"
 #include "AngryCoachCharacter.h"
 #include "SkeletalMeshComponent.h"
 #include "SkillComponent.h"
@@ -22,6 +23,7 @@ AAccessoryActor::AAccessoryActor()
 
 	// Mesh와 Particle들을 SceneRoot의 자식으로 attach
 	AccessoryMesh = CreateDefaultSubobject<UStaticMeshComponent>("AccessoryMesh");
+	AccessoryMesh->SetEnableCollision(false);  // 메쉬 자체는 충돌 불필요 (AttackShape가 담당)
 	RootComponent = AccessoryMesh;
 
 	// 액세서리 메시 자체로는 충돌 차단/오버랩을 끄고, 공격 판정은 AttackShape로만 처리
@@ -43,6 +45,11 @@ AAccessoryActor::AAccessoryActor()
 	BaseEffectParticle->ObjectName = FName("BaseEffectParticle");
 	BaseEffectParticle->SetupAttachment(RootComponent);
 
+	SkillEffectParticle = CreateDefaultSubobject<UParticleSystemComponent>("SkillEffectParticle");
+	SkillEffectParticle->ObjectName = FName("SkillEffectParticle");
+	SkillEffectParticle->SetupAttachment(RootComponent);
+	SkillEffectParticle->bAutoActivate = false;
+
 	// 악세서리 스킬 생성 및 등록
 	UAccessoryLightAttackSkill* LightSkill = NewObject<UAccessoryLightAttackSkill>();
 	UAccessoryHeavyAttackSkill* HeavySkill = NewObject<UAccessoryHeavyAttackSkill>();
@@ -63,6 +70,7 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		TryAttackParticle = nullptr;
 		HitAttackParticle = nullptr;
 		BaseEffectParticle = nullptr;
+		SkillEffectParticle = nullptr;
 		OwningCharacter = nullptr;
 		AttackShapes.Empty();
 
@@ -104,6 +112,10 @@ void AAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 				else if (ParticleName.find("BaseEffect") != std::string::npos)
 				{
 					BaseEffectParticle = Particle;
+				}
+				else if (ParticleName.find("SkillEffect") != std::string::npos)
+				{
+					SkillEffectParticle = Particle;
 				}
 			}
 		}
@@ -189,6 +201,41 @@ void AAccessoryActor::StopHitParticle()
 	}
 }
 
+void AAccessoryActor::PlaySkillEffectParticle()
+{
+	if (SkillEffectParticle)
+	{
+		SkillEffectParticle->ResetAndActivate();
+
+		// 자동 종료 등록 (1초 후 StopSpawning)
+		bool bFound = false;
+		for (int32 i = 0; i < ActiveParticles.Num(); ++i)
+		{
+			if (ActiveParticles[i].Comp == SkillEffectParticle)
+			{
+				ActiveParticles[i].TimeRemaining = ParticleLifetime;
+				bFound = true;
+				break;
+			}
+		}
+		if (!bFound)
+		{
+			FActiveParticle Entry;
+			Entry.Comp = SkillEffectParticle;
+			Entry.TimeRemaining = ParticleLifetime;
+			ActiveParticles.Add(Entry);
+		}
+	}
+}
+
+void AAccessoryActor::StopSkillEffectParticle()
+{
+	if (SkillEffectParticle)
+	{
+		SkillEffectParticle->StopSpawning();
+	}
+}
+
 void AAccessoryActor::SpawnHitParticleAtLocation(const FVector& Location)
 {
     if (!HitAttackParticle)
@@ -269,6 +316,7 @@ void AAccessoryActor::DuplicateSubObjects()
 	AccessoryMesh = nullptr;
 	TryAttackParticle = nullptr;
 	HitAttackParticle = nullptr;
+	SkillEffectParticle = nullptr;
 	OwningCharacter = nullptr;
 	AttackShapes.Empty();
 
@@ -310,6 +358,10 @@ void AAccessoryActor::DuplicateSubObjects()
 			{
 				HitAttackParticle = Particle;
 			}
+			else if (ParticleName.find("SkillEffect") != std::string::npos)
+			{
+				SkillEffectParticle = Particle;
+			}
 		}
 	}
 
@@ -338,9 +390,13 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 	// 1. 캐릭터의 Mesh 소켓에 부착
 	USkeletalMeshComponent* CharacterMesh = OwnerCharacter->GetMesh();
 	if (CharacterMesh && AccessoryMesh && AttachSocketName.IsValid())
-	{ 
+	{
 		AccessoryMesh->SetupAttachment(CharacterMesh, AttachSocketName);
 		AccessoryMesh->RegisterComponent(OwnerCharacter->GetWorld());
+
+		// 소켓 위치에 정확히 부착 (상대 위치/회전을 0으로 설정)
+		AccessoryMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		AccessoryMesh->SetRelativeRotation(FQuat::Identity());
 
 		// 월드 스케일 1이 되도록 상대 스케일 계산 (부모 스케일 상쇄)
 		FTransform SocketWorld = CharacterMesh->GetSocketTransform(AttachSocketName);
@@ -351,7 +407,7 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 			SocketWorldScale.Z != 0.0f ? 1.0f / SocketWorldScale.Z : 1.0f
 		);
 
-		AccessoryMesh->SetRelativeScale(RelativeScaleForWorldOne); 
+		AccessoryMesh->SetRelativeScale(RelativeScaleForWorldOne);
 	}
 
 	// 2. 캐릭터의 스킬 컴포넌트 찾기 및 스킬 등록
@@ -370,6 +426,13 @@ void AAccessoryActor::Equip(AAngryCoachCharacter* OwnerCharacter)
 			// 자신을 공격하는 걸 방지하기 위해서 owner 설정
 			Shape->SetOwner(OwnerCharacter);
 		}
+	}
+
+	// 4. SkillEffectParticle을 캐릭터 메시에 부착
+	if (SkillEffectParticle && OwnerCharacter->GetMesh())
+	{
+		SkillEffectParticle->SetupAttachment(OwnerCharacter->GetMesh());
+		SkillEffectParticle->SetRelativeLocation(FVector::Zero());
 	}
 }
 

@@ -35,6 +35,16 @@ const bool UClothComponent::bPropertiesRegistered = []() {
 
 BEGIN_PROPERTIES(UClothComponent)
     MARK_AS_COMPONENT("UClothComponent", "Auto-generated UClothComponent")
+    ADD_PROPERTY_RANGE(float, Mass, "Cloth|Physics", 0.0f, 2.0f, true, "전체 질량")
+    ADD_PROPERTY_RANGE(float, Damping, "Cloth|Physics", 0.0f, 1.0f, true, "감쇠 (0-1) - 낮춰서 더 자연스럽게")
+    ADD_PROPERTY_RANGE(float, LinearDrag, "Cloth|Physics", 0.0f, 1.0f, true, "선형 저항 - 낮춰서 공기 저항 감소")
+    ADD_PROPERTY_RANGE(float, AngularDrag, "Cloth|Physics", 0.0f, 1.0f, true, "각속도 저항 - 낮춰서 회전이 더 자유롭게")
+    ADD_PROPERTY_RANGE(float, Friction, "Cloth|Physics", 0.0f, 1.0f, true, "마찰")
+    ADD_PROPERTY(bool, bUseGravity, "Cloth|Gravity", true, "중력 사용")
+    ADD_PROPERTY(FVector, GravityOverride, "Cloth|Gravity", true, "중력 오버라이드 (cm/s^2)")
+    ADD_PROPERTY(FVector, WindVelocity, "Cloth|Wind", true, "바람 속도 (cm/s)")
+    ADD_PROPERTY_RANGE(float, WindDrag, "Cloth|Wind", 0.0f, 2.0f, true, "바람 저항 계수 - 높일수록 바람 영향 증가")
+    ADD_PROPERTY_RANGE(float, WindLift, "Cloth|Wind", 0.0f, 2.0f, true, "바람 양력 계수 - 높일수록 떠오르는 효과")
     ADD_PROPERTY_CLOTHWEIGHTASSET(FString, ClothWeightAssetPath, "Cloth", true, "Cloth Weight 에셋 파일 경로")
 END_PROPERTIES()
 

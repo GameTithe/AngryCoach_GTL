@@ -31,7 +31,8 @@ AKnifeAccessoryActor::AKnifeAccessoryActor()
 	GrantedSkills.Add(ESkillSlot::HeavyAttack, HeavySkill);
 	GrantedSkills.Add(ESkillSlot::Specical, SpecialSkill);
 
-	CreateAttackShape<UBoxComponent>(FName("AttackShape"));	
+	AttackShape =  Cast<UBoxComponent>(CreateAttackShape<UBoxComponent>(FName("AttackShape")));	
+	AttackShape->SetGenerateOverlapEvents(false);
 }
 
 void AKnifeAccessoryActor::Serialize(const bool bInIsLoading, JSON& InOutHandle)

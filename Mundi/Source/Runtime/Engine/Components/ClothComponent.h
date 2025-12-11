@@ -16,16 +16,20 @@ class UClothWeightAsset;
 
 /**
  * @brief Cloth 시뮬레이션 설정
- */
-
+ */ 
 struct FClothSimulationSettings
-{
+{ 
+
 	// Physics properties
-	float Mass = 1.0f;                          // 전체 질량
-	float Damping = 0.1f;                       // 감쇠 (0-1) - 낮춰서 더 자연스럽게
-	float LinearDrag = 0.05f;                   // 선형 저항 - 낮춰서 공기 저항 감소
-	float AngularDrag = 0.1f;                   // 각속도 저항 - 낮춰서 회전이 더 자유롭게
-	float Friction = 0.5f;                      // 마찰
+ 	float Mass = 1.0f;
+
+ 	float Damping = 0.1f;
+
+ 	float LinearDrag = 0.05f;
+
+ 	float AngularDrag = 0.1f;
+
+ 	float Friction = 0.5f;
 	// Stretch constraints (Horizontal/Vertical)
 	float StretchStiffness = 0.5f;              // 신축 강성 (0-1)
 	float StretchStiffnessMultiplier = 0.5f;    // 강성 배율
@@ -54,9 +58,10 @@ struct FClothSimulationSettings
 	int32 SolverFrequency = 120;                // Solver 주파수 (Hz)
 	int32 StiffnessFrequency = 10;              // 강성 업데이트 주파수
 
-	// Gravity
-	bool bUseGravity = true;                    // 중력 사용
-	FVector GravityOverride = FVector(0, 0, -9.80f); // 중력 오버라이드 (cm/s^2) - 현실적인 중력
+	// Gravity 
+	bool bUseGravity = true;
+	 
+	FVector GravityOverride = FVector(0, 0, -9.80f);
 
 	// Wind
 	FVector WindVelocity = FVector(0, 0, 0);    // 바람 속도 (cm/s) - 기본값: 바람 없음
@@ -114,6 +119,13 @@ public:
 	void ApplyPaintedWeights();
 	void ApplyWeightsToClothParticles();  // ClothParticles.w에 weight 적용 (CreateClothInstance 전에 호출)
 	bool LoadWeightsToArray();            // ClothVertexWeights 배열에만 로드 (NvCloth 적용 안함)
+
+	/**
+	 * @brief UI에서 변경한 물리 설정을 ClothSettings에 동기화하고 NvCloth에 적용
+	 * UI에서 Mass, Damping, LinearDrag, Friction, Gravity 등을 변경한 후 이 함수를 호출하면 즉시 반영됩니다.
+	 */ 
+	void UpdatePhysicsSettings();
+
 	void LoadWeightsFromMap(const std::unordered_map<uint32, float>& InClothVertexWeights);
 	const TArray<float>& GetVertexWeights() const { return ClothVertexWeights; }
 	const TArray<uint32>& GetClothVertexToMeshVertexMapping() const { return ClothVertexToMeshVertex; }
@@ -210,8 +222,42 @@ protected:
 	nv::cloth::Vector<int32_t>::Type phaseTypeInfo;
 	nv::cloth::PhaseConfig* phases;
 
-	// Setting
+	void CheckClothSetting();
+
+	// UI에서 조절 가능한 Cloth 물리 파라미터
+	UPROPERTY(EditAnywhere, Category="Cloth|Physics", Range="0.0, 2.0", Tooltip="전체 질량")
+	float Mass = 1.0f;
+
+	UPROPERTY(EditAnywhere, Category="Cloth|Physics", Range="0.0, 1.0", Tooltip="감쇠 (0-1) - 낮춰서 더 자연스럽게")
+	float Damping = 0.1f;
+
+	UPROPERTY(EditAnywhere, Category="Cloth|Physics", Range="0.0, 1.0", Tooltip="선형 저항 - 낮춰서 공기 저항 감소")
+	float LinearDrag = 0.05f;
+
+	UPROPERTY(EditAnywhere, Category="Cloth|Physics", Range="0.0, 1.0", Tooltip="각속도 저항 - 낮춰서 회전이 더 자유롭게")
+	float AngularDrag = 0.1f;
+
+	UPROPERTY(EditAnywhere, Category="Cloth|Physics", Range="0.0, 1.0", Tooltip="마찰")
+	float Friction = 0.5f;
+
+	UPROPERTY(EditAnywhere, Category="Cloth|Gravity", Tooltip="중력 사용")
+	bool bUseGravity = true;
+
+	UPROPERTY(EditAnywhere, Category="Cloth|Gravity", Tooltip="중력 오버라이드 (cm/s^2)")
+	FVector GravityOverride = FVector(0, 0, -9.80f);
+
+	UPROPERTY(EditAnywhere, Category="Cloth|Wind", Tooltip="바람 속도 (cm/s)")
+	FVector WindVelocity = FVector(0, 0, 0);
+
+	UPROPERTY(EditAnywhere, Category="Cloth|Wind", Range="0.0, 2.0", Tooltip="바람 저항 계수 - 높일수록 바람 영향 증가")
+	float WindDrag = 0.5f;
+
+	UPROPERTY(EditAnywhere, Category="Cloth|Wind", Range="0.0, 2.0", Tooltip="바람 양력 계수 - 높일수록 떠오르는 효과")
+	float WindLift = 0.5f;
+
+	// 내부용 설정 구조체 (모든 파라미터 포함)
 	FClothSimulationSettings ClothSettings;
+
 	bool bClothEnabled = true;
 	bool bClothInitialized = false;
 
