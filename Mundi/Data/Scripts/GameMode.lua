@@ -1189,20 +1189,17 @@ function TickSelectInput()
                 selectedRoundIndex = selectedRoundIndex - 1
                 canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
                 UpdateRoundArrows(canvas)
-                print("[GameMode] Round to win: " .. selectedRoundIndex)
                 roundInputCooldown = INPUT_COOLDOWN_FRAMES
             elseif rightPressed and selectedRoundIndex < 3 then
                 selectedRoundIndex = selectedRoundIndex + 1
                 canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
                 UpdateRoundArrows(canvas)
-                print("[GameMode] Round to win: " .. selectedRoundIndex)
                 roundInputCooldown = INPUT_COOLDOWN_FRAMES
             end
         end
 
-        -- 확정: Space 또는 Enter
-        if InputManager:IsKeyPressed("Space") or InputManager:IsKeyPressed(13) then
-            print("[GameMode] Selection confirmed!")
+        -- 확정: 약공격 키 (P1: T, P2: Numpad1)
+        if InputManager:IsKeyPressed("T") or InputManager:IsKeyPressed(97) then
             FinishSelection()
         end
     end
@@ -1212,11 +1209,6 @@ end
 function FinishSelection()
     -- Select 입력 처리 비활성화
     bInSelectPhase = false
-
-    print("[GameMode] FinishSelection called")
-    print("[GameMode] P1 accessory: " .. AccessoryList[p1SelectedAccessory].name)
-    print("[GameMode] P2 accessory: " .. AccessoryList[p2SelectedAccessory].name)
-    print("[GameMode] Rounds to win: " .. selectedRoundIndex)
 
     -- 라운드 설정
     currentRoundsToWin = selectedRoundIndex
