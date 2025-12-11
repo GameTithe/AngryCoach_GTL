@@ -298,14 +298,14 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 		// 초점 거리는 두 플레이어까지의 평균 거리로 설정
 		float DofFocalDistance = (MinPlayerDistToCam + MaxPlayerDistToCam) / 2.0f;
 		// 초점 영역은 두 플레이어의 거리를 커버하도록 설정 (최소값 보장)
-		float DofFocalRegion = FMath::Max(5.f, (MaxPlayerDistToCam - MinPlayerDistToCam) * 2.f); // 1.2f는 약간의 여유
+		float DofFocalRegion = FMath::Max(30.f, (MaxPlayerDistToCam - MinPlayerDistToCam) * 3.f);
 
-		float DofNearTransition = 0.1f;
-		float DofFarTransition = 0.5f;
+		float DofNearTransition = 10.0f;
+		float DofFarTransition = 50.0f;
 
 		// ZoomFactor에 따라 블러 강도 조절 (멀리 떨어지면 블러 약화, 가까우면 강화)
-		float DofMaxNearBlur = 2.0f / FMath::Max(1.0f, ZoomFactor);
-		float DofMaxFarBlur = 2.0f / FMath::Max(1.0f, ZoomFactor);
+		float DofMaxNearBlur = 3.0f / FMath::Max(1.0f, ZoomFactor);
+		float DofMaxFarBlur = 3.0f / FMath::Max(1.0f, ZoomFactor);
 		
 		PlayerCameraManager->StartDOF(
 			DofFocalDistance, DofFocalRegion,

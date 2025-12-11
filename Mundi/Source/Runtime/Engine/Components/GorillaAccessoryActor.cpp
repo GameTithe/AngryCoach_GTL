@@ -299,6 +299,7 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 	{
 		UE_LOG("[AGorillaAccessoryActor] Switching to Gorilla Form.");
 		CharacterMesh->SetSkeletalMesh(GorillaSkeletalMeshPath);
+		CharacterMesh->SetCollisionEnabled(ECollisionState::QueryOnly);  // 물리 충돌 없이 오버랩만
 		CharacterMesh->SetAnimGraph(GorillaAnimGraph);
 
 		// PhysicsAsset 자동 생성 (없을 경우)
@@ -328,6 +329,7 @@ void AGorillaAccessoryActor::ToggleGorillaForm()
 	{
 		UE_LOG("[AGorillaAccessoryActor] Switching to Original Form.");
 		CharacterMesh->SetSkeletalMesh(DefaultSkeletalMeshPath);
+		CharacterMesh->SetCollisionEnabled(ECollisionState::QueryOnly);  // 기본도 QueryOnly 유지
 		CharacterMesh->SetAnimGraph(DefaultAnimGraph);
 		CharacterMesh->SetPhysicsAsset(DefaultPhysicsAsset);
 		if (DefaultSkinTexture) CharacterMesh->SetMaterialTextureByUser(1, EMaterialTextureSlot::Diffuse, DefaultSkinTexture);
