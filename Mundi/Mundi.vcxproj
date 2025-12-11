@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_StandAlone|x64">
@@ -314,6 +314,7 @@
     <ClCompile Include="Source\Runtime\Engine\Components\CloakHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\CloakLightAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\CloakSpecialAttackSkill.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\DefaultJumpAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\GorillaAccessoryActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\GorillaHeavyAttackSkill.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\GorillaLightAttackSkill.cpp" />
@@ -786,7 +787,7 @@
     <ClCompile Include="Generated\UPunchSpecialAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UCloakSpecialAttackSkill.generated.cpp" />
     <ClCompile Include="Generated\UGorillaSpecialAttackSkill.generated.cpp" />
-  </ItemGroup>
+  <ClCompile Include="Generated\UDefaultJumpAttackSkill.generated.cpp" /></ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -1020,6 +1021,7 @@
     <ClInclude Include="Source\Runtime\Engine\Components\CloakHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\CloakLightAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\CloakSpecialAttackSkill.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\DefaultJumpAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\GorillaAccessoryActor.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\GorillaHeavyAttackSkill.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\GorillaLightAttackSkill.h" />
@@ -1357,7 +1359,7 @@
     <ClInclude Include="Generated\UPunchSpecialAttackSkill.generated.h" />
     <ClInclude Include="Generated\UCloakSpecialAttackSkill.generated.h" />
     <ClInclude Include="Generated\ATestGameMode.generated.h" />
-  </ItemGroup>
+  <ClInclude Include="Generated\UDefaultJumpAttackSkill.generated.h" /></ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />

@@ -57,11 +57,30 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 	// 게임플레이 입력이 비활성화된 경우 (UI 상태 등) 캐릭터 입력 처리 스킵
 	UInputManager& InputManager = UInputManager::GetInstance();
 
+	// F1 키로 자유 카메라 모드 토글
+	if (InputManager.IsKeyPressed(VK_F1))
+	{
+		bFreeCameraMode = !bFreeCameraMode;
+
+		// 자유 카메라 모드 끄면 기본 회전으로 복원
+		if (!bFreeCameraMode && GameCamera)
+		{
+			GameCamera->SetActorRotation(FVector{0.f, 30.f, 0.f});
+		}
+	}
+
 	// 게임패드 자동 등록 (버튼 누르면 등록)
 	InputManager.TryRegisterGamepadFromInput();
 	if (!InputManager.IsGameplayInputEnabled())
 	{
 		// 카메라 위치는 계속 업데이트 (Select 화면에서도 카메라 동작 유지)
+		UpdateCameraPosition(DeltaSeconds);
+		return;
+	}
+
+	// 자유 카메라 모드면 캐릭터 입력 스킵
+	if (bFreeCameraMode)
+	{
 		UpdateCameraPosition(DeltaSeconds);
 		return;
 	}
@@ -78,30 +97,29 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 	}
 
 	UpdateGamePadVibration(DeltaSeconds);
-	if (bEnableP1Vibration && P1VibrationTime <= 0.0f)
-	{
-		bEnableP1Vibration = false;
-		P1VibrationTime = 0.0f;
-		GamePadIndex = 0;
-		GamePadIndex = -1;
-		InputManager.StopGamepadVibration(0);
-	}
-	if (bEnableP2Vibration && P2VibrationTime <= 0.0f)
-	{
-		bEnableP2Vibration = false;
-		P2VibrationTime = 0.0f;
-		GamePadIndex = 0;
-		GamePadIndex = -1;
-		InputManager.StopGamepadVibration(1);
-	}
+
+	// P1 진동 타이머 처리
 	if (bEnableP1Vibration)
 	{
 		P1VibrationTime -= DeltaSeconds;
+		if (P1VibrationTime <= 0.0f)
+		{
+			bEnableP1Vibration = false;
+			P1VibrationTime = 0.0f;
+			InputManager.StopGamepadVibration(0);
+		}
 	}
 
+	// P2 진동 타이머 처리
 	if (bEnableP2Vibration)
 	{
 		P2VibrationTime -= DeltaSeconds;
+		if (P2VibrationTime <= 0.0f)
+		{
+			bEnableP2Vibration = false;
+			P2VibrationTime = 0.0f;
+			InputManager.StopGamepadVibration(1);
+		}
 	}
 
 	// 카메라 위치 업데이트
@@ -118,7 +136,8 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 	bool bIsYKeyDown = InputManager.IsKeyDown('Y');
 	if (Player1->IsGuard())
 	{
-		if (!bIsTKeyDown || !bIsYKeyDown)
+		// 두 버튼 모두 떼야 가드 해제 (|| → &&)
+		if (!bIsTKeyDown && !bIsYKeyDown)
 		{
 			Player1->StopGuard();
 		}
@@ -145,7 +164,8 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		InputDir.Y -= 1.0f;		
 	}
 
-	if (!InputDir.IsZero() && !Player1->IsPlayingMontage())
+	// 춤 montage일 때는 예외적으로 input을 받자 
+	if (!InputDir.IsZero() && ( !Player1->IsPlayingMontage() || Player1->GetIsDancing() ) )
 	{
 		InputDir.Normalize();
 
@@ -161,8 +181,8 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		FQuat NewRotation = FQuat::Slerp(CurrentRotation, TargetRotation, FMath::Clamp(DeltaTime * 10.0f, 0.0f, 1.0f));
 		Player1->SetActorRotation(NewRotation);
 
-		// 이동 적용
-		Player1->AddMovementInput(WorldDir * (Player1->GetVelocity() * DeltaTime));
+		// 이동 적용 (GetVelocity는 속도 크기, DeltaTime은 AddMovementInput 내부에서 처리)
+		Player1->AddMovementInput(WorldDir * Player1->GetVelocity(), 1.0f);
 	}
 
 	// I - 점프
@@ -171,9 +191,23 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		Player1->Jump();
 	}
 
+	// 공격
 	if (bIsP1InputBuffering || Player1->CanAttack())
 	{
 		ProcessPlayer1Attack(DeltaTime);
+	}
+	
+	// decal
+	if (InputManager.IsKeyPressed('G'))
+	{
+		Player1->PaintPlayer1Decal();
+	}
+
+	// 춤 
+	if (InputManager.IsKeyPressed('H'))
+	{
+
+		Player1->DancingCoach();	
 	}
 }
 
@@ -187,7 +221,8 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	bool bIsNum2KeyDown = InputManager.IsKeyDown(VK_NUMPAD2);
 	if (Player2->IsGuard())
 	{
-		if (!bIsNum1KeyDown || !bIsNum2KeyDown)
+		// 두 버튼 모두 떼야 가드 해제 (|| → &&)
+		if (!bIsNum1KeyDown && !bIsNum2KeyDown)
 		{
 			Player2->StopGuard();
 		}
@@ -202,7 +237,7 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	if (InputManager.IsKeyDown(VK_RIGHT)) { InputDir.Y += 1.0f; }
 	if (InputManager.IsKeyDown(VK_LEFT))  { InputDir.Y -= 1.0f; }
 
-	if (!InputDir.IsZero() && !Player2->IsPlayingMontage())
+	if (!InputDir.IsZero() && ( !Player2->IsPlayingMontage() || Player2->GetIsDancing()))
 	{
 		InputDir.Normalize();
 
@@ -218,8 +253,8 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 		FQuat NewRotation = FQuat::Slerp(CurrentRotation, TargetRotation, FMath::Clamp(DeltaTime * 10.0f, 0.0f, 1.0f));
 		Player2->SetActorRotation(NewRotation);
 
-		// 이동 적용
-		Player2->AddMovementInput(WorldDir * (Player2->GetVelocity() * DeltaTime));
+		// 이동 적용 (GetVelocity는 속도 크기, DeltaTime은 AddMovementInput 내부에서 처리)
+		Player2->AddMovementInput(WorldDir * Player2->GetVelocity(), 1.0f);
 	}
 
 	// Numpad6 - 점프
@@ -232,11 +267,68 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	{
 		ProcessPlayer2Attack(DeltaTime);
 	}
+
+	// decal
+	if (InputManager.IsKeyPressed(VK_NUMPAD4))
+	{
+		Player2->PaintPlayer2Decal();
+	}
+
+	if (InputManager.IsKeyPressed(VK_NUMPAD5))
+	{
+
+		Player2->DancingCoach();
+	}
 }
 
 void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 {
-	if (!Player1 || !Player2 || !GameCamera) return;
+	if (!GameCamera) return;
+
+	UInputManager& InputManager = UInputManager::GetInstance();
+
+	// 자유 카메라 모드
+	if (bFreeCameraMode)
+	{
+		FVector CamMove = FVector::Zero();
+
+		// WASD로 카메라 이동
+		if (InputManager.IsKeyDown('W')) CamMove.X += 1.0f;  // 전진
+		if (InputManager.IsKeyDown('S')) CamMove.X -= 1.0f;  // 후진
+		if (InputManager.IsKeyDown('A')) CamMove.Y -= 1.0f;  // 좌
+		if (InputManager.IsKeyDown('D')) CamMove.Y += 1.0f;  // 우
+		if (InputManager.IsKeyDown('Q')) CamMove.Z -= 1.0f;  // 하강
+		if (InputManager.IsKeyDown('E')) CamMove.Z += 1.0f;  // 상승
+
+		if (!CamMove.IsZero())
+		{
+			CamMove.Normalize();
+			// 카메라 방향 기준으로 이동
+			FQuat CamRot = GameCamera->GetActorRotation();
+			FVector Forward = CamRot.GetForwardVector();
+			FVector Right = CamRot.GetRightVector();
+			FVector Up = FVector(0.f, 0.f, 1.f);
+
+			FVector WorldMove = Forward * CamMove.X + Right * CamMove.Y + Up * CamMove.Z;
+			GameCamera->SetActorLocation(GameCamera->GetActorLocation() + WorldMove * FreeCameraMoveSpeed * DeltaTime);
+		}
+
+		// 마우스로 카메라 회전
+		FVector2D MouseDelta = InputManager.GetMouseDelta();
+		if (MouseDelta.X != 0.0f || MouseDelta.Y != 0.0f)
+		{
+			FVector CurrentEuler = GameCamera->GetActorRotation().ToEulerZYXDeg();
+			CurrentEuler.Z += MouseDelta.X * FreeCameraRotateSpeed * DeltaTime;  // Yaw
+			CurrentEuler.Y += MouseDelta.Y * FreeCameraRotateSpeed * DeltaTime;  // Pitch
+			CurrentEuler.Y = FMath::Clamp(CurrentEuler.Y, -89.0f, 89.0f);  // Pitch 제한
+			GameCamera->SetActorRotation(FVector(CurrentEuler.X, CurrentEuler.Y, CurrentEuler.Z));
+		}
+
+		return;
+	}
+
+	// 일반 카메라 모드 (플레이어 추적)
+	if (!Player1 || !Player2) return;
 	if (Player1->GetHealthPercent() <= 0.f || Player2->GetHealthPercent() <= 0.f) return;
 
 	// 두 캐릭터의 중심점 계산
@@ -269,14 +361,14 @@ void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 		// 초점 거리는 두 플레이어까지의 평균 거리로 설정
 		float DofFocalDistance = (MinPlayerDistToCam + MaxPlayerDistToCam) / 2.0f;
 		// 초점 영역은 두 플레이어의 거리를 커버하도록 설정 (최소값 보장)
-		float DofFocalRegion = FMath::Max(5.f, (MaxPlayerDistToCam - MinPlayerDistToCam) * 2.f); // 1.2f는 약간의 여유
+		float DofFocalRegion = FMath::Max(30.f, (MaxPlayerDistToCam - MinPlayerDistToCam) * 3.f);
 
-		float DofNearTransition = 0.1f;
-		float DofFarTransition = 0.5f;
+		float DofNearTransition = 10.0f;
+		float DofFarTransition = 50.0f;
 
 		// ZoomFactor에 따라 블러 강도 조절 (멀리 떨어지면 블러 약화, 가까우면 강화)
-		float DofMaxNearBlur = 2.0f / FMath::Max(1.0f, ZoomFactor);
-		float DofMaxFarBlur = 2.0f / FMath::Max(1.0f, ZoomFactor);
+		float DofMaxNearBlur = 3.0f / FMath::Max(1.0f, ZoomFactor);
+		float DofMaxFarBlur = 3.0f / FMath::Max(1.0f, ZoomFactor);
 		
 		PlayerCameraManager->StartDOF(
 			DofFocalDistance, DofFocalRegion,
@@ -310,10 +402,35 @@ void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
 	bool bIsTKeyDown = InputManager.IsKeyDown('T');
 	bool bIsYKeyDown = InputManager.IsKeyDown('Y');
 
+	// 점프 중 공격 → 점프 공격
+	if (Player1->GetCurrentState() == ECharacterState::Jumping)
+	{
+		if (bIsTKeyDown || bIsYKeyDown)
+		{
+			FVector InputDir = FVector::Zero();
+			if (InputManager.IsKeyDown('W')) InputDir.X += 1.0f;
+			if (InputManager.IsKeyDown('S')) InputDir.X -= 1.0f;
+			if (InputManager.IsKeyDown('D')) InputDir.Y += 1.0f;
+			if (InputManager.IsKeyDown('A')) InputDir.Y -= 1.0f;
+
+			Player1->OnJumpAttackInput(InputDir);
+			ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
+			return;
+		}
+		return;  // 점프 중엔 일반 공격 처리 안함
+	}
+
 	// 스킬은 즉발로 처리
 	if (InputManager.IsKeyPressed('U'))
 	{
 		Player1->OnAttackInput(EAttackInput::Skill);
+		ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
+		return;
+	}
+	
+	// painting 즉발로 처리
+	if (InputManager.IsKeyPressed('G'))
+	{
 		ResetInputBuffer(bIsP1InputBuffering, P1PendingKey, P1InputBufferTime);
 		return;
 	}
@@ -356,6 +473,7 @@ void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
 			bIsP1InputBuffering = false;
 		}
 	}
+
 	// 새로운 입력 발생 (대기 상태)
 	else
 	{
@@ -381,9 +499,27 @@ void AAngryCoachPlayerController::ProcessPlayer1Attack(float DeltaTime)
 void AAngryCoachPlayerController::ProcessPlayer2Attack(float DeltaTime)
 {
 	UInputManager& InputManager = UInputManager::GetInstance();
-	
+
 	bool bIsNum1KeyDown = InputManager.IsKeyDown(VK_NUMPAD1);
 	bool bIsNum2KeyDown = InputManager.IsKeyDown(VK_NUMPAD2);
+
+	// 점프 중 공격 → 점프 공격
+	if (Player2->GetCurrentState() == ECharacterState::Jumping)
+	{
+		if (bIsNum1KeyDown || bIsNum2KeyDown)
+		{
+			FVector InputDir = FVector::Zero();
+			if (InputManager.IsKeyDown(VK_UP))    InputDir.X += 1.0f;
+			if (InputManager.IsKeyDown(VK_DOWN))  InputDir.X -= 1.0f;
+			if (InputManager.IsKeyDown(VK_RIGHT)) InputDir.Y += 1.0f;
+			if (InputManager.IsKeyDown(VK_LEFT))  InputDir.Y -= 1.0f;
+
+			Player2->OnJumpAttackInput(InputDir);
+			ResetInputBuffer(bIsP2InputBuffering, P2PendingKey, P2InputBufferTime);
+			return;
+		}
+		return;  // 점프 중엔 일반 공격 처리 안함
+	}
 
 	// 테스트용
 	if (InputManager.IsKeyPressed('M'))

@@ -79,7 +79,7 @@ protected:
 	FVector LastFrameLocation = FVector::Zero();
 	
 	float BaseDamage = 10.0f;
-	float MaxHealth = 20.0f;
+	float MaxHealth = 100.0f;
 	float CurrentHealth = MaxHealth;
 
 };

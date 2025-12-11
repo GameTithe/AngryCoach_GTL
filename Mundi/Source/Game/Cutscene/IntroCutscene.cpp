@@ -34,6 +34,16 @@ void UIntroCutscene::Update(float DeltaTime)
 
 	PhaseTime += DeltaTime;
 
+	// Skip 위젯 깜빡임 업데이트
+	SkipBlinkTime += DeltaTime;
+	if (Canvas)
+	{
+		// 사인파로 부드러운 깜빡임 (0.3 ~ 1.0 범위)
+		float BlinkAlpha = (sinf(SkipBlinkTime * SKIP_BLINK_SPEED * 2.0f * 3.14159f) + 1.0f) * 0.5f;
+		float Opacity = SKIP_OPACITY_MIN + BlinkAlpha * (SKIP_OPACITY_MAX - SKIP_OPACITY_MIN);
+		Canvas->SetWidgetOpacity("Skip", Opacity);
+	}
+
 	// 페이즈별 처리
 	switch (CurrentPhase)
 	{
@@ -272,6 +282,10 @@ void UIntroCutscene::InitializeWidgets()
 	Canvas->SetWidgetVisible("mb2", false);
 	Canvas->SetWidgetVisible("mb3", false);
 	Canvas->SetWidgetVisible("mb4", false);
+
+	// Skip 위젯은 처음부터 보이게 (깜빡임 시작)
+	Canvas->SetWidgetVisible("Skip", true);
+	SkipBlinkTime = 0.0f;
 }
 
 void UIntroCutscene::PlayWidgetEnter(const std::string& WidgetName)

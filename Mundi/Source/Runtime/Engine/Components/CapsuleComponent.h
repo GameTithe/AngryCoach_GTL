@@ -12,6 +12,7 @@ public:
 
 	UCapsuleComponent();
 	void OnRegister(UWorld* World) override;
+	void OnCreatePhysicsState(UWorld* World) override;
 
 	// Duplication
 	virtual void DuplicateSubObjects() override;

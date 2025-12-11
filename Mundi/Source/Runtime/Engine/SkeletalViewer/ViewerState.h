@@ -60,6 +60,7 @@ public:
     bool bTimeChanged = false;
     bool bIsRecording = false;
     bool bIsLooping = true;
+    float PlaybackSpeed = 1.0f;  // 재생 속도 (0.1 ~ 3.0)
 
 	// ======== 피직스 애셋 관련 ==========
     

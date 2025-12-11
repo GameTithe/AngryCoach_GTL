@@ -5,16 +5,20 @@
 #include "Character.h"
 #include "SceneComponent.h"
 #include "CapsuleComponent.h"
+#include "PrimitiveComponent.h"
 #include "World.h"
 #include "Source/Runtime/Engine/Physics/PhysScene.h"
+#include "Source/Runtime/Engine/Physics/BodyInstance.h"
 #include "Source/Runtime/Engine/Collision/Collision.h"
+#include <PxPhysicsAPI.h>
+using namespace physx;
 
 UCharacterMovementComponent::UCharacterMovementComponent()
 {
 	// 캐릭터 전용 설정 값
  	MaxWalkSpeed = 6.0f;
 	MaxAcceleration = 20.0f;
-	JumpZVelocity = 4.0;
+	JumpZVelocity = 8.0f;
 
 	BrackingDeceleration = 20.0f; // 입력이 없을 때 감속도
 	GroundFriction = 8.0f; //바닥 마찰 계수
@@ -325,6 +329,12 @@ void UCharacterMovementComponent::PhysFalling(float DeltaSecond)
 			Velocity.Z = 0.0f;
 			bIsFalling = false;
 			CurrentJumpCount = 0;  // 점프 횟수 리셋
+
+			// 착지 이벤트 호출
+			if (AAngryCoachCharacter* AngryChar = Cast<AAngryCoachCharacter>(CharacterOwner))
+			{
+				AngryChar->OnLanded();
+			}
 			// SafeMoveUpdatedComponent에서 이미 SkinWidth 적용된 위치로 설정됨
 			// Hit.Location으로 덮어쓰면 경사면에 박힘
 		}
@@ -375,7 +385,13 @@ void UCharacterMovementComponent::PhysFalling(float DeltaSecond)
 			// 여기다 놓으면 안좋음
 			// StopJump처리가 애매해서 땜빵식 코드
 			// 캐릭터 클래스에서 처리하는게 좋다.
-			CharacterOwner->SetCurrentState(ECharacterState::Idle);			
+			CharacterOwner->SetCurrentState(ECharacterState::Idle);
+
+			// 착지 이벤트 호출
+			if (AAngryCoachCharacter* AngryChar = Cast<AAngryCoachCharacter>(CharacterOwner))
+			{
+				AngryChar->OnLanded();
+			}
 
 			// 바닥으로 스냅 (SkinWidth 여유를 두고 이동)
 			const float SkinWidth = 0.00125f;
@@ -478,6 +494,35 @@ bool UCharacterMovementComponent::SafeMoveUpdatedComponent(const FVector& Delta,
         }
         FVector SafeLocation = Start + Delta.GetSafeNormal() * SafeDistance;
 		UpdatedComponent->SetWorldLocation(SafeLocation);
+
+		// 충돌한 물체 밀어내기 (동적 물체만)
+		if (OutHit.HitComponent)
+		{
+			UPrimitiveComponent* HitPrimitive = Cast<UPrimitiveComponent>(OutHit.HitComponent);
+			FBodyInstance* HitBodyInstance = HitPrimitive ? HitPrimitive->GetBodyInstance() : nullptr;
+			if (HitBodyInstance && HitBodyInstance->RigidActor)
+			{
+				// Kinematic body만 밀어내기 (Dynamic은 PhysX가 처리, Static은 밀면 안됨)
+				PxRigidDynamic* Dyn = HitBodyInstance->RigidActor->is<PxRigidDynamic>();
+				if (Dyn && (Dyn->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC))
+				{
+					// 밀어내기 방향 (내 이동 방향)
+					FVector PushDirection = Delta.GetNormalized();
+					PushDirection.Z = 0.0f; // 수평으로만 밀기
+					if (!PushDirection.IsZero())
+					{
+						PushDirection = PushDirection.GetNormalized();
+
+						// 침투 깊이만큼 상대방 밀어내기
+						float PushDistance = FMath::Max(0.0f, Delta.Size() - SafeDistance);
+						FVector PushVector = PushDirection * PushDistance;
+
+						OutHit.HitComponent->AddWorldOffset(PushVector);
+					}
+				}
+			}
+		}
+
 		return false;
 	}
 	else

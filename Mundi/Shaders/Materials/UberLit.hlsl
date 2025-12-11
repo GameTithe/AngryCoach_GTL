@@ -81,7 +81,7 @@ cbuffer FLightShadowmBufferType : register(b5)
 };
 
 #if USE_CARTOON_SHADING
-cbuffer CartoonParamsBuffer : register(b6)
+cbuffer CartoonParamsBuffer : register(b13)
 {
     float CartoonOutlineThreshold;   // Outline detection threshold
     int CartoonShadingLevels;        // Number of cel shading levels
@@ -596,7 +596,7 @@ PS_OUTPUT mainPS(PS_INPUT Input)
     
         // Shadow factor
         float shadowFactor = 1.0f;
-    //    if (DirectionalLight.bCastShadows)
+        if (DirectionalLight.bCastShadows)
     //    {
     //        shadowFactor = CalculateSpotLightShadowFactor(Input.WorldPos, DirectionalLight.Cascades[0], g_ShadowAtlas2D, g_ShadowSample);
     //    }
@@ -633,6 +633,12 @@ PS_OUTPUT mainPS(PS_INPUT Input)
         float3 specular = light.Color.rgb * quantizedSpecular * SPECULAR_COLOR * attenuation;
     
         litColor += diffuse + specular;
+    }
+     
+    [loop]
+    for (int j = 0; j < SpotLightCount; j++)
+    {
+        litColor +=  CalculateSpotLight(g_SpotLightList[j],Input.WorldPos, normal, viewDir, baseColor, true, specPower, g_ShadowAtlas2D, g_ShadowSample, g_VSMShadowAtlas, g_VSMSampler);
     }
     
     // Rim Lighting (optional enhancement for cartoon style)

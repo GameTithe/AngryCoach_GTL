@@ -6,6 +6,10 @@
 #include "BVHierarchy.h"
 #include "GameObject.h"
 #include "Collision.h"
+#include "../Physics/BodyInstance.h"
+#include "../Physics/PhysicsTypes.h"
+#include <PxPhysicsAPI.h>
+using namespace physx;
 
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 UShapeComponent::UShapeComponent() : bShapeIsVisible(true), bShapeHiddenInGame(true)
@@ -22,8 +26,35 @@ void UShapeComponent::BeginPlay()
 void UShapeComponent::OnRegister(UWorld* InWorld)
 {
     Super::OnRegister(InWorld);
-    
+
     GetWorldAABB();
+
+    // 부착 정보 로그
+    FString ParentName = AttachParent ? AttachParent->ObjectName.ToString() : "None";
+    FString SocketName = AttachSocketName.ToString().empty() ? "None" : AttachSocketName.ToString();
+    FTransform WorldTM = GetWorldTransform();
+    UE_LOG("[ShapeComponent] %s OnRegister - Parent: %s, Socket: %s, WorldPos: (%.2f, %.2f, %.2f)",
+        ObjectName.ToString().c_str(), ParentName.c_str(), SocketName.c_str(),
+        WorldTM.Translation.X, WorldTM.Translation.Y, WorldTM.Translation.Z);
+
+    // PhysX body 생성은 자식 클래스에서 크기 계산 후 호출
+}
+
+void UShapeComponent::OnUnregister()
+{
+    // PhysX body 정리
+    if (BodyInstance)
+    {
+        UWorld* World = GetWorld();
+        if (World && World->GetPhysScene())
+        {
+            BodyInstance->Terminate(*World->GetPhysScene());
+        }
+        delete BodyInstance;
+        BodyInstance = nullptr;
+    }
+
+    Super::OnUnregister();
 }
 
 void UShapeComponent::OnTransformUpdated()
@@ -39,12 +70,33 @@ void UShapeComponent::OnTransformUpdated()
         }
     }
 
+    // PhysX body 위치 업데이트 (Kinematic)
+    if (BodyInstance && BodyInstance->RigidActor)
+    {
+        PxRigidDynamic* Dyn = BodyInstance->RigidActor->is<PxRigidDynamic>();
+        if (Dyn && (Dyn->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC))
+        {
+            FTransform WorldTransform = GetWorldTransform();
+            PxTransform PxTM = ToPx(WorldTransform);
+            // setKinematicTarget은 다음 simulate()에서 적용됨
+            // setGlobalPose는 즉시 적용됨
+            Dyn->setGlobalPose(PxTM);
+        }
+    }
+
     //UpdateOverlaps();
     Super::OnTransformUpdated();
 }
 
 void UShapeComponent::TickComponent(float DeltaSeconds)
 {
+    // PhysX body가 있으면 자체 충돌 시스템 스킵 (PhysX가 처리)
+    if (BodyInstance && BodyInstance->RigidActor)
+    {
+        Super::TickComponent(DeltaSeconds);
+        return;
+    }
+
     // if (!bGenerateOverlapEvents || !bBlockComponent)
     // {
     //     // Super::TickComponent(DeltaSeconds);

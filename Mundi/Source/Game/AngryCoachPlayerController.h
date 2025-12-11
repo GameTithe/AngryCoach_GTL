@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "PlayerController.h"
 #include "AAngryCoachPlayerController.generated.h"
 
@@ -31,9 +31,11 @@ protected:
 private:
 	// 헬퍼 함수
 	void ProcessPlayer1Attack(float DeltaTime);
-	void ProcessPlayer2Attack(float DeltaTime);
+	void ProcessPlayer2Attack(float DeltaTime); 
+
 	void ResetInputBuffer(bool& bIsInputBuffering, char& PendingKey, float& InputBufferTime);
 	void UpdateGamePadVibration(float DeltaTime);
+	
 
 protected:
 	AAngryCoachCharacter* Player1 = nullptr;
@@ -43,6 +45,11 @@ protected:
 	// 카메라 오프셋 (두 캐릭터 중심에서 얼마나 떨어질지) - 미터 단위
 	FVector CameraOffset = FVector(-8.0f, 0.0f, 6.f);
 	float CameraLerpSpeed = 5.0f;
+
+	// 자유 카메라 모드
+	bool bFreeCameraMode = false;
+	float FreeCameraMoveSpeed = 10.0f;
+	float FreeCameraRotateSpeed = 50.0f;
 
 	// Player 1
 	bool bIsP1InputBuffering = false;

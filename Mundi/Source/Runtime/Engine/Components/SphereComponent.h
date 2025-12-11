@@ -12,6 +12,7 @@ public:
 
     USphereComponent();
     void OnRegister(UWorld* InWorld) override;
+    void OnCreatePhysicsState(UWorld* World) override;
 
     // Duplication
     virtual void DuplicateSubObjects() override;

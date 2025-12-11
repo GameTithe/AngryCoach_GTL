@@ -60,6 +60,21 @@ local prevP1HealthRatio = 1.0
 local prevP2HealthRatio = 1.0
 
 -- ============================================
+-- 체력바 잔상 (Delayed Health Bar / Trail) 관련
+-- ============================================
+local p1TrailProgress = 1.0      -- P1 잔상 현재 값
+local p2TrailProgress = 1.0      -- P2 잔상 현재 값
+local p1TrailDelayTimer = 0.0    -- P1 딜레이 타이머 (초)
+local p2TrailDelayTimer = 0.0    -- P2 딜레이 타이머 (초)
+local bTrailAnimating = false    -- Trail 애니메이션 진행 중 (KO 후에도 계속)
+local lastP1HP = 1.0             -- KO 후 trail 업데이트용 마지막 HP
+local lastP2HP = 1.0
+
+-- 잔상 설정 (조절 가능)
+local TRAIL_DELAY = 0.5          -- 딜레이 시간 (초) - 줄어들기 전 대기
+local TRAIL_SHRINK_SPEED = 0.8   -- 초당 축소 속도 (0.8 = 1초에 80% 축소)
+
+-- ============================================
 -- 악세사리 선택 관련
 -- ============================================
 
@@ -80,6 +95,18 @@ local p2Ready = false
 
 -- 선택 단계 (false = 악세사리 선택, true = 라운드 선택)
 local bRoundSelectionPhase = false
+
+-- Select UI 활성화 상태 (Tick에서 입력 처리용)
+local bInSelectPhase = false
+
+-- 입력 쿨다운 (프레임 단위)
+local INPUT_COOLDOWN_FRAMES = 5
+local READY_COOLDOWN_FRAMES = 15
+local p1InputCooldown = 0
+local p2InputCooldown = 0
+local p1ReadyCooldown = 0
+local p2ReadyCooldown = 0
+local roundInputCooldown = 0
 
 -- 코루틴 대기 함수 (스케줄러가 "wait_time" 태그를 기대함)
 function WaitForSeconds(seconds)
@@ -226,10 +253,40 @@ function UpdateTimerUI(seconds)
 end
 
 -- ============================================
--- 체력바 UI 업데이트
+-- 체력바 UI 업데이트 (잔상 포함)
 -- ============================================
-function UpdateHealthBars()
-    -- C++ 캐릭터에서 실제 체력 퍼센트 읽기
+
+-- 잔상 업데이트 헬퍼 함수
+-- prevHP: 이전 프레임의 체력 (새로운 데미지 감지용)
+local function UpdateTrail(currentHP, trailProgress, delayTimer, dt, prevHP)
+    -- 실제로 체력이 감소했을 때만 딜레이 리셋 (prevHP와 비교)
+    if prevHP and currentHP < prevHP then
+        delayTimer = TRAIL_DELAY
+    end
+
+    -- 체력 회복 → 잔상 즉시 동기화
+    if currentHP > trailProgress then
+        trailProgress = currentHP
+        delayTimer = 0
+    end
+
+    -- 딜레이 처리
+    if delayTimer > 0 then
+        delayTimer = delayTimer - dt
+    else
+        -- 딜레이 끝 → 선형 축소
+        if trailProgress > currentHP then
+            trailProgress = trailProgress - (TRAIL_SHRINK_SPEED * dt)
+            if trailProgress < currentHP then
+                trailProgress = currentHP
+            end
+        end
+    end
+
+    return trailProgress, delayTimer
+end
+
+function UpdateHealthBars(deltaTime)
     local p1Ratio = GetP1HealthPercent()
     local p2Ratio = GetP2HealthPercent()
 
@@ -237,9 +294,44 @@ function UpdateHealthBars()
     if canvas then
         canvas:SetProgress("P1_HP", p1Ratio)
         canvas:SetProgress("P2_HP", p2Ratio)
+
+        local dt = deltaTime or 0.016
+
+        -- 잔상 처리 (prevHP 전달로 새 데미지 감지)
+        p1TrailProgress, p1TrailDelayTimer = UpdateTrail(p1Ratio, p1TrailProgress, p1TrailDelayTimer, dt, prevP1HealthRatio)
+        p2TrailProgress, p2TrailDelayTimer = UpdateTrail(p2Ratio, p2TrailProgress, p2TrailDelayTimer, dt, prevP2HealthRatio)
+
+        canvas:SetProgress("P1_HP_Trail", p1TrailProgress)
+        canvas:SetProgress("P2_HP_Trail", p2TrailProgress)
+
+        -- KO 후 trail 애니메이션 계속하기 위해 상태 저장
+        lastP1HP = p1Ratio
+        lastP2HP = p2Ratio
+        bTrailAnimating = (math.abs(p1TrailProgress - p1Ratio) > 0.001) or (math.abs(p2TrailProgress - p2Ratio) > 0.001)
     end
 
     return p1Ratio, p2Ratio
+end
+
+-- KO 후에도 trail만 계속 업데이트하는 함수
+function UpdateTrailOnly(deltaTime)
+    local canvas = UI.FindCanvas(battleUICanvasName)
+    if not canvas then
+        bTrailAnimating = false
+        return
+    end
+
+    local dt = deltaTime or 0.016
+
+    -- Trail만 업데이트 (새 데미지 감지 없이, prevHP = nil)
+    p1TrailProgress, p1TrailDelayTimer = UpdateTrail(lastP1HP, p1TrailProgress, p1TrailDelayTimer, dt, nil)
+    p2TrailProgress, p2TrailDelayTimer = UpdateTrail(lastP2HP, p2TrailProgress, p2TrailDelayTimer, dt, nil)
+
+    canvas:SetProgress("P1_HP_Trail", p1TrailProgress)
+    canvas:SetProgress("P2_HP_Trail", p2TrailProgress)
+
+    -- Trail이 HP에 도달했는지 체크
+    bTrailAnimating = (math.abs(p1TrailProgress - lastP1HP) > 0.001) or (math.abs(p2TrailProgress - lastP2HP) > 0.001)
 end
 
 -- ============================================
@@ -273,50 +365,52 @@ end
 -- damageRatio: 받은 데미지 비율 (0.0 ~ 1.0)
 function ShakePortraitOnDamage(playerIndex, damageRatio)
     local canvas = UI.FindCanvas(battleUICanvasName)
-    if not canvas then return end
-
-    -- 최소 데미지 임계값 (너무 작은 데미지는 무시)
-    if damageRatio < 0.01 then return end
+    if not canvas or damageRatio < 0.01 then return end
 
     local widgetName = (playerIndex == 1) and "P1_Portrait" or "P2_Portrait"
     local intensity, duration, frequency = GetPortraitShakeParams(damageRatio)
-
-    -- 진동 시작 (감쇠 적용)
     canvas:ShakeWidget(widgetName, intensity, duration, frequency, true)
-
-    print(string.format("[GameMode] Portrait shake: P%d, damage=%.1f%%, intensity=%.1f, duration=%.2f, freq=%.1f",
-        playerIndex, damageRatio * 100, intensity, duration, frequency))
 end
 
 -- 이전 체력 비율 리셋 (라운드 시작 시 호출)
 function ResetPrevHealthRatios()
     prevP1HealthRatio = 1.0
     prevP2HealthRatio = 1.0
+    -- 잔상도 리셋
+    p1TrailProgress = 1.0
+    p2TrailProgress = 1.0
+    p1TrailDelayTimer = 0.0
+    p2TrailDelayTimer = 0.0
+    bTrailAnimating = false
+    lastP1HP = 1.0
+    lastP2HP = 1.0
 end
 
 -- ============================================
 -- 타이머 진동 효과
 -- 시간이 줄어들수록 강도 증가
 -- ============================================
+local TIMER_SHAKE_STAGES = {
+    { threshold = 10, intensity = 0 },   -- 10초 이상: 진동 없음
+    { threshold = 7,  intensity = 3 },   -- 10~7초: 약한 진동
+    { threshold = 4,  intensity = 6 },   -- 7~4초: 중간 진동
+    { threshold = 0,  intensity = 10 },  -- 4초 이하: 강한 진동
+}
+
 function GetTimerShakeIntensity(seconds)
-    if seconds >= TIMER_SHAKE_THRESHOLD then
-        return 0  -- 10초 이상이면 진동 없음
-    elseif seconds >= 7 then
-        return 3  -- 10~7초: 약한 진동
-    elseif seconds >= 4 then
-        return 6  -- 7~4초: 중간 진동
-    else
-        return 10 -- 4초 이하: 강한 진동
+    for _, stage in ipairs(TIMER_SHAKE_STAGES) do
+        if seconds >= stage.threshold then
+            return stage.intensity
+        end
     end
+    return TIMER_SHAKE_STAGES[#TIMER_SHAKE_STAGES].intensity
 end
 
 function StartTimerShake(canvas, intensity)
     if not canvas then return end
-    -- 무한 진동, 감쇠 없음 (계속 유지)
     canvas:ShakeWidget("timer_tens", intensity, 0, 15, false)
     canvas:ShakeWidget("timer_ones", intensity, 0, 15, false)
     bTimerShaking = true
-    print("[GameMode] Timer shake started! Intensity: " .. intensity)
 end
 
 function UpdateTimerShake(canvas, intensity)
@@ -329,13 +423,10 @@ function UpdateTimerShake(canvas, intensity)
 end
 
 function StopTimerShake(canvas)
-    if not canvas then return end
-    if bTimerShaking then
-        canvas:StopShake("timer_tens")
-        canvas:StopShake("timer_ones")
-        bTimerShaking = false
-        print("[GameMode] Timer shake stopped")
-    end
+    if not canvas or not bTimerShaking then return end
+    canvas:StopShake("timer_tens")
+    canvas:StopShake("timer_ones")
+    bTimerShaking = false
 end
 
 -- ============================================
@@ -568,6 +659,25 @@ function Tick(Delta)
         return
     end
 
+    -- Start_Page 키보드 입력 처리 (약공격 키로 게임 시작)
+    local startPageCanvas = UI.FindCanvas(startPageCanvasName)
+    if startPageCanvas then
+        if InputManager:IsKeyPressed("T") or InputManager:IsKeyPressed(97) then
+            -- 버튼 잔상 효과
+            ShowButtonAfterimage(startPageCanvas, "GameStart")
+
+            -- 코루틴으로 대기 후 전환
+            StartCoroutine(function()
+                coroutine.yield(WaitForSeconds(0.5))
+                UI.RemoveCanvas(startPageCanvasName)
+                EndStartPage()
+            end)
+        end
+    end
+
+    -- Select 단계 입력 처리 (프레임 동기화)
+    TickSelectInput()
+
     -- 전투 중일 때만 처리
     if bBattleActive then
         local timeRemaining = GetRoundTimeRemaining()
@@ -626,22 +736,19 @@ function Tick(Delta)
             end
         end
 
-        -- 체력바 UI 업데이트 및 KO 체크
-        local p1Ratio, p2Ratio = UpdateHealthBars()
+        -- 체력바 UI 업데이트 및 KO 체크 (Delta 전달로 잔상 애니메이션 처리)
+        local p1Ratio, p2Ratio = UpdateHealthBars(Delta)
 
-        -- Portrait 진동 체크 (체력이 감소했을 때)
-        if p1Ratio < prevP1HealthRatio then
-            local damageRatio = prevP1HealthRatio - p1Ratio
-            ShakePortraitOnDamage(1, damageRatio)
+        -- Portrait 진동 체크 (체력 감소 시)
+        local function CheckPortraitShake(playerIndex, currentRatio, prevRatio)
+            if currentRatio < prevRatio then
+                ShakePortraitOnDamage(playerIndex, prevRatio - currentRatio)
+            end
         end
-        if p2Ratio < prevP2HealthRatio then
-            local damageRatio = prevP2HealthRatio - p2Ratio
-            ShakePortraitOnDamage(2, damageRatio)
-        end
+        CheckPortraitShake(1, p1Ratio, prevP1HealthRatio)
+        CheckPortraitShake(2, p2Ratio, prevP2HealthRatio)
 
-        -- 이전 체력 비율 업데이트
-        prevP1HealthRatio = p1Ratio
-        prevP2HealthRatio = p2Ratio
+        prevP1HealthRatio, prevP2HealthRatio = p1Ratio, p2Ratio
 
         -- KO 체크 (한 쪽이라도 0 이하가 되면)
         if p1Ratio <= 0 or p2Ratio <= 0 then
@@ -677,6 +784,9 @@ function Tick(Delta)
             -- (라운드 승리 카운트, 매치 종료 여부는 C++에서 처리됨)
             EndRound(winnerIndex)
         end
+    elseif bTrailAnimating then
+        -- 전투 종료 후에도 trail 애니메이션 계속 (KO 슬로모션 중)
+        UpdateTrailOnly(Delta)
     end
 end
 
@@ -917,8 +1027,15 @@ function OnCharacterSelectStart()
         canvas:SetWidgetVisible("left_arrow", false)
         canvas:SetWidgetVisible("right_arrow", false)
 
-        -- 키 입력 처리 코루틴 시작
-        StartCoroutine(SelectionInputLoop)
+        -- 쿨다운 초기화
+        p1InputCooldown = 0
+        p2InputCooldown = 0
+        p1ReadyCooldown = 0
+        p2ReadyCooldown = 0
+        roundInputCooldown = 0
+
+        -- Select 입력 처리 활성화 (Tick에서 처리)
+        bInSelectPhase = true
 
         print("[GameMode] Selection started - P1:A/D+T, P2:Arrows+Numpad1")
     else
@@ -965,6 +1082,10 @@ function UpdateReadyUI(canvas)
     -- 둘 다 Ready면 라운드 선택 화살표 표시 (인덱스에 따라)
     if p1Ready and p2Ready then
         UpdateRoundArrows(canvas)
+    else
+        -- 한 명이라도 Ready 취소 시 화살표 숨김
+        canvas:SetWidgetVisible("left_arrow", false)
+        canvas:SetWidgetVisible("right_arrow", false)
     end
 end
 
@@ -977,157 +1098,143 @@ function UpdateRoundArrows(canvas)
     canvas:SetWidgetVisible("right_arrow", selectedRoundIndex < 3)
 end
 
--- 통합 선택 입력 루프
-function SelectionInputLoop()
-    print("[GameMode] SelectionInputLoop started")
+-- Tick에서 호출되는 Select 입력 처리 함수 (프레임 동기화)
+function TickSelectInput()
+    if not bInSelectPhase then return end
 
-    -- 입력 쿨다운 (프레임 단위, ~60fps 기준 5프레임 ≈ 0.08초)
-    local INPUT_COOLDOWN_FRAMES = 5
-    local READY_COOLDOWN_FRAMES = 15  -- Ready 버튼은 더 긴 쿨다운 (토글 방지)
-    local p1InputCooldown = 0
-    local p2InputCooldown = 0
-    local p1ReadyCooldown = 0
-    local p2ReadyCooldown = 0
-    local roundInputCooldown = 0
+    local canvas = UI.FindCanvas(selectCanvasName)
+    if not canvas then
+        bInSelectPhase = false
+        return
+    end
 
-    while UI.FindCanvas(selectCanvasName) do
-        local canvas = UI.FindCanvas(selectCanvasName)
-        if not canvas then break end
+    -- 쿨다운 감소 (매 프레임 1씩)
+    if p1InputCooldown > 0 then p1InputCooldown = p1InputCooldown - 1 end
+    if p2InputCooldown > 0 then p2InputCooldown = p2InputCooldown - 1 end
+    if p1ReadyCooldown > 0 then p1ReadyCooldown = p1ReadyCooldown - 1 end
+    if p2ReadyCooldown > 0 then p2ReadyCooldown = p2ReadyCooldown - 1 end
+    if roundInputCooldown > 0 then roundInputCooldown = roundInputCooldown - 1 end
 
-        -- 쿨다운 감소 (매 프레임 1씩)
-        if p1InputCooldown > 0 then p1InputCooldown = p1InputCooldown - 1 end
-        if p2InputCooldown > 0 then p2InputCooldown = p2InputCooldown - 1 end
-        if p1ReadyCooldown > 0 then p1ReadyCooldown = p1ReadyCooldown - 1 end
-        if p2ReadyCooldown > 0 then p2ReadyCooldown = p2ReadyCooldown - 1 end
-        if roundInputCooldown > 0 then roundInputCooldown = roundInputCooldown - 1 end
-
-        -- ==========================================
-        -- Phase 1: 악세사리 선택 (둘 다 Ready 전)
-        -- ==========================================
-        if not bRoundSelectionPhase then
-            -- P1 악세사리 선택: A/D (Ready 전에만, 쿨다운 적용)
-            if not p1Ready and p1InputCooldown <= 0 then
-                local p1Changed = false
-                if InputManager:IsKeyPressed("A") then
-                    if p1SelectedAccessory > 1 then
-                        p1SelectedAccessory = p1SelectedAccessory - 1
-                        p1Changed = true
-                    end
-                elseif InputManager:IsKeyPressed("D") then
-                    if p1SelectedAccessory < 3 then
-                        p1SelectedAccessory = p1SelectedAccessory + 1
-                        p1Changed = true
-                    end
+    -- ==========================================
+    -- Phase 1: 악세사리 선택 (둘 다 Ready 전)
+    -- ==========================================
+    if not bRoundSelectionPhase then
+        -- P1 악세사리 선택: A/D (Ready 전에만, 쿨다운 적용)
+        if not p1Ready and p1InputCooldown <= 0 then
+            local p1Changed = false
+            if InputManager:IsKeyPressed("A") then
+                if p1SelectedAccessory > 1 then
+                    p1SelectedAccessory = p1SelectedAccessory - 1
+                    p1Changed = true
                 end
-
-                if p1Changed then
-                    print("[GameMode] P1 accessory: " .. AccessoryList[p1SelectedAccessory].name)
-                    UpdateAccessoryUI(canvas)
-                    EquipAccessoryToPlayer(1, AccessoryList[p1SelectedAccessory].prefab)
-                    p1InputCooldown = INPUT_COOLDOWN_FRAMES
+            elseif InputManager:IsKeyPressed("D") then
+                if p1SelectedAccessory < 3 then
+                    p1SelectedAccessory = p1SelectedAccessory + 1
+                    p1Changed = true
                 end
             end
 
-            -- P2 악세사리 선택: 화살표 (Ready 전에만, 쿨다운 적용)
-            if not p2Ready and p2InputCooldown <= 0 then
-                local p2Changed = false
-                if InputManager:IsKeyPressed(37) then  -- VK_LEFT
-                    if p2SelectedAccessory > 1 then
-                        p2SelectedAccessory = p2SelectedAccessory - 1
-                        p2Changed = true
-                    end
-                elseif InputManager:IsKeyPressed(39) then  -- VK_RIGHT
-                    if p2SelectedAccessory < 3 then
-                        p2SelectedAccessory = p2SelectedAccessory + 1
-                        p2Changed = true
-                    end
-                end
-
-                if p2Changed then
-                    print("[GameMode] P2 accessory: " .. AccessoryList[p2SelectedAccessory].name)
-                    UpdateAccessoryUI(canvas)
-                    EquipAccessoryToPlayer(2, AccessoryList[p2SelectedAccessory].prefab)
-                    p2InputCooldown = INPUT_COOLDOWN_FRAMES
-                end
-            end
-
-            -- P1 Ready: T키 (쿨다운 적용)
-            local tKeyPressed = InputManager:IsKeyPressed("T")
-            local numpad1Pressed = InputManager:IsKeyPressed(97)
-
-            if p1ReadyCooldown <= 0 and tKeyPressed then
-                p1Ready = not p1Ready
-                print("[GameMode] P1 Ready toggled by T key: " .. tostring(p1Ready))
-                print("[GameMode]   - T pressed: " .. tostring(tKeyPressed) .. ", Numpad1 pressed: " .. tostring(numpad1Pressed))
-                UpdateReadyUI(canvas)
-                p1ReadyCooldown = READY_COOLDOWN_FRAMES
-
-                -- 둘 다 Ready면 라운드 선택 단계로
-                if p1Ready and p2Ready then
-                    bRoundSelectionPhase = true
-                    print("[GameMode] Both players ready! Round selection enabled.")
-                end
-            end
-
-            -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97, 쿨다운 적용)
-            if p2ReadyCooldown <= 0 and numpad1Pressed then
-                p2Ready = not p2Ready
-                print("[GameMode] P2 Ready toggled by Numpad1: " .. tostring(p2Ready))
-                print("[GameMode]   - T pressed: " .. tostring(tKeyPressed) .. ", Numpad1 pressed: " .. tostring(numpad1Pressed))
-                UpdateReadyUI(canvas)
-                p2ReadyCooldown = READY_COOLDOWN_FRAMES
-
-                -- 둘 다 Ready면 라운드 선택 단계로
-                if p1Ready and p2Ready then
-                    bRoundSelectionPhase = true
-                    print("[GameMode] Both players ready! Round selection enabled.")
-                end
-            end
-
-        -- ==========================================
-        -- Phase 2: 라운드 선택 (둘 다 Ready 후)
-        -- ==========================================
-        else
-            -- 라운드 선택: A/D 또는 화살표 (쿨다운 적용)
-            if roundInputCooldown <= 0 then
-                local leftPressed = InputManager:IsKeyPressed("A") or InputManager:IsKeyPressed(37)
-                local rightPressed = InputManager:IsKeyPressed("D") or InputManager:IsKeyPressed(39)
-
-                if leftPressed and selectedRoundIndex > 1 then
-                    selectedRoundIndex = selectedRoundIndex - 1
-                    canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
-                    UpdateRoundArrows(canvas)
-                    print("[GameMode] Round to win: " .. selectedRoundIndex)
-                    roundInputCooldown = INPUT_COOLDOWN_FRAMES
-                elseif rightPressed and selectedRoundIndex < 3 then
-                    selectedRoundIndex = selectedRoundIndex + 1
-                    canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
-                    UpdateRoundArrows(canvas)
-                    print("[GameMode] Round to win: " .. selectedRoundIndex)
-                    roundInputCooldown = INPUT_COOLDOWN_FRAMES
-                end
-            end
-
-            -- 확정: Space 또는 Enter
-            if InputManager:IsKeyPressed("Space") or InputManager:IsKeyPressed(13) then
-                print("[GameMode] Selection confirmed!")
-                FinishSelection()
-                break
+            if p1Changed then
+                UpdateAccessoryUI(canvas)
+                EquipAccessoryToPlayer(1, AccessoryList[p1SelectedAccessory].prefab)
+                p1InputCooldown = INPUT_COOLDOWN_FRAMES
             end
         end
 
-        coroutine.yield(WaitForSeconds(0.016))  -- ~60fps
-    end
+        -- P2 악세사리 선택: 화살표 (Ready 전에만, 쿨다운 적용)
+        if not p2Ready and p2InputCooldown <= 0 then
+            local p2Changed = false
+            if InputManager:IsKeyPressed(37) then  -- VK_LEFT
+                if p2SelectedAccessory > 1 then
+                    p2SelectedAccessory = p2SelectedAccessory - 1
+                    p2Changed = true
+                end
+            elseif InputManager:IsKeyPressed(39) then  -- VK_RIGHT
+                if p2SelectedAccessory < 3 then
+                    p2SelectedAccessory = p2SelectedAccessory + 1
+                    p2Changed = true
+                end
+            end
 
-    print("[GameMode] SelectionInputLoop ended")
+            if p2Changed then
+                UpdateAccessoryUI(canvas)
+                EquipAccessoryToPlayer(2, AccessoryList[p2SelectedAccessory].prefab)
+                p2InputCooldown = INPUT_COOLDOWN_FRAMES
+            end
+        end
+
+        -- P1 Ready: T키 (쿨다운 적용)
+        local tKeyPressed = InputManager:IsKeyPressed("T")
+        local numpad1Pressed = InputManager:IsKeyPressed(97)
+
+        if p1ReadyCooldown <= 0 and tKeyPressed then
+            p1Ready = not p1Ready
+            UpdateReadyUI(canvas)
+            p1ReadyCooldown = READY_COOLDOWN_FRAMES
+
+            -- 둘 다 Ready면 라운드 선택 단계로
+            if p1Ready and p2Ready then
+                bRoundSelectionPhase = true
+            end
+        end
+
+        -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97, 쿨다운 적용)
+        if p2ReadyCooldown <= 0 and numpad1Pressed then
+            p2Ready = not p2Ready
+            UpdateReadyUI(canvas)
+            p2ReadyCooldown = READY_COOLDOWN_FRAMES
+
+            -- 둘 다 Ready면 라운드 선택 단계로
+            if p1Ready and p2Ready then
+                bRoundSelectionPhase = true
+            end
+        end
+
+    -- ==========================================
+    -- Phase 2: 라운드 선택 (둘 다 Ready 후)
+    -- ==========================================
+    else
+        -- 라운드 선택: A/D 또는 화살표 (쿨다운 적용)
+        if roundInputCooldown <= 0 then
+            local leftPressed = InputManager:IsKeyPressed("A") or InputManager:IsKeyPressed(37)
+            local rightPressed = InputManager:IsKeyPressed("D") or InputManager:IsKeyPressed(39)
+
+            if leftPressed and selectedRoundIndex > 1 then
+                selectedRoundIndex = selectedRoundIndex - 1
+                canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
+                UpdateRoundArrows(canvas)
+                roundInputCooldown = INPUT_COOLDOWN_FRAMES
+            elseif rightPressed and selectedRoundIndex < 3 then
+                selectedRoundIndex = selectedRoundIndex + 1
+                canvas:SetTextureSubUVFrame("round_to_win", selectedRoundIndex)
+                UpdateRoundArrows(canvas)
+                roundInputCooldown = INPUT_COOLDOWN_FRAMES
+            end
+        end
+
+        -- 확정: 강공격 키 (P1: Y, P2: Numpad2)
+        if InputManager:IsKeyPressed("Y") or InputManager:IsKeyPressed(98) then
+            FinishSelection()
+        end
+
+        -- 레디 취소: 약공격 키 (P1: T, P2: Numpad1)
+        if InputManager:IsKeyPressed("T") then
+            p1Ready = false
+            bRoundSelectionPhase = false
+            UpdateReadyUI(canvas)
+        end
+        if InputManager:IsKeyPressed(97) then
+            p2Ready = false
+            bRoundSelectionPhase = false
+            UpdateReadyUI(canvas)
+        end
+    end
 end
 
 -- 선택 완료
 function FinishSelection()
-    print("[GameMode] FinishSelection called")
-    print("[GameMode] P1 accessory: " .. AccessoryList[p1SelectedAccessory].name)
-    print("[GameMode] P2 accessory: " .. AccessoryList[p2SelectedAccessory].name)
-    print("[GameMode] Rounds to win: " .. selectedRoundIndex)
+    -- Select 입력 처리 비활성화
+    bInSelectPhase = false
 
     -- 라운드 설정
     currentRoundsToWin = selectedRoundIndex

@@ -43,6 +43,8 @@ TArray<FString> UPropertyRenderer::CachedScriptPaths;
 TArray<const char*> UPropertyRenderer::CachedScriptItems;
 TArray<FString> UPropertyRenderer::CachedClothWeightAssetPaths;
 TArray<FString> UPropertyRenderer::CachedClothWeightAssetItems;
+TArray<FString> UPropertyRenderer::CachedDecalTexturePaths;
+TArray<const char*> UPropertyRenderer::CachedDecalTextureItems;
 
 static bool ItemsGetter(void* Data, int Index, const char** CItem)
 {
@@ -469,6 +471,23 @@ void UPropertyRenderer::CacheResources()
 			}
 		}
 	}
+
+	if (CachedDecalTexturePaths.IsEmpty() && CachedDecalTextureItems.IsEmpty())
+	{
+		const FString DecalDataDir = NormalizePath(GDataDir + "/Textures/");
+		CachedDecalTextureItems.Add("None");
+
+		TArray<FString> AllTexturePaths = ResMgr.GetAllFilePaths<UTexture>();
+		for (const FString& Path : AllTexturePaths)
+		{
+			FString Normalized = NormalizePath(Path);
+			if (Normalized.rfind(DecalDataDir, 0) == 0)
+			{
+				CachedDecalTexturePaths.Add(Normalized);
+				CachedDecalTextureItems.Add(CachedDecalTexturePaths[CachedDecalTexturePaths.Num() - 1].c_str());
+			}
+		}
+	}
 }
 
 void UPropertyRenderer::ClearResourcesCache()
@@ -489,6 +508,8 @@ void UPropertyRenderer::ClearResourcesCache()
 	CachedScriptItems.Empty();
 	CachedClothWeightAssetPaths.Empty();
 	CachedClothWeightAssetItems.Empty();
+	CachedDecalTexturePaths.Empty();
+	CachedDecalTextureItems.Empty();
 }
 
 // ===== 타입별 렌더링 구현 =====
@@ -678,8 +699,21 @@ bool UPropertyRenderer::RenderTextureProperty(const FProperty& Prop, void* Insta
 	UTexture* CurrentTexture = *TexturePtr;
 	UTexture* NewTexture = nullptr;
 
+	// 컴포넌트별 Setter 호출
+	UObject* Obj = static_cast<UObject*>(Instance);
+	bool bChanged;
+	
 	// 헬퍼 함수를 호출하여 텍스처 콤보박스를 렌더링합니다.
-	bool bChanged = RenderTextureSelectionCombo(Prop.Name, CurrentTexture, NewTexture);
+	if (UDecalComponent* Decal = Cast<UDecalComponent>(Obj))
+	{
+		bChanged = RenderTextureSelectionComboFromCache(
+			Prop.Name, CurrentTexture, NewTexture,
+			CachedDecalTexturePaths, CachedDecalTextureItems);
+	}
+	else
+	{
+		bChanged = RenderTextureSelectionCombo(Prop.Name, CurrentTexture, NewTexture);
+	}
 
 	if (bChanged)
 	{
@@ -689,8 +723,7 @@ bool UPropertyRenderer::RenderTextureProperty(const FProperty& Prop, void* Insta
 		// 새 텍스처 경로 (None일 경우 빈 문자열)
 		FString NewPath = (NewTexture) ? NewTexture->GetFilePath() : "";
 
-		// 컴포넌트별 Setter 호출
-		UObject* Obj = static_cast<UObject*>(Instance);
+		
 		if (UBillboardComponent* Billboard = Cast<UBillboardComponent>(Obj))
 		{
 			Billboard->SetTexture(NewPath);
@@ -1691,23 +1724,78 @@ bool UPropertyRenderer::RenderSingleMaterialSlot(const char* Label, UMaterialInt
 // ===== 텍스처 선택 헬퍼 함수 =====
 bool UPropertyRenderer::RenderTextureSelectionCombo(const char* Label, UTexture* CurrentTexture, UTexture*& OutNewTexture)
 {
-	// 텍스처 캐시가 비어있으면 렌더링하지 않음
-	if (CachedTextureItems.empty())
+	return RenderTextureSelectionComboFromCache(Label, CurrentTexture, OutNewTexture, CachedTexturePaths, CachedTextureItems);
+}
+ 
+
+
+
+bool UPropertyRenderer::RenderSoundSelectionComboSimple(const char* Label, USound* CurrentSound, USound*& OutNewSound)
+{
+    if (CachedSoundItems.empty())
+    {
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No Sound available in cache.");
+        return false;
+    }
+
+    bool bChanged = false;
+    FString CurrentSoundPath = (CurrentSound) ? CurrentSound->GetFilePath() : "None";
+
+    int SelectedSoundIdx = 0; // 0 = None
+    for (int j = 0; j < (int)CachedSoundPaths.size(); ++j)
+    {
+        if (CachedSoundPaths[j] == CurrentSoundPath)
+        {
+            SelectedSoundIdx = j + 1; // +1 for "None"
+            break;
+        }
+    }
+
+    const char* PreviewText = CachedSoundItems[SelectedSoundIdx];
+    ImGui::SetNextItemWidth(220.0f);
+    if (ImGui::BeginCombo(Label, PreviewText))
+    {
+        for (int i = 0; i < (int)CachedSoundItems.size(); ++i)
+        {
+            bool is_selected = (SelectedSoundIdx == i);
+            const char* ItemText = CachedSoundItems[i];
+
+            if (ImGui::Selectable(ItemText, is_selected))
+            {
+                USound* SelectedSound = (i == 0)
+                    ? nullptr
+                    : UResourceManager::GetInstance().Load<USound>(CachedSoundPaths[i - 1]);
+                OutNewSound = SelectedSound;
+                bChanged = true;
+            }
+
+            if (is_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+
+    return bChanged;
+}
+
+bool UPropertyRenderer::RenderTextureSelectionComboFromCache(const char* Label, UTexture* CurrentTexture,
+	UTexture*& OutNewTexture, const TArray<FString>& Paths, const TArray<const char*>& Items)
+{
+	if (Items.empty())
 	{
-		ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No textures available in cache.");
+		ImGui::TextColored(ImVec4(1,0,0,1), "No textures available in cache.");
 		return false;
 	}
 
 	bool bChanged = false;
 	FString CurrentTexturePath = (CurrentTexture) ? CurrentTexture->GetFilePath() : "None";
 
-	// 1. 현재 선택된 텍스처의 인덱스 찾기
 	int SelectedTextureIdx = 0; // "None"
-	for (int j = 0; j < (int)CachedTexturePaths.size(); ++j)
+	for (int j = 0; j < (int)Paths.size(); ++j)
 	{
-		if (CachedTexturePaths[j] == CurrentTexturePath)
+		if (Paths[j] == CurrentTexturePath)
 		{
-			SelectedTextureIdx = j + 1; // 0번은 "None"이므로 +1
+			SelectedTextureIdx = j + 1; // 0번은 "None"
 			break;
 		}
 	}
@@ -1757,7 +1845,7 @@ bool UPropertyRenderer::RenderTextureSelectionCombo(const char* Label, UTexture*
 
 	// 3. 커스텀 콤보박스 시작
 	// 콤보박스에 표시될 텍스트 (현재 선택된 항목의 텍스트)
-	const char* PreviewText = CachedTextureItems[SelectedTextureIdx];
+	const char* PreviewText = Items[SelectedTextureIdx];
 
 	// SetNextItemWidth를 썸네일 크기만큼 보정
 	ImGui::SetNextItemWidth(220.0f - ThumbnailSize - ImGui::GetStyle().ItemSpacing.x);
@@ -1770,17 +1858,17 @@ bool UPropertyRenderer::RenderTextureSelectionCombo(const char* Label, UTexture*
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 1.0f));
 
 		// 텍스처 리스트 (미리보기 포함) - "None" 옵션(i=0)을 루프에 포함
-		for (int i = 0; i < (int)CachedTextureItems.size(); ++i)
+		for (int i = 0; i < (int)Items.size(); ++i)
 		{
 			bool is_selected = (SelectedTextureIdx == i);
-			const char* ItemText = CachedTextureItems[i];
+			const char* ItemText = Items[i];
 
 			UTexture* previewTexture = nullptr;
 			FString TexturePath = "None";
 
 			if (i > 0)
 			{
-				TexturePath = CachedTexturePaths[i - 1];
+				TexturePath = Paths[i - 1];
 				previewTexture = UResourceManager::GetInstance().Load<UTexture>(TexturePath);
 			}
 
@@ -1885,57 +1973,6 @@ bool UPropertyRenderer::RenderTextureSelectionCombo(const char* Label, UTexture*
 	}
 
 	return bChanged;
-}
- 
-
-
-
-bool UPropertyRenderer::RenderSoundSelectionComboSimple(const char* Label, USound* CurrentSound, USound*& OutNewSound)
-{
-    if (CachedSoundItems.empty())
-    {
-        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "No Sound available in cache.");
-        return false;
-    }
-
-    bool bChanged = false;
-    FString CurrentSoundPath = (CurrentSound) ? CurrentSound->GetFilePath() : "None";
-
-    int SelectedSoundIdx = 0; // 0 = None
-    for (int j = 0; j < (int)CachedSoundPaths.size(); ++j)
-    {
-        if (CachedSoundPaths[j] == CurrentSoundPath)
-        {
-            SelectedSoundIdx = j + 1; // +1 for "None"
-            break;
-        }
-    }
-
-    const char* PreviewText = CachedSoundItems[SelectedSoundIdx];
-    ImGui::SetNextItemWidth(220.0f);
-    if (ImGui::BeginCombo(Label, PreviewText))
-    {
-        for (int i = 0; i < (int)CachedSoundItems.size(); ++i)
-        {
-            bool is_selected = (SelectedSoundIdx == i);
-            const char* ItemText = CachedSoundItems[i];
-
-            if (ImGui::Selectable(ItemText, is_selected))
-            {
-                USound* SelectedSound = (i == 0)
-                    ? nullptr
-                    : UResourceManager::GetInstance().Load<USound>(CachedSoundPaths[i - 1]);
-                OutNewSound = SelectedSound;
-                bChanged = true;
-            }
-
-            if (is_selected)
-                ImGui::SetItemDefaultFocus();
-        }
-        ImGui::EndCombo();
-    }
-
-    return bChanged;
 }
 
 

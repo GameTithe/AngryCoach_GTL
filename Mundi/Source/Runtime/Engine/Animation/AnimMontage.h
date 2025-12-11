@@ -117,6 +117,9 @@ public:
     /** 루프 여부 */
     bool bLoop = false;
 
+    /** 전체 재생 속도 (기본 1.0) */
+    float PlayRate = 1.0f;
+
     /** 섹션 목록 */
     TArray<FMontageSection> Sections;
 

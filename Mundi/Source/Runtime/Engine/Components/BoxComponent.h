@@ -10,8 +10,9 @@ public:
 
 	GENERATED_REFLECTION_BODY();
 
-	UBoxComponent(); 
+	UBoxComponent();
 	void OnRegister(UWorld* InWorld) override;
+	void OnCreatePhysicsState(UWorld* World) override;
 
 	void SetBoxExtent(const FVector& InExtent) { BoxExtent = InExtent; }
 

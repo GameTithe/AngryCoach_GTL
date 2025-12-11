@@ -275,7 +275,6 @@ bool ACharacter::CanAttack()
 {
 	return CurrentState != ECharacterState::Attacking &&
 		CurrentState != ECharacterState::Walking &&
-		CurrentState != ECharacterState::Jumping &&
 		CurrentState != ECharacterState::Damaged;
 }
 

@@ -12,7 +12,12 @@ void UBoneAnchorComponent::SetTarget(USkeletalMeshComponent* InTarget, int32 InB
     BoneIndex = InBoneIndex;
     SocketIndex = -1;
     PreviewMesh = nullptr;
+
+    // UpdateAnchorFromBone 중 writeback 방지 (SetWorldTransform → OnTransformUpdated 호출됨)
+    bool bWasEditable = bIsEditable;
+    bIsEditable = false;
     UpdateAnchorFromBone();
+    bIsEditable = bWasEditable;
 }
 
 void UBoneAnchorComponent::SetSocketTarget(USkeletalMeshComponent* InTarget, int32 InSocketIndex)
@@ -21,7 +26,12 @@ void UBoneAnchorComponent::SetSocketTarget(USkeletalMeshComponent* InTarget, int
     SocketIndex = InSocketIndex;
     BoneIndex = -1;
     PreviewMesh = nullptr;
+
+    // UpdateAnchorFromBone 중 writeback 방지 (SetWorldTransform → OnTransformUpdated 호출됨)
+    bool bWasEditable = bIsEditable;
+    bIsEditable = false;
     UpdateAnchorFromBone();
+    bIsEditable = bWasEditable;
 }
 
 void UBoneAnchorComponent::SetPreviewMeshTarget(UStaticMeshComponent* InPreviewMesh)
@@ -29,7 +39,12 @@ void UBoneAnchorComponent::SetPreviewMeshTarget(UStaticMeshComponent* InPreviewM
     PreviewMesh = InPreviewMesh;
     BoneIndex = -1;
     SocketIndex = -1;
+
+    // UpdateAnchorFromBone 중 writeback 방지 (SetWorldTransform → OnTransformUpdated 호출됨)
+    bool bWasEditable = bIsEditable;
+    bIsEditable = false;
     UpdateAnchorFromBone();
+    bIsEditable = bWasEditable;
 }
 
 void UBoneAnchorComponent::UpdateAnchorFromBone()
@@ -85,6 +100,12 @@ void UBoneAnchorComponent::UpdateAnchorFromBone()
 void UBoneAnchorComponent::OnTransformUpdated()
 {
     Super::OnTransformUpdated();
+
+    // 편집 모드가 아니면 writeback 하지 않음 (다른 곳에서 트랜스폼이 변경되어도 소켓/본 값 유지)
+    if (!bIsEditable)
+    {
+        return;
+    }
 
     const FTransform AnchorWorld = GetWorldTransform();
 
@@ -146,7 +167,7 @@ void UBoneAnchorComponent::OnTransformUpdated()
 
         Socket.RelativeLocation = SocketRelative.Translation;
         Socket.RelativeRotation = SocketRelative.Rotation;
-        Socket.RelativeScale = SocketRelative.Scale3D;
+        // 스케일은 기즈모로 변경하지 않음 (UI에서만 변경, 부동소수점 오차 방지)
 
         // 이 소켓에 붙은 자식 컴포넌트들 트랜스폼 갱신 트리거
         FName SocketName(Socket.SocketName);

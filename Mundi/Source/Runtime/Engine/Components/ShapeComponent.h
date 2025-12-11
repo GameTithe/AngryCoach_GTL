@@ -40,7 +40,9 @@ public:
 	virtual void GetShape(FShape& OutShape) const {};
 	virtual void BeginPlay() override;
     virtual void OnRegister(UWorld* InWorld) override;
+    virtual void OnUnregister() override;
     virtual void OnTransformUpdated() override;
+    virtual void OnCreatePhysicsState(UWorld* World) {};
 
     void UpdateOverlaps(); 
 

@@ -64,6 +64,7 @@ bool UAnimMontage::Save(const FString& FilePath) const
     Root["BlendInTime"] = BlendInTime;
     Root["BlendOutTime"] = BlendOutTime;
     Root["bLoop"] = bLoop;
+    Root["PlayRate"] = PlayRate;
 
     // 섹션 저장
     JSON SectionsArray = JSON::Make(JSON::Class::Array);
@@ -118,6 +119,7 @@ bool UAnimMontage::Load(const FString& FilePath)
     // 블렌드 시간 로드
     FJsonSerializer::ReadFloat(Root, "BlendInTime", BlendInTime, 0.2f, false);
     FJsonSerializer::ReadFloat(Root, "BlendOutTime", BlendOutTime, 0.2f, false);
+    FJsonSerializer::ReadFloat(Root, "PlayRate", PlayRate, 1.0f, false);
 
     if (Root.hasKey("bLoop"))
     {

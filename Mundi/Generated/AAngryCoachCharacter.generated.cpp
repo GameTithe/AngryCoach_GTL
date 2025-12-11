@@ -37,6 +37,9 @@ BEGIN_PROPERTIES(AAngryCoachCharacter)
     MARK_AS_COMPONENT("AAngryCoachCharacter", "Auto-generated AAngryCoachCharacter")
     ADD_PROPERTY(float, KnockbackPower, "[캐릭터]", true)
     ADD_PROPERTY(float, VibrationDuration, "[캐릭터]", true)
+    ADD_PROPERTY(FVector, DecalScale, "[Decal]", true)
+    ADD_PROPERTY(float, DecalSurfaceOffset, "[Decal]", true)
+    ADD_PROPERTY(float, DecalMinDistance, "[Decal]", true)
 END_PROPERTIES()
 
 // ===== Lua Binding =====

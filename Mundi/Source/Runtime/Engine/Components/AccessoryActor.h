@@ -36,6 +36,9 @@ public:
     // 기본 Particle
     UParticleSystemComponent* BaseEffectParticle;
 
+    // 스킬 이펙트 Particle
+    UParticleSystemComponent* SkillEffectParticle;
+
     TArray<UShapeComponent*> AttackShapes;
 
     // === 악세서리 데이터 ===
@@ -59,6 +62,9 @@ public:
 
     void PlayHitParticle();
     void StopHitParticle();
+
+    void PlaySkillEffectParticle();
+    void StopSkillEffectParticle();
 
     void SpawnHitParticleAtLocation(const FVector& Location);
     

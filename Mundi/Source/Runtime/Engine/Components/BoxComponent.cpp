@@ -1,5 +1,11 @@
 ﻿#include "pch.h"
 #include "BoxComponent.h"
+#include "../Physics/BodyInstance.h"
+#include "../Physics/BodySetup.h"
+#include "../Physics/PhysScene.h"
+#include "World.h"
+#include <PxPhysicsAPI.h>
+using namespace physx;
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 //BEGIN_PROPERTIES(UBoxComponent)
 //MARK_AS_COMPONENT("박스 충돌 컴포넌트", "박스 모양의 충돌체를 생성하는 컴포넌트입니다.")
@@ -14,7 +20,7 @@ UBoxComponent::UBoxComponent()
 }
 
 void UBoxComponent::OnRegister(UWorld* InWorld)
-{ 
+{
 	Super::OnRegister(InWorld);
 
 	// Owner의 실제 바운드를 가져옴
@@ -41,7 +47,69 @@ void UBoxComponent::OnRegister(UWorld* InWorld)
 				S.Z > Eps ? WorldHalfExtent.Z / S.Z : WorldHalfExtent.Z
 			);
 		}
+	}
 
+	// PhysX body 생성
+	OnCreatePhysicsState(InWorld);
+}
+
+void UBoxComponent::OnCreatePhysicsState(UWorld* World)
+{
+	if (!World)
+	{
+		return;
+	}
+
+	FPhysScene* PhysScene = World->GetPhysScene();
+	if (!PhysScene)
+	{
+		return;
+	}
+
+	// Extent가 유효하지 않으면 PhysX body 생성하지 않음
+	if (BoxExtent.X <= 0.0f || BoxExtent.Y <= 0.0f || BoxExtent.Z <= 0.0f)
+	{
+		UE_LOG("[BoxComponent] %s - Invalid extent (%.4f, %.4f, %.4f), skipping PhysX body creation",
+			ObjectName.ToString().c_str(), BoxExtent.X, BoxExtent.Y, BoxExtent.Z);
+		return;
+	}
+
+	if (BodyInstance)
+	{
+		BodyInstance->Terminate(*PhysScene);
+		delete BodyInstance;
+		BodyInstance = nullptr;
+	}
+
+	UBodySetup* BoxBodySetup = NewObject<UBodySetup>();
+	if (!BoxBodySetup)
+	{
+		return;
+	}
+
+	FKBoxElem BoxElem;
+	BoxElem.Center = FVector::Zero();
+	BoxElem.Extents = BoxExtent;
+	BoxElem.Rotation = FQuat::Identity();
+	BoxBodySetup->AddBox(BoxElem);
+
+	BoxBodySetup->CollisionState = CollisionEnabled;
+
+	BodyInstance = new FBodyInstance();
+	BodyInstance->OwnerComponent = this;
+	BodyInstance->BodySetup = BoxBodySetup;
+
+	FTransform WorldTransform = GetWorldTransform();
+	float Mass = 10.0f;
+
+	BodyInstance->InitDynamic(*PhysScene, WorldTransform, Mass, WorldTransform.Scale3D, 0);
+
+	if (BodyInstance->RigidActor)
+	{
+		if (PxRigidDynamic* Dyn = BodyInstance->RigidActor->is<PxRigidDynamic>())
+		{
+			Dyn->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+		}
 	}
 }
 

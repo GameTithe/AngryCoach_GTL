@@ -253,12 +253,13 @@ void UConsoleWidget::AddLog(const char* fmt, ...)
 	buf[sizeof(buf) - 1] = 0;
 	va_end(args);
 
-	if (strstr(buf, "[error]") != nullptr)
-	{
-		USlateManager::GetInstance().ForceOpenConsole();
-	}
-	
-	std::lock_guard<std::mutex> lock(LogMutex); 
+	// 에러 로그 발생시 콘솔창 자동 오픈 비활성화
+	// if (strstr(buf, "[error]") != nullptr)
+	// {
+	// 	USlateManager::GetInstance().ForceOpenConsole();
+	// }
+
+	std::lock_guard<std::mutex> lock(LogMutex);
 	Items.Add(FString(buf));
 	ScrollToBottom = true;
 }
@@ -269,10 +270,11 @@ void UConsoleWidget::VAddLog(const char* fmt, va_list args)
 	vsnprintf_s(buf, sizeof(buf), fmt, args);
 	buf[sizeof(buf) - 1] = 0;
 
-	if (strstr(buf, "[error]") != nullptr)
-	{
-		USlateManager::GetInstance().ForceOpenConsole();
-	}
+	// 에러 로그 발생시 콘솔창 자동 오픈 비활성화
+	// if (strstr(buf, "[error]") != nullptr)
+	// {
+	// 	USlateManager::GetInstance().ForceOpenConsole();
+	// }
 
 	std::lock_guard<std::mutex> lock(LogMutex); 
 	Items.Add(FString(buf));
