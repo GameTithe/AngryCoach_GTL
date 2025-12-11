@@ -146,7 +146,8 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		InputDir.Y -= 1.0f;		
 	}
 
-	if (!InputDir.IsZero() && !Player1->IsPlayingMontage())
+	// 춤 montage일 때는 예외적으로 input을 받자 
+	if (!InputDir.IsZero() && ( !Player1->IsPlayingMontage() || Player1->GetIsDancing() ) )
 	{
 		InputDir.Normalize();
 
@@ -163,7 +164,7 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 		Player1->SetActorRotation(NewRotation);
 
 		// 이동 적용 (GetVelocity는 속도 크기, DeltaTime은 AddMovementInput 내부에서 처리)
-		Player1->AddMovementInput(WorldDir * Player1->GetVelocity());
+		Player1->AddMovementInput(WorldDir * Player1->GetVelocity(), 1.0f);
 	}
 
 	// I - 점프
@@ -181,7 +182,14 @@ void AAngryCoachPlayerController::ProcessPlayer1Input(float DeltaTime)
 	// decal
 	if (InputManager.IsKeyPressed('G'))
 	{
-		Player1->PaintPlayer1Decal(DeltaTime);
+		Player1->PaintPlayer1Decal();
+	}
+
+	// 춤 
+	if (InputManager.IsKeyPressed('H'))
+	{
+
+		Player1->DancingCoach();	
 	}
 }
 
@@ -211,7 +219,7 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	if (InputManager.IsKeyDown(VK_RIGHT)) { InputDir.Y += 1.0f; }
 	if (InputManager.IsKeyDown(VK_LEFT))  { InputDir.Y -= 1.0f; }
 
-	if (!InputDir.IsZero() && !Player2->IsPlayingMontage())
+	if (!InputDir.IsZero() && ( !Player2->IsPlayingMontage() || Player2->GetIsDancing()))
 	{
 		InputDir.Normalize();
 
@@ -228,7 +236,7 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 		Player2->SetActorRotation(NewRotation);
 
 		// 이동 적용 (GetVelocity는 속도 크기, DeltaTime은 AddMovementInput 내부에서 처리)
-		Player2->AddMovementInput(WorldDir * Player2->GetVelocity());
+		Player2->AddMovementInput(WorldDir * Player2->GetVelocity(), 1.0f);
 	}
 
 	// Numpad6 - 점프
@@ -245,7 +253,13 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 	// decal
 	if (InputManager.IsKeyPressed(VK_NUMPAD4))
 	{
-		Player2->PaintPlayer2Decal(DeltaTime);
+		Player2->PaintPlayer2Decal();
+	}
+
+	if (InputManager.IsKeyPressed(VK_NUMPAD5))
+	{
+
+		Player2->DancingCoach();
 	}
 }
 

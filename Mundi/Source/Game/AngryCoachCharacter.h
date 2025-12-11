@@ -52,8 +52,14 @@ public:
     USound* GetSkillSound() const { return SkillSound; }
 
 	// ==== Decal Painting ====
-	void PaintPlayer1Decal(float DeltaTime);
-	void PaintPlayer2Decal(float DeltaTime);
+	void PaintPlayer1Decal();
+	void PaintPlayer2Decal();
+
+	// === 춤 ====
+	void DancingCoach();
+
+	// ===== 이동 =====
+	void AddMovementInput(FVector Direction, float Scale) override;
 
 	// 착지 시 호출 (CharacterMovementComponent에서 호출)
 	void OnLanded();
@@ -92,6 +98,8 @@ public:
 	// 애니메이션 노티파이용 함수
 	void ToggleGorillaFormOnAccessory();
 
+	// 춤 추고 있는 지 
+	bool GetIsDancing() { return bIsDancing; }
 protected:
 
 	//TODO: 다른 컴포넌트를 만들어서 관리하는게 맞는 방법 같은데,
@@ -140,4 +148,9 @@ protected:
 	USound* DieSound = nullptr;
 
 	TArray<AActor*> HitActors;
+
+	// 춤 관련
+	bool bIsDancing = false;  // 춤 중인지 플래그
+
+	UAnimMontage* DacingMontage = nullptr;
 };

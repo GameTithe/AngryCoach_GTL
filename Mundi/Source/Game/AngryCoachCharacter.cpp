@@ -31,6 +31,7 @@ AAngryCoachCharacter::AAngryCoachCharacter()
 	HitReationMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/HitReaction.montage.json");
 	GuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
 	GorillaGuardMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/Guard.montage.json");
+	DacingMontage = RESOURCE.Load<UAnimMontage>("Data/Montages/DancingCoach.montage.json");
 	if (GuardMontage)
 	{
 		GuardMontage->bLoop = true;
@@ -196,6 +197,12 @@ void AAngryCoachCharacter::StopCurrentMontage(float BlendOutTime)
 	if (!AnimInstance) return;
 
 	AnimInstance->StopMontage(BlendOutTime);
+
+	// ⭐ 몽타주 중단 시 춤 플래그도 리셋
+	if (bIsDancing)
+	{
+		bIsDancing = false;
+	}
 }
 
 bool AAngryCoachCharacter::IsPlayingMontage() const
@@ -330,6 +337,13 @@ void AAngryCoachCharacter::OnAttackInput(EAttackInput Input)
     if (!SkillComponent)
         return;
 
+	// ⭐ 춤 중이면 즉시 중단
+	if (bIsDancing)
+	{
+		StopCurrentMontage(0.2f);
+		bIsDancing = false;
+	}
+
 	// TODO: 점프 중이면 JumpAttack, 콤보 중이면 다음 콤보 등 상태 체크
 	// 지금은 단순 매핑
 	ESkillSlot Slot = ESkillSlot::None;
@@ -425,7 +439,7 @@ void AAngryCoachCharacter::AttackEnd()
     }
 }
 
-void AAngryCoachCharacter::PaintPlayer1Decal(float DeltaTime)
+void AAngryCoachCharacter::PaintPlayer1Decal()
 { 
 
     if (!CharacterMovement)
@@ -479,7 +493,7 @@ void AAngryCoachCharacter::PaintPlayer1Decal(float DeltaTime)
     LastDecalTime[0] = 0.0f;
 }
 
-void AAngryCoachCharacter::PaintPlayer2Decal(float DeltaTime)
+void AAngryCoachCharacter::PaintPlayer2Decal()
 {
 
     if (!CharacterMovement)
@@ -519,6 +533,26 @@ void AAngryCoachCharacter::PaintPlayer2Decal(float DeltaTime)
     LastDecalSpawnPos = ImpactPoint; 
     LastDecalTime[1] = 0.0f;
 }
+
+void AAngryCoachCharacter::DancingCoach()
+{
+	bIsDancing = true;
+	PlayMontage(DacingMontage);
+}
+
+void AAngryCoachCharacter::AddMovementInput(FVector Direction, float Scale)
+{
+	// ⭐ 춤 중이고 이동 입력이 있으면 즉시 중단
+	if (bIsDancing && Direction.SizeSquared() > 0.0f)
+	{
+		StopCurrentMontage(0.2f);
+		bIsDancing = false;
+	}
+
+	// 부모 클래스 호출 (실제 이동 처리)
+	Super::AddMovementInput(Direction, Scale);
+}
+
 
 void AAngryCoachCharacter::OnLanded()
 {
