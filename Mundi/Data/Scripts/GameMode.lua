@@ -659,6 +659,22 @@ function Tick(Delta)
         return
     end
 
+    -- Start_Page 키보드 입력 처리 (약공격 키로 게임 시작)
+    local startPageCanvas = UI.FindCanvas(startPageCanvasName)
+    if startPageCanvas then
+        if InputManager:IsKeyPressed("T") or InputManager:IsKeyPressed(97) then
+            -- 버튼 잔상 효과
+            ShowButtonAfterimage(startPageCanvas, "GameStart")
+
+            -- 코루틴으로 대기 후 전환
+            StartCoroutine(function()
+                coroutine.yield(WaitForSeconds(0.5))
+                UI.RemoveCanvas(startPageCanvasName)
+                EndStartPage()
+            end)
+        end
+    end
+
     -- Select 단계 입력 처리 (프레임 동기화)
     TickSelectInput()
 
@@ -1066,6 +1082,10 @@ function UpdateReadyUI(canvas)
     -- 둘 다 Ready면 라운드 선택 화살표 표시 (인덱스에 따라)
     if p1Ready and p2Ready then
         UpdateRoundArrows(canvas)
+    else
+        -- 한 명이라도 Ready 취소 시 화살표 숨김
+        canvas:SetWidgetVisible("left_arrow", false)
+        canvas:SetWidgetVisible("right_arrow", false)
     end
 end
 
@@ -1115,7 +1135,6 @@ function TickSelectInput()
             end
 
             if p1Changed then
-                print("[GameMode] P1 accessory: " .. AccessoryList[p1SelectedAccessory].name)
                 UpdateAccessoryUI(canvas)
                 EquipAccessoryToPlayer(1, AccessoryList[p1SelectedAccessory].prefab)
                 p1InputCooldown = INPUT_COOLDOWN_FRAMES
@@ -1138,7 +1157,6 @@ function TickSelectInput()
             end
 
             if p2Changed then
-                print("[GameMode] P2 accessory: " .. AccessoryList[p2SelectedAccessory].name)
                 UpdateAccessoryUI(canvas)
                 EquipAccessoryToPlayer(2, AccessoryList[p2SelectedAccessory].prefab)
                 p2InputCooldown = INPUT_COOLDOWN_FRAMES
@@ -1151,28 +1169,24 @@ function TickSelectInput()
 
         if p1ReadyCooldown <= 0 and tKeyPressed then
             p1Ready = not p1Ready
-            print("[GameMode] P1 Ready toggled by T key: " .. tostring(p1Ready))
             UpdateReadyUI(canvas)
             p1ReadyCooldown = READY_COOLDOWN_FRAMES
 
             -- 둘 다 Ready면 라운드 선택 단계로
             if p1Ready and p2Ready then
                 bRoundSelectionPhase = true
-                print("[GameMode] Both players ready! Round selection enabled.")
             end
         end
 
         -- P2 Ready: Numpad 1 (VK_NUMPAD1 = 97, 쿨다운 적용)
         if p2ReadyCooldown <= 0 and numpad1Pressed then
             p2Ready = not p2Ready
-            print("[GameMode] P2 Ready toggled by Numpad1: " .. tostring(p2Ready))
             UpdateReadyUI(canvas)
             p2ReadyCooldown = READY_COOLDOWN_FRAMES
 
             -- 둘 다 Ready면 라운드 선택 단계로
             if p1Ready and p2Ready then
                 bRoundSelectionPhase = true
-                print("[GameMode] Both players ready! Round selection enabled.")
             end
         end
 
@@ -1198,9 +1212,21 @@ function TickSelectInput()
             end
         end
 
-        -- 확정: 약공격 키 (P1: T, P2: Numpad1)
-        if InputManager:IsKeyPressed("T") or InputManager:IsKeyPressed(97) then
+        -- 확정: 강공격 키 (P1: Y, P2: Numpad2)
+        if InputManager:IsKeyPressed("Y") or InputManager:IsKeyPressed(98) then
             FinishSelection()
+        end
+
+        -- 레디 취소: 약공격 키 (P1: T, P2: Numpad1)
+        if InputManager:IsKeyPressed("T") then
+            p1Ready = false
+            bRoundSelectionPhase = false
+            UpdateReadyUI(canvas)
+        end
+        if InputManager:IsKeyPressed(97) then
+            p2Ready = false
+            bRoundSelectionPhase = false
+            UpdateReadyUI(canvas)
         end
     end
 end
