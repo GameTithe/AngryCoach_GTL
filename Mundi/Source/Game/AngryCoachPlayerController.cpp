@@ -57,11 +57,30 @@ void AAngryCoachPlayerController::Tick(float DeltaSeconds)
 	// 게임플레이 입력이 비활성화된 경우 (UI 상태 등) 캐릭터 입력 처리 스킵
 	UInputManager& InputManager = UInputManager::GetInstance();
 
+	// F1 키로 자유 카메라 모드 토글
+	if (InputManager.IsKeyPressed(VK_F1))
+	{
+		bFreeCameraMode = !bFreeCameraMode;
+
+		// 자유 카메라 모드 끄면 기본 회전으로 복원
+		if (!bFreeCameraMode && GameCamera)
+		{
+			GameCamera->SetActorRotation(FVector{0.f, 30.f, 0.f});
+		}
+	}
+
 	// 게임패드 자동 등록 (버튼 누르면 등록)
 	InputManager.TryRegisterGamepadFromInput();
 	if (!InputManager.IsGameplayInputEnabled())
 	{
 		// 카메라 위치는 계속 업데이트 (Select 화면에서도 카메라 동작 유지)
+		UpdateCameraPosition(DeltaSeconds);
+		return;
+	}
+
+	// 자유 카메라 모드면 캐릭터 입력 스킵
+	if (bFreeCameraMode)
+	{
 		UpdateCameraPosition(DeltaSeconds);
 		return;
 	}
@@ -264,7 +283,52 @@ void AAngryCoachPlayerController::ProcessPlayer2Input(float DeltaTime)
 
 void AAngryCoachPlayerController::UpdateCameraPosition(float DeltaTime)
 {
-	if (!Player1 || !Player2 || !GameCamera) return;
+	if (!GameCamera) return;
+
+	UInputManager& InputManager = UInputManager::GetInstance();
+
+	// 자유 카메라 모드
+	if (bFreeCameraMode)
+	{
+		FVector CamMove = FVector::Zero();
+
+		// WASD로 카메라 이동
+		if (InputManager.IsKeyDown('W')) CamMove.X += 1.0f;  // 전진
+		if (InputManager.IsKeyDown('S')) CamMove.X -= 1.0f;  // 후진
+		if (InputManager.IsKeyDown('A')) CamMove.Y -= 1.0f;  // 좌
+		if (InputManager.IsKeyDown('D')) CamMove.Y += 1.0f;  // 우
+		if (InputManager.IsKeyDown('Q')) CamMove.Z -= 1.0f;  // 하강
+		if (InputManager.IsKeyDown('E')) CamMove.Z += 1.0f;  // 상승
+
+		if (!CamMove.IsZero())
+		{
+			CamMove.Normalize();
+			// 카메라 방향 기준으로 이동
+			FQuat CamRot = GameCamera->GetActorRotation();
+			FVector Forward = CamRot.GetForwardVector();
+			FVector Right = CamRot.GetRightVector();
+			FVector Up = FVector(0.f, 0.f, 1.f);
+
+			FVector WorldMove = Forward * CamMove.X + Right * CamMove.Y + Up * CamMove.Z;
+			GameCamera->SetActorLocation(GameCamera->GetActorLocation() + WorldMove * FreeCameraMoveSpeed * DeltaTime);
+		}
+
+		// 마우스로 카메라 회전
+		FVector2D MouseDelta = InputManager.GetMouseDelta();
+		if (MouseDelta.X != 0.0f || MouseDelta.Y != 0.0f)
+		{
+			FVector CurrentEuler = GameCamera->GetActorRotation().ToEulerZYXDeg();
+			CurrentEuler.Z += MouseDelta.X * FreeCameraRotateSpeed * DeltaTime;  // Yaw
+			CurrentEuler.Y += MouseDelta.Y * FreeCameraRotateSpeed * DeltaTime;  // Pitch
+			CurrentEuler.Y = FMath::Clamp(CurrentEuler.Y, -89.0f, 89.0f);  // Pitch 제한
+			GameCamera->SetActorRotation(FVector(CurrentEuler.X, CurrentEuler.Y, CurrentEuler.Z));
+		}
+
+		return;
+	}
+
+	// 일반 카메라 모드 (플레이어 추적)
+	if (!Player1 || !Player2) return;
 	if (Player1->GetHealthPercent() <= 0.f || Player2->GetHealthPercent() <= 0.f) return;
 
 	// 두 캐릭터의 중심점 계산

@@ -477,10 +477,10 @@ void AAngryCoachCharacter::PaintPlayer1Decal()
         return;
     }
 	// 너무 빠르게 다시 사용할 때
-    if (LastDecalTime[0] < DecalMinInterval[0])
-    {
-        return;
-    }
+    // if (LastDecalTime[0] < DecalMinInterval[0])
+    // {
+    //     return;
+    // }
 	 
 	FString PrefabPath = "Data/Prefabs/CGCDecal.prefab";
 	AActor* DecalActor = Cast<AActor>(GWorld->SpawnPrefabActor(UTF8ToWide(PrefabPath)));

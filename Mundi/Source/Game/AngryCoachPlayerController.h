@@ -46,6 +46,11 @@ protected:
 	FVector CameraOffset = FVector(-8.0f, 0.0f, 6.f);
 	float CameraLerpSpeed = 5.0f;
 
+	// 자유 카메라 모드
+	bool bFreeCameraMode = false;
+	float FreeCameraMoveSpeed = 10.0f;
+	float FreeCameraRotateSpeed = 50.0f;
+
 	// Player 1
 	bool bIsP1InputBuffering = false;
 	char P1PendingKey = 0;
